@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Squircle Frame Outline -->
+    <!-- Center (54,54), width 52, height 52 => bounds 28,28 to 80,80, corner radius 16 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="3.6"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 44,28 L 64,28 A 16,16 0 0 1 80,44 L 80,64 A 16,16 0 0 1 64,80 L 44,80 A 16,16 0 0 1 28,64 L 28,44 A 16,16 0 0 1 44,28 Z" />
+
+    <!-- Left Cyan Indicator Dot -->
+    <path
+        android:fillColor="#39B8FD"
+        android:pathData="M 40,38 m -3.5,0 a 3.5,3.5 0 1,0 7,0 a 3.5,3.5 0 1,0 -7,0" />
+
+    <!-- Right Emerald Indicator Dot -->
+    <path
+        android:fillColor="#2EE59D"
+        android:pathData="M 68,38 m -3.5,0 a 3.5,3.5 0 1,0 7,0 a 3.5,3.5 0 1,0 -7,0" />
+
+    <!-- Clock Face Circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 54,55 m -14,0 a 14,14 0 1,0 28,0 a 14,14 0 1,0 -28,0" />
+
+    <!-- Clock Hands (indigo) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#4F46E5"
+        android:strokeWidth="2.8"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 54,47 L 54,55 L 59,58" />
+</vector>

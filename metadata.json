@@ -1,0 +1,6 @@
+{
+  "name": "DayMeet",
+  "description": "Kinetic minimalist productivity app with daily planner, calendar, meetings, tasks, smart finance, and AI assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
