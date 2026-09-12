@@ -13,7 +13,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,6 +35,8 @@ import com.example.BuildConfig
 import com.example.model.AppUpdateInfo
 import com.example.ui.theme.*
 import com.example.util.AppUpdateManager
+import com.example.util.PlayAppUpdateManager
+import com.google.android.play.core.install.model.UpdateAvailability
 
 @Composable
 fun InAppUpdateDialog(
@@ -42,7 +47,7 @@ fun InAppUpdateDialog(
 ) {
     val context = LocalContext.current
 
-    // Query current installed version code directly from device package manager
+    // Current APK's installed version code
     val installedPackageVersionCode = remember(context) {
         try {
             val pInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -65,21 +70,45 @@ fun InAppUpdateDialog(
         }
     }
 
-    // Factor in any locally applied updates persisted in storage
-    val effectiveInstalledCode = remember(installedPackageVersionCode) {
-        maxOf(installedPackageVersionCode, AppUpdateManager.getEffectiveVersionCode(context))
+    // Effective installed version code incorporating current APK's BuildConfig.VERSION_CODE and persisted installs
+    val currentInstalledVersionCode = remember(installedPackageVersionCode) {
+        maxOf(
+            BuildConfig.VERSION_CODE,
+            installedPackageVersionCode,
+            AppUpdateManager.getEffectiveVersionCode(context)
+        )
     }
 
-    // Determine latest available version code from Google Play Store or direct channel
-    val latestAvailableVersionCode = remember(updateInfo) {
-        updateInfo.playUpdateInfo?.availableVersionCode() ?: updateInfo.latestVersionCode
+    // Retrieve the latest available version code from Google Play Store or update payload
+    var playStoreVersionCode by remember(updateInfo) {
+        mutableStateOf(
+            updateInfo.playUpdateInfo?.availableVersionCode() ?: updateInfo.latestVersionCode
+        )
     }
 
-    // Version Check: Ensure the dialog ONLY triggers when a strictly higher version code is detected
-    val isStrictlyHigherVersion = latestAvailableVersionCode > effectiveInstalledCode
+    // Dynamically query Play Store In-App Updates to ensure live Play Store version code
+    LaunchedEffect(context) {
+        try {
+            val manager = PlayAppUpdateManager.getOrCreate(context)
+            manager.appUpdateInfo.addOnSuccessListener { info ->
+                if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE) {
+                    val storeCode = info.availableVersionCode()
+                    if (storeCode > 0) {
+                        playStoreVersionCode = storeCode
+                    }
+                }
+            }
+        } catch (ignored: Exception) {}
+    }
 
-    if (!isStrictlyHigherVersion || !updateInfo.isUpdateAvailable) {
-        // Automatically dismiss dialog if the available version is not strictly higher
+    // Version Check: Only show the update dialog if the Play Store version code is
+    // strictly greater than the currently installed version code (BuildConfig.VERSION_CODE & effectiveInstalled),
+    // preventing any infinite update loops.
+    val isStrictlyGreater = playStoreVersionCode > BuildConfig.VERSION_CODE &&
+            playStoreVersionCode > currentInstalledVersionCode
+
+    if (!isStrictlyGreater || !updateInfo.isUpdateAvailable) {
+        // Automatically dismiss dialog and do not show if version is not strictly greater
         LaunchedEffect(Unit) {
             onDismiss()
         }
@@ -208,7 +237,7 @@ fun InAppUpdateDialog(
                                 )
                             )
                             Text(
-                                text = "v${updateInfo.currentVersionName} (${updateInfo.currentVersionCode})",
+                                text = "v${updateInfo.currentVersionName} (Build $currentInstalledVersionCode)",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.SemiBold,
                                     color = OnSurface
@@ -233,7 +262,7 @@ fun InAppUpdateDialog(
                                 )
                             )
                             Text(
-                                text = "v${updateInfo.latestVersionName} (${updateInfo.latestVersionCode})",
+                                text = "v${updateInfo.latestVersionName} (Build $playStoreVersionCode)",
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = EmeraldSuccess
