@@ -2,11 +2,1603 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="refresh" content="0; url=/public/index.html">
-  <title>Redirecting to DayMeet...</title>
-  <script>window.location.href = "/public/index.html";</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayMeet — Digital Command Center</title>
+  <meta name="description" content="DayMeet: Personal digital command center for Productivity, Meetings, Tasks, Finance, Health, Habits, Goals, and Automations.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"Space Grotesk"', 'monospace']
+          },
+          colors: {
+            brand: {
+              surface: '#FAF9FF',
+              card: '#FFFFFF',
+              containerHigh: '#E5E8F5',
+              containerLow: '#F1F3FF',
+              onSurface: '#181B25',
+              onSurfaceVariant: '#464555',
+              outlineVariant: '#C7C4D8',
+              primary: '#3525CD',
+              primaryContainer: '#4F46E5',
+              primaryFixed: '#E2DFFF',
+              secondary: '#006591',
+              tertiary: '#005338',
+              tertiaryFixed: '#6FFBBE',
+              emerald: '#10B981',
+              amber: '#F59E0B',
+              rose: '#E53935',
+              sky: '#0288D1'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #FAF9FF;
+      color: #181B25;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .material-symbols-rounded {
+      font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+    /* Hide scrollbars while allowing scroll */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .strike-line {
+      text-decoration: line-through;
+      color: #777587 !important;
+      opacity: 0.6;
+    }
+  </style>
 </head>
-<body>
-  <p>Redirecting to <a href="/public/index.html">DayMeet All-in-One Daily Life Super App</a>...</p>
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- TOP APP BAR / HEADER (Matching DayMeetHeader.kt) -->
+  <header class="sticky top-0 z-40 bg-[#FAF9FF]/95 backdrop-blur-md border-b border-[#E5E8F5]">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-[60px] flex items-center justify-between">
+      <!-- Brand Logo & Title -->
+      <div onclick="openAiAssistant()" class="flex items-center gap-2.5 cursor-pointer select-none">
+        <div class="w-9 h-9 rounded-[10px] bg-[#3525CD] border border-white/20 flex items-center justify-center text-white shadow-sm shadow-indigo-600/20">
+          <span class="material-symbols-rounded text-[22px]">widgets</span>
+        </div>
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-xl font-bold tracking-tight text-[#181B25]">DayMeet</span>
+          <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+        </div>
+      </div>
+
+      <!-- Action Icons (Search, Notifications, Profile, Copilot) -->
+      <div class="flex items-center gap-1">
+        <button onclick="openSearchModal()" title="Search Across All Modules" class="w-9 h-9 rounded-full flex items-center justify-center text-[#464555] hover:bg-[#EBEDFB] transition">
+          <span class="material-symbols-rounded text-[20px]">search</span>
+        </button>
+
+        <button onclick="triggerToast('All systems synced: Calendar, Health, Tasks & Budget ✓')" title="Sync & Notifications" class="w-9 h-9 rounded-full flex items-center justify-center text-[#464555] hover:bg-[#EBEDFB] transition relative">
+          <span class="material-symbols-rounded text-[20px]">notifications</span>
+          <span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#E53935]"></span>
+        </button>
+
+        <button onclick="openAiAssistant()" title="AI Assistant Copilot" class="h-8 px-2.5 rounded-full bg-[#E2DFFF] text-[#3525CD] text-xs font-bold flex items-center gap-1.5 hover:bg-[#DAD7FF] transition ml-1">
+          <span class="material-symbols-rounded text-[16px] animate-pulse">auto_awesome</span>
+          <span class="hidden sm:inline">AI Copilot</span>
+        </button>
+
+        <button onclick="triggerToast('Alex Chen • Product Lead (DayMeet Pro)')" title="Profile" class="w-8 h-8 rounded-full ml-1 overflow-hidden ring-2 ring-[#E2DFFF] hover:ring-[#3525CD] transition">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120" alt="Alex Chen" class="w-full h-full object-cover">
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 pt-3 pb-32 flex-1 w-full">
+
+    <!-- ============================================================ -->
+    <!-- TAB 1: HOME SCREEN (Exact 1:1 replica of HomeScreen.kt) -->
+    <!-- ============================================================ -->
+    <div id="screen-home" class="space-y-4">
+      
+      <!-- 1. Header Greeting & Weather Strip -->
+      <div class="pt-1">
+        <div class="flex items-center justify-between">
+          <h1 class="text-2xl font-black text-[#181B25] tracking-tight">Good morning, Alex</h1>
+          <span class="px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#6FFBBE]/40 text-[#005338] border border-[#6FFBBE]">
+            33 Modules Synced
+          </span>
+        </div>
+        <div class="flex items-center gap-2 mt-1 text-xs text-[#464555] font-medium flex-wrap">
+          <span>Thursday, Oct 24</span>
+          <span class="text-[#C7C4D8]">•</span>
+          <span class="inline-flex items-center gap-1 text-[#D97706]">
+            <span class="material-symbols-rounded text-[15px]">wb_sunny</span>
+            72°F Sunny (10% rain)
+          </span>
+          <span class="text-[#C7C4D8]">•</span>
+          <span>New York</span>
+        </div>
+      </div>
+
+      <!-- 2. Daily Briefing Card -->
+      <div class="bg-white rounded-[18px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-[#E5E8F5]">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-rounded text-[#3525CD] text-[18px]">auto_awesome</span>
+            <h2 class="text-sm font-bold text-[#181B25]">Daily Briefing</h2>
+          </div>
+          <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E2DFFF] text-[#3525CD]">
+            Auto-Synced
+          </span>
+        </div>
+
+        <!-- 4 Metrics Grid -->
+        <div class="grid grid-cols-4 gap-2 mt-3 text-center">
+          <div class="p-1">
+            <p id="metric-meetings-count" class="text-lg font-bold text-[#181B25] leading-tight">3</p>
+            <p class="text-[11px] text-[#464555]">Meetings</p>
+          </div>
+          <div class="p-1">
+            <p id="metric-tasks-count" class="text-lg font-bold text-[#181B25] leading-tight">6</p>
+            <p class="text-[11px] text-[#464555]">Tasks</p>
+          </div>
+          <div class="p-1">
+            <p id="metric-spent-count" class="text-lg font-bold text-[#181B25] leading-tight">₹3,450</p>
+            <p class="text-[11px] text-[#464555]">Spent</p>
+          </div>
+          <div class="p-1">
+            <p id="metric-steps-count" class="text-lg font-bold text-[#181B25] leading-tight">7.8k</p>
+            <p class="text-[11px] text-[#464555]">Steps</p>
+          </div>
+        </div>
+
+        <!-- Progress bar & Start My Day button -->
+        <div class="flex items-center justify-between gap-3 mt-3.5 pt-2 border-t border-[#F1F3FF]">
+          <div class="flex items-center gap-2.5 flex-1">
+            <div class="w-full bg-[#E5E8F5] h-1.5 rounded-full overflow-hidden">
+              <div id="briefing-progress-bar" class="bg-[#3525CD] h-full rounded-full transition-all duration-500" style="width: 33%"></div>
+            </div>
+            <span id="briefing-progress-text" class="text-[11px] text-[#464555] whitespace-nowrap font-medium">2/6 Done</span>
+          </div>
+          <button onclick="openBriefingModal()" class="px-3.5 py-1.5 rounded-full bg-[#3525CD] text-white text-xs font-bold hover:bg-[#2B1DAE] transition whitespace-nowrap flex items-center gap-1 shadow-sm">
+            <span>Start My Day</span>
+            <span class="material-symbols-rounded text-[14px]">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. My Day Widgets Header -->
+      <div class="flex items-center justify-between pt-1">
+        <div class="flex items-center gap-2">
+          <h3 class="text-base font-bold text-[#181B25]">My Day Widgets</h3>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#6FFBBE]/40 text-[#005338]">Live</span>
+        </div>
+        <button onclick="triggerToast('Widget customization: Reorder & toggles')" class="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#F1F3FF] text-[11px] text-[#464555] font-medium hover:bg-[#E5E8F5] transition">
+          <span class="material-symbols-rounded text-[14px]">tune</span>
+          <span>Customize & Reorder</span>
+        </button>
+      </div>
+
+      <!-- 4. Hero Next Meeting Card -->
+      <div class="bg-white rounded-[18px] p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-[#E5E8F5]">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-[10px] bg-[#E2DFFF] flex items-center justify-center text-[#3525CD]">
+              <span class="material-symbols-rounded text-[20px]">videocam</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#D32F2F]">In 20m</span>
+                <span class="text-[11px] text-[#464555] font-medium">09:30 AM - 10:15 AM</span>
+              </div>
+            </div>
+          </div>
+          <span class="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E5E8F5] text-[#3525CD]">Google Meet</span>
+        </div>
+
+        <h4 class="text-base font-bold text-[#181B25] mt-2.5">Product Strategy Review</h4>
+
+        <div class="flex items-center justify-between mt-3 pt-2">
+          <!-- Overlapping Avatars -->
+          <div class="flex items-center -space-x-2 overflow-hidden">
+            <div class="w-7 h-7 rounded-full bg-[#4F46E5] text-white text-[9px] font-bold flex items-center justify-center ring-2 ring-white">AC</div>
+            <div class="w-7 h-7 rounded-full bg-[#39B8FD] text-[#004666] text-[9px] font-bold flex items-center justify-center ring-2 ring-white">ML</div>
+            <div class="w-7 h-7 rounded-full bg-[#006E4B] text-[#67F4B7] text-[9px] font-bold flex items-center justify-center ring-2 ring-white">DK</div>
+            <div class="w-7 h-7 rounded-full bg-[#E5E8F5] text-[#464555] text-[10px] font-bold flex items-center justify-center ring-2 ring-white">+4</div>
+          </div>
+
+          <!-- Join Button -->
+          <button onclick="triggerToast('Connecting to Google Meet room...')" class="h-[38px] px-4 rounded-xl bg-[#3525CD] text-white text-xs font-bold flex items-center gap-1.5 hover:bg-[#2B1DAE] transition shadow-sm">
+            <span class="material-symbols-rounded text-[16px]">videocam</span>
+            <span>Join Meeting</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Electricity Bill Due Banner -->
+      <div id="electricity-bill-card" class="bg-[#F1F5FD] rounded-2xl p-3 px-3.5 flex items-center justify-between border border-blue-100">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-[#E0F2FE] text-[#0288D1] flex items-center justify-center">
+            <span class="material-symbols-rounded text-[18px]">bolt</span>
+          </div>
+          <div>
+            <p class="text-xs font-bold text-[#D32F2F]">Electricity Bill Due Tomorrow</p>
+            <p class="text-[11px] text-[#464555]">Tata Power • ₹2,400</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="switchTab('finance')" class="text-xs font-bold text-[#3525CD] hover:underline">View</button>
+          <button onclick="payBill('b1')" class="h-8 px-3 rounded-full bg-[#181B25] text-white text-[11px] font-bold hover:bg-black transition">
+            Pay Now
+          </button>
+        </div>
+      </div>
+
+      <!-- 6. Daily Vitals (4 Streams) 2x2 Bento Grid -->
+      <div class="space-y-2.5">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-[#181B25]">Daily Vitals</h3>
+          <span class="text-xs text-[#464555]">4 Streams</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <!-- Bento 1: Focus & Work -->
+          <div onclick="switchTab('tasks')" class="bg-white rounded-2xl p-3 border border-[#E5E8F5] shadow-sm hover:border-[#3525CD]/40 cursor-pointer transition">
+            <div class="flex items-center justify-between">
+              <div class="w-7 h-7 rounded-lg bg-[#E5E8F5] text-[#3525CD] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[16px]">filter_center_focus</span>
+              </div>
+              <span id="vitals-focus-badge" class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]">33%</span>
+            </div>
+            <p class="text-[11px] text-[#464555] mt-2">Focus & Work</p>
+            <p id="vitals-focus-val" class="text-sm font-bold text-[#181B25]">2/6 Tasks</p>
+            <div class="w-full bg-[#E5E8F5] h-1 rounded-full mt-2 overflow-hidden">
+              <div id="vitals-focus-bar" class="bg-[#3525CD] h-full rounded-full" style="width: 33%"></div>
+            </div>
+            <p class="text-[10px] text-[#464555] mt-1.5 truncate">3 meetings scheduled</p>
+          </div>
+
+          <!-- Bento 2: Finance (Daily) -->
+          <div onclick="switchTab('finance')" class="bg-white rounded-2xl p-3 border border-[#E5E8F5] shadow-sm hover:border-[#005338]/40 cursor-pointer transition">
+            <div class="flex items-center justify-between">
+              <div class="w-7 h-7 rounded-lg bg-[#E5E8F5] text-[#005338] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[16px]">account_balance_wallet</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#005338]/10 text-[#005338]">Safe</span>
+            </div>
+            <p class="text-[11px] text-[#464555] mt-2">Finance (Daily)</p>
+            <p class="text-sm font-bold text-[#181B25]">₹3,450 / 5k</p>
+            <div class="w-full bg-[#E5E8F5] h-1 rounded-full mt-2 overflow-hidden">
+              <div class="bg-[#005338] h-full rounded-full" style="width: 69%"></div>
+            </div>
+            <p class="text-[10px] text-[#464555] mt-1.5 truncate">69% of daily ceiling</p>
+          </div>
+
+          <!-- Bento 3: Health & Vitality -->
+          <div onclick="switchTab('insights')" class="bg-white rounded-2xl p-3 border border-[#E5E8F5] shadow-sm hover:border-[#0288D1]/40 cursor-pointer transition">
+            <div class="flex items-center justify-between">
+              <div class="w-7 h-7 rounded-lg bg-[#E5E8F5] text-[#0288D1] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[16px]">favorite</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#0288D1]/10 text-[#0288D1]">88 Score</span>
+            </div>
+            <p class="text-[11px] text-[#464555] mt-2">Health & Vitality</p>
+            <p class="text-sm font-bold text-[#181B25]">7,845 Steps</p>
+            <div class="w-full bg-[#E5E8F5] h-1 rounded-full mt-2 overflow-hidden">
+              <div class="bg-[#0288D1] h-full rounded-full" style="width: 72%"></div>
+            </div>
+            <p class="text-[10px] text-[#464555] mt-1.5 truncate">Hydration: 1.8L / 2.5L</p>
+          </div>
+
+          <!-- Bento 4: Habits & Goals -->
+          <div onclick="triggerToast('Daily Habits: 18-day streak active')" class="bg-white rounded-2xl p-3 border border-[#E5E8F5] shadow-sm hover:border-[#F59E0B]/40 cursor-pointer transition">
+            <div class="flex items-center justify-between">
+              <div class="w-7 h-7 rounded-lg bg-[#E5E8F5] text-[#F59E0B] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[16px]">local_fire_department</span>
+              </div>
+              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-[#F59E0B]/10 text-[#D97706]">18d streak</span>
+            </div>
+            <p class="text-[11px] text-[#464555] mt-2">Habits & Goals</p>
+            <p class="text-sm font-bold text-[#181B25]">2 / 3 Done</p>
+            <div class="w-full bg-[#E5E8F5] h-1 rounded-full mt-2 overflow-hidden">
+              <div class="bg-[#F59E0B] h-full rounded-full" style="width: 66%"></div>
+            </div>
+            <p class="text-[10px] text-[#464555] mt-1.5 truncate">66% consistency</p>
+          </div>
+        </div>
+
+        <!-- Bento 5: Daily Habit Check-in Card (Single-tap morning routine logging) -->
+        <div class="bg-white rounded-2xl p-3.5 border border-[#E5E8F5] shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[#FFF3E0] text-[#D97706] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[18px]">self_improvement</span>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-[#181B25]">Daily Habit Check-in</p>
+                <p class="text-[10px] text-[#464555]">Single-tap morning routine logging</p>
+              </div>
+            </div>
+            <button onclick="triggerToast('Viewing all 5 habits & streaks')" class="text-xs font-bold text-[#3525CD] flex items-center gap-0.5 hover:underline">
+              <span>View All</span>
+              <span class="material-symbols-rounded text-[14px]">chevron_right</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- Morning Meditation Button -->
+            <div onclick="logHabitMeditation()" id="habit-btn-meditation" class="p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#673AB7] cursor-pointer transition flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <div id="habit-icon-box-meditation" class="w-7 h-7 rounded-full bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center">
+                  <span id="habit-icon-meditation" class="material-symbols-rounded text-[16px]">self_improvement</span>
+                </div>
+                <span id="habit-status-meditation" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]">Tap to Log</span>
+              </div>
+              <div class="mt-2">
+                <p class="text-xs font-bold text-[#181B25] truncate">Morning Meditation</p>
+                <p id="habit-streak-meditation" class="text-[10px] text-[#464555]">19d streak • 15m</p>
+              </div>
+            </div>
+
+            <!-- Morning Exercise Button -->
+            <div onclick="logHabitExercise()" id="habit-btn-exercise" class="p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#2E7D32] cursor-pointer transition flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <div id="habit-icon-box-exercise" class="w-7 h-7 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center">
+                  <span id="habit-icon-exercise" class="material-symbols-rounded text-[16px]">fitness_center</span>
+                </div>
+                <span id="habit-status-exercise" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]">Tap to Log</span>
+              </div>
+              <div class="mt-2">
+                <p class="text-xs font-bold text-[#181B25] truncate">Morning Exercise</p>
+                <p id="habit-streak-exercise" class="text-[10px] text-[#464555]">14d streak • 30m</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Cross-Module Stream (Full View) -->
+      <div class="space-y-2.5 pt-1">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <h3 class="text-base font-bold text-[#181B25]">Cross-Module Stream</h3>
+            <span class="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+          </div>
+          <button onclick="switchTab('calendar')" class="text-xs font-bold text-[#3525CD] hover:underline">Full View</button>
+        </div>
+
+        <!-- Dynamic Cross-Module Feed List -->
+        <div id="cross-stream-list" class="space-y-2">
+          <!-- Rendered via JavaScript from state -->
+        </div>
+      </div>
+
+      <!-- 8. Quick Capture Hub (6 Circular Icons) -->
+      <div class="bg-white rounded-[18px] p-4 border border-[#E5E8F5] shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-bold text-[#181B25]">Quick Capture Hub</h3>
+          <span class="text-[11px] text-[#464555]">Tap to create</span>
+        </div>
+        <div class="grid grid-cols-6 gap-2 text-center">
+          <div onclick="openQuickAddWith('Meeting')" class="cursor-pointer group">
+            <div class="w-11 h-11 mx-auto rounded-full bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center group-hover:scale-105 transition">
+              <span class="material-symbols-rounded text-[20px]">calendar_today</span>
+            </div>
+            <p class="text-[10px] text-[#464555] font-medium mt-1">Meeting</p>
+          </div>
+          <div onclick="openQuickAddWith('Task')" class="cursor-pointer group">
+            <div class="w-11 h-11 mx-auto rounded-full bg-[#FFEBEE] text-[#E53935] flex items-center justify-center group-hover:scale-105 transition">
+              <span class="material-symbols-rounded text-[20px]">check_circle</span>
+            </div>
+            <p class="text-[10px] text-[#464555] font-medium mt-1">Task</p>
+          </div>
+          <div onclick="openQuickAddWith('Expense')" class="cursor-pointer group">
+            <div class="w-11 h-11 mx-auto rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center group-hover:scale-105 transition">
+              <span class="material-symbols-rounded text-[20px]">account_balance_wallet</span>
+            </div>
+            <p class="text-[10px] text-[#464555] font-medium mt-1">Expense</p>
+          </div>
+          <div onclick="openQuickAddWith('Note')" class="cursor-pointer group">
+            <div class="w-11 h-11 mx-auto rounded-full bg-[#E3F2FD] text-[#1976D2] flex items-center justify-center group-hover:scale-105 transition">
+              <span class="material-symbols-rounded text-[20px]">edit_note</span>
+            </div>
+            <p class="text-[10px] text-[#464555] font-medium mt-1">Note</p>
+          </div>
+          <div onclick="openQuickAddWith('Habit')" class="cursor-pointer group">
+            <div class="w-11 h-11 mx-auto rounded-full bg-[#FFF3E0] text-[#F57C00] flex items-center justify-center group-hover:scale-105 transition">
+              <span class="material-symbols-rounded text-[20px]">local_fire_department</span>
+            </div>
+            <p class="text-[10px] text-[#464555] font-medium mt-1">Habit</p>
+          </div>
+          <div onclick="openQuickAddWith('Health Entry')" class="cursor-pointer group">
+            <div class="w-11 h-11 mx-auto rounded-full bg-[#E0F2F1] text-[#00897B] flex items-center justify-center group-hover:scale-105 transition">
+              <span class="material-symbols-rounded text-[20px]">favorite_border</span>
+            </div>
+            <p class="text-[10px] text-[#464555] font-medium mt-1">Health</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 2: CALENDAR SCREEN (CalendarScreen.kt) -->
+    <!-- ============================================================ -->
+    <div id="screen-calendar" class="hidden space-y-4">
+      <div class="flex items-center justify-between pt-1">
+        <div>
+          <h2 class="text-xl font-black text-[#181B25]">Unified Schedule</h2>
+          <p class="text-xs text-[#464555]">All calendar blocks, appointments, and syncs</p>
+        </div>
+        <div class="flex items-center gap-1.5 bg-[#EBEDFB] p-1 rounded-xl text-xs font-bold">
+          <button class="px-3 py-1 rounded-lg bg-white text-[#181B25] shadow-xs">Timeline</button>
+          <button onclick="triggerToast('Viewing schedule grouped by module category')" class="px-3 py-1 rounded-lg text-[#464555] hover:text-[#181B25]">By Category</button>
+        </div>
+      </div>
+
+      <!-- Day selector ribbon -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+        <div class="p-3 px-4 rounded-2xl bg-[#E2DFFF] text-[#3525CD] border-2 border-[#3525CD] text-center min-w-[62px] cursor-pointer">
+          <p class="text-[10px] font-bold uppercase">Thu</p>
+          <p class="text-lg font-black leading-none mt-1">24</p>
+        </div>
+        <div onclick="triggerToast('Oct 25: 2 meetings, 4 tasks')" class="p-3 px-4 rounded-2xl bg-white text-[#464555] border border-[#E5E8F5] text-center min-w-[62px] cursor-pointer hover:border-[#3525CD]">
+          <p class="text-[10px] font-medium uppercase">Fri</p>
+          <p class="text-lg font-bold leading-none mt-1">25</p>
+        </div>
+        <div onclick="triggerToast('Oct 26: Weekend Deep Rest Mode')" class="p-3 px-4 rounded-2xl bg-white text-[#464555] border border-[#E5E8F5] text-center min-w-[62px] cursor-pointer hover:border-[#3525CD]">
+          <p class="text-[10px] font-medium uppercase">Sat</p>
+          <p class="text-lg font-bold leading-none mt-1">26</p>
+        </div>
+        <div onclick="triggerToast('Oct 27: Weekly Retrospective & Planning')" class="p-3 px-4 rounded-2xl bg-white text-[#464555] border border-[#E5E8F5] text-center min-w-[62px] cursor-pointer hover:border-[#3525CD]">
+          <p class="text-[10px] font-medium uppercase">Sun</p>
+          <p class="text-lg font-bold leading-none mt-1">27</p>
+        </div>
+        <div onclick="triggerToast('Oct 28: Sprint Review kickoff')" class="p-3 px-4 rounded-2xl bg-white text-[#464555] border border-[#E5E8F5] text-center min-w-[62px] cursor-pointer hover:border-[#3525CD]">
+          <p class="text-[10px] font-medium uppercase">Mon</p>
+          <p class="text-lg font-bold leading-none mt-1">28</p>
+        </div>
+      </div>
+
+      <!-- Schedule Timeline Items -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm space-y-3">
+        <div class="flex items-center justify-between pb-2 border-b border-[#F1F3FF]">
+          <span class="text-xs font-bold text-[#181B25]">Today's Sequence</span>
+          <span class="text-[11px] text-[#3525CD] font-semibold">Google Calendar Connected</span>
+        </div>
+
+        <div class="space-y-3">
+          <!-- Timeline Item 1 -->
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <span class="text-xs font-bold text-[#3525CD] w-14">09:30 AM</span>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-bold text-[#181B25]">Product Strategy Review</p>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#EDE7F6] text-[#673AB7]">MEETING</span>
+              </div>
+              <p class="text-[11px] text-[#464555] mt-0.5">Google Meet • Alex, Sarah, David (45m)</p>
+            </div>
+          </div>
+
+          <!-- Timeline Item 2 -->
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <span class="text-xs font-bold text-[#3525CD] w-14">12:00 PM</span>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-bold text-[#181B25]">Finalize Mobile Design Tokens</p>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#FFEBEE] text-[#E53935]">PRIORITY</span>
+              </div>
+              <p class="text-[11px] text-[#464555] mt-0.5">Workspace sync • Due at release freeze</p>
+            </div>
+          </div>
+
+          <!-- Timeline Item 3 -->
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <span class="text-xs font-bold text-[#3525CD] w-14">02:00 PM</span>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-bold text-[#181B25]">Deep Work Sanctuary (Focus)</p>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E2DFFF] text-[#3525CD]">FOCUS</span>
+              </div>
+              <p class="text-[11px] text-[#464555] mt-0.5">DND auto-activates • Slack set to in focus</p>
+            </div>
+          </div>
+
+          <!-- Timeline Item 4 -->
+          <div class="flex items-start gap-3 p-3 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <span class="text-xs font-bold text-[#3525CD] w-14">04:30 PM</span>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-bold text-[#181B25]">Team Daily Sync & Demo</p>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#EDE7F6] text-[#673AB7]">MEETING</span>
+              </div>
+              <p class="text-[11px] text-[#464555] mt-0.5">Google Meet • Engineering & Design team</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 3: TASKS SCREEN (TasksScreen.kt) -->
+    <!-- ============================================================ -->
+    <div id="screen-tasks" class="hidden space-y-4">
+      <div class="flex items-center justify-between pt-1">
+        <div>
+          <h2 class="text-xl font-black text-[#181B25]">Tasks & Checklists</h2>
+          <p class="text-xs text-[#464555]">Action items connected across meetings and modules</p>
+        </div>
+        <button onclick="openQuickAddWith('Task')" class="px-3 py-1.5 rounded-xl bg-[#3525CD] text-white text-xs font-bold flex items-center gap-1 hover:bg-[#2B1DAE]">
+          <span class="material-symbols-rounded text-[14px]">add</span>
+          <span>New Task</span>
+        </button>
+      </div>
+
+      <!-- Task Filter Pills -->
+      <div class="flex items-center gap-2">
+        <button onclick="filterTasks('All')" id="filter-all" class="px-3 py-1 rounded-full text-xs font-bold bg-[#181B25] text-white">All (6)</button>
+        <button onclick="filterTasks('Pending')" id="filter-pending" class="px-3 py-1 rounded-full text-xs font-medium bg-[#EBEDFB] text-[#464555] hover:bg-[#E5E8F5]">Pending (4)</button>
+        <button onclick="filterTasks('Completed')" id="filter-completed" class="px-3 py-1 rounded-full text-xs font-medium bg-[#EBEDFB] text-[#464555] hover:bg-[#E5E8F5]">Completed (2)</button>
+      </div>
+
+      <!-- Task Items Container -->
+      <div id="tasks-full-container" class="space-y-2.5">
+        <!-- Rendered dynamically via JavaScript -->
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 4: INSIGHTS & HEALTH (HealthScreen.kt) -->
+    <!-- ============================================================ -->
+    <div id="screen-insights" class="hidden space-y-4">
+      <div class="flex items-center justify-between pt-1">
+        <div>
+          <h2 class="text-xl font-black text-[#181B25]">Bio-Sync & Health</h2>
+          <p class="text-xs text-[#464555]">Wearable biometrics & daily vitality index</p>
+        </div>
+        <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#E8F5E9] text-[#2E7D32] flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full bg-[#2E7D32] animate-pulse"></span>
+          Oura Ring Active
+        </span>
+      </div>
+
+      <!-- 4-Card Grid Metrics -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white p-3.5 rounded-2xl border border-[#E5E8F5] text-center shadow-sm">
+          <p class="text-[11px] text-[#464555]">Sleep Quality</p>
+          <p class="text-xl font-extrabold text-[#181B25] mt-1">7h 20m</p>
+          <span class="text-[10px] font-bold text-[#10B981]">85% Optimal</span>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-[#E5E8F5] text-center shadow-sm">
+          <p class="text-[11px] text-[#464555]">Steps Walked</p>
+          <p class="text-xl font-extrabold text-[#181B25] mt-1">7,845</p>
+          <span class="text-[10px] font-bold text-[#3525CD]">Goal: 10,000</span>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-[#E5E8F5] text-center shadow-sm">
+          <p class="text-[11px] text-[#464555]">Water Hydration</p>
+          <p class="text-xl font-extrabold text-[#181B25] mt-1">1.8 L</p>
+          <span class="text-[10px] font-bold text-[#0288D1]">Goal: 2.5 L</span>
+        </div>
+        <div class="bg-white p-3.5 rounded-2xl border border-[#E5E8F5] text-center shadow-sm">
+          <p class="text-[11px] text-[#464555]">Active Burn</p>
+          <p class="text-xl font-extrabold text-[#181B25] mt-1">480 kcal</p>
+          <span class="text-[10px] font-bold text-[#F59E0B]">Goal: 600 kcal</span>
+        </div>
+      </div>
+
+      <!-- Health Bio-Readiness Graph Card -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm">
+        <h3 class="text-sm font-bold text-[#181B25] mb-2">Readiness & Vitals Curve</h3>
+        <p class="text-xs text-[#464555] mb-4">Peak cognitive window identified between 10:00 AM and 01:00 PM today.</p>
+        <div class="h-28 flex items-end justify-between gap-2 px-2 pt-4 border-b border-[#E5E8F5]">
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-[#3525CD]/20 rounded-t h-16 hover:bg-[#3525CD] transition"></div>
+            <span class="text-[10px] text-[#464555]">6AM</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-[#3525CD] rounded-t h-24"></div>
+            <span class="text-[10px] font-bold text-[#3525CD]">9AM</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-[#3525CD] rounded-t h-26"></div>
+            <span class="text-[10px] font-bold text-[#3525CD]">12PM</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-[#3525CD]/70 rounded-t h-20"></div>
+            <span class="text-[10px] text-[#464555]">3PM</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-[#3525CD]/40 rounded-t h-14"></div>
+            <span class="text-[10px] text-[#464555]">6PM</span>
+          </div>
+          <div class="flex-1 flex flex-col items-center gap-1">
+            <div class="w-full bg-[#3525CD]/20 rounded-t h-10"></div>
+            <span class="text-[10px] text-[#464555]">9PM</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 5: MORE / COMMAND CENTER (MoreScreen.kt - 33 Modules) -->
+    <!-- ============================================================ -->
+    <div id="screen-more" class="hidden space-y-4">
+      <div class="pt-1">
+        <h2 class="text-xl font-black text-[#181B25]">Command Center</h2>
+        <p class="text-xs text-[#464555]">All 33 interconnected life operating system modules</p>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <!-- Module: Rules & Automations -->
+        <div onclick="openSubScreen('automations')" class="p-3.5 bg-white rounded-2xl border border-[#E5E8F5] shadow-xs hover:border-[#3525CD] cursor-pointer transition">
+          <div class="w-8 h-8 rounded-xl bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center mb-2">
+            <span class="material-symbols-rounded text-[18px]">bolt</span>
+          </div>
+          <p class="text-xs font-bold text-[#181B25]">Rules & Automations</p>
+          <p class="text-[10px] text-[#464555]">When → If → Then engine</p>
+        </div>
+
+        <!-- Module: Finance & Ledger -->
+        <div onclick="switchTab('finance')" class="p-3.5 bg-white rounded-2xl border border-[#E5E8F5] shadow-xs hover:border-[#3525CD] cursor-pointer transition">
+          <div class="w-8 h-8 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center mb-2">
+            <span class="material-symbols-rounded text-[18px]">account_balance_wallet</span>
+          </div>
+          <p class="text-xs font-bold text-[#181B25]">Finance & Ledger</p>
+          <p class="text-[10px] text-[#464555]">Daily cap & bank sync</p>
+        </div>
+
+        <!-- Module: Meetings Hub -->
+        <div onclick="openSubScreen('meetings')" class="p-3.5 bg-white rounded-2xl border border-[#E5E8F5] shadow-xs hover:border-[#3525CD] cursor-pointer transition">
+          <div class="w-8 h-8 rounded-xl bg-[#E0F2FE] text-[#0288D1] flex items-center justify-center mb-2">
+            <span class="material-symbols-rounded text-[18px]">videocam</span>
+          </div>
+          <p class="text-xs font-bold text-[#181B25]">Meetings & MoM</p>
+          <p class="text-[10px] text-[#464555]">AI notes & summaries</p>
+        </div>
+
+        <!-- Module: Habits & Streaks -->
+        <div onclick="triggerToast('Habit streaks: 18-day streak on 2.5L water')" class="p-3.5 bg-white rounded-2xl border border-[#E5E8F5] shadow-xs hover:border-[#3525CD] cursor-pointer transition">
+          <div class="w-8 h-8 rounded-xl bg-[#FFF3E0] text-[#F57C00] flex items-center justify-center mb-2">
+            <span class="material-symbols-rounded text-[18px]">local_fire_department</span>
+          </div>
+          <p class="text-xs font-bold text-[#181B25]">Habits & Goals</p>
+          <p class="text-[10px] text-[#464555]">Streak tracker & badges</p>
+        </div>
+
+        <!-- Module: Travel Itinerary -->
+        <div onclick="triggerToast('Chennai flight 6E 412 in 3 days. Packing list ready.')" class="p-3.5 bg-white rounded-2xl border border-[#E5E8F5] shadow-xs hover:border-[#3525CD] cursor-pointer transition">
+          <div class="w-8 h-8 rounded-xl bg-[#E8EAF6] text-[#3949AB] flex items-center justify-center mb-2">
+            <span class="material-symbols-rounded text-[18px]">flight</span>
+          </div>
+          <p class="text-xs font-bold text-[#181B25]">Travel & Trips</p>
+          <p class="text-[10px] text-[#464555]">Boarding pass & packing</p>
+        </div>
+
+        <!-- Module: Document Vault -->
+        <div onclick="triggerToast('Decrypted on-device AES Document Vault')" class="p-3.5 bg-white rounded-2xl border border-[#E5E8F5] shadow-xs hover:border-[#3525CD] cursor-pointer transition">
+          <div class="w-8 h-8 rounded-xl bg-[#ECEFF1] text-[#455A64] flex items-center justify-center mb-2">
+            <span class="material-symbols-rounded text-[18px]">lock</span>
+          </div>
+          <p class="text-xs font-bold text-[#181B25]">Document Vault</p>
+          <p class="text-[10px] text-[#464555]">Passports & health cards</p>
+        </div>
+      </div>
+
+      <!-- Settings: Device Calendar Alerts & Notification Sync -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="cal-sync-icon-box" class="w-10 h-10 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center transition-colors">
+              <span class="material-symbols-rounded text-[22px]">event_available</span>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-[#181B25]">Sync Device Calendar Notifications</p>
+              <p id="cal-sync-desc" class="text-[10px] text-[#464555]">Active: DayMeet alerts mirrored with local system calendar</p>
+            </div>
+          </div>
+          <!-- Toggle Switch -->
+          <button onclick="toggleCalendarSync()" id="cal-sync-toggle-btn" class="w-12 h-6 rounded-full bg-[#3525CD] p-0.5 transition-colors relative flex items-center cursor-pointer">
+            <div id="cal-sync-knob" class="w-5 h-5 rounded-full bg-white shadow-md transform translate-x-6 transition-transform"></div>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- TAB 6: FINANCE (Direct Module Screen) -->
+    <!-- ============================================================ -->
+    <div id="screen-finance" class="hidden space-y-4">
+      <div class="flex items-center justify-between pt-1">
+        <div>
+          <h2 class="text-xl font-black text-[#181B25]">Finance & Ledger</h2>
+          <p class="text-xs text-[#464555]">Daily ₹5,000 ceiling, recurring bills, and accounts</p>
+        </div>
+        <button onclick="openQuickAddWith('Expense')" class="px-3 py-1.5 rounded-xl bg-[#005338] text-white text-xs font-bold flex items-center gap-1 hover:bg-[#00422B]">
+          <span class="material-symbols-rounded text-[14px]">add</span>
+          <span>Log Expense</span>
+        </button>
+      </div>
+
+      <!-- Finance Cards Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="p-4 bg-white rounded-2xl border border-[#E5E8F5] shadow-sm">
+          <p class="text-xs text-[#464555] font-medium">Liquid Net Worth</p>
+          <p class="text-2xl font-black text-[#181B25] mt-1">₹1,42,850</p>
+          <p class="text-[11px] text-[#464555] mt-0.5">HDFC ••4109 & ICICI ••8912</p>
+        </div>
+        <div class="p-4 bg-white rounded-2xl border border-[#E5E8F5] shadow-sm">
+          <p class="text-xs text-[#005338] font-semibold">Today's Total Spend</p>
+          <p class="text-2xl font-black text-[#005338] mt-1">₹3,450</p>
+          <p class="text-[11px] text-[#10B981] mt-0.5">₹1,550 safe buffer remaining</p>
+        </div>
+        <div class="p-4 bg-white rounded-2xl border border-[#E5E8F5] shadow-sm">
+          <p class="text-xs text-[#D97706] font-semibold">Upcoming Bills (48h)</p>
+          <p class="text-2xl font-black text-[#181B25] mt-1">₹2,400</p>
+          <p class="text-[11px] text-[#D32F2F] mt-0.5">Tata Power Electricity</p>
+        </div>
+      </div>
+
+      <!-- D3.js / Recharts-based Bar Chart: Daily Spending vs Daily Budget Ceiling -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-[#181B25]">Daily Spending vs Budget Ceiling</h3>
+            <p class="text-[10px] text-[#464555]">Current week expenditure against daily ₹5,000 ceiling</p>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#2E7D32]">Ceiling ₹5k/day</span>
+        </div>
+
+        <!-- Interactive Tooltip Callout -->
+        <div id="finance-chart-tooltip" class="bg-[#F4F3FB] p-2.5 rounded-xl flex items-center justify-between text-xs transition">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3525CD]"></span>
+            <span id="chart-tooltip-day" class="font-bold text-[#181B25]">Thu (Today): ₹3,450</span>
+          </div>
+          <span id="chart-tooltip-status" class="font-bold text-[#2E7D32]">₹1,550 safe buffer</span>
+        </div>
+
+        <!-- Chart Container with Reference Line -->
+        <div class="relative h-40 w-full pt-4">
+          <!-- ₹5,000 Budget Ceiling Reference Line (dashed red/amber) -->
+          <div class="absolute left-0 right-0 top-7 border-b border-dashed border-[#E53935] flex justify-end pointer-events-none z-10">
+            <span class="text-[9px] font-bold text-[#C62828] bg-[#FFEBEE] px-2 py-0.5 rounded -mt-2.5 shadow-xs">--- Budget Ceiling ₹5,000</span>
+          </div>
+          <!-- ₹2,500 Guideline -->
+          <div class="absolute left-0 right-0 top-24 border-b border-gray-100 pointer-events-none"></div>
+
+          <!-- The Bars (Mon to Sun) -->
+          <div class="relative h-full flex items-end justify-between px-2 gap-2 pb-5">
+            <div onclick="selectFinanceChartBar(0, 'Mon', 2100)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-0" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 35%"></div>
+              <span id="flbl-0" class="text-[10px] text-[#464555] mt-1.5 font-medium">M</span>
+            </div>
+            <div onclick="selectFinanceChartBar(1, 'Tue', 4350)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-1" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 72.5%"></div>
+              <span id="flbl-1" class="text-[10px] text-[#464555] mt-1.5 font-medium">T</span>
+            </div>
+            <div onclick="selectFinanceChartBar(2, 'Wed', 2800)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-2" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 46.6%"></div>
+              <span id="flbl-2" class="text-[10px] text-[#464555] mt-1.5 font-medium">W</span>
+            </div>
+            <div onclick="selectFinanceChartBar(3, 'Thu (Today)', 3450)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-3" class="w-full max-w-[28px] rounded-t-md bg-[#3525CD] ring-2 ring-[#3525CD]/40 transition-all" style="height: 57.5%"></div>
+              <span id="flbl-3" class="text-[10px] text-[#3525CD] font-bold mt-1.5">T</span>
+            </div>
+            <div onclick="selectFinanceChartBar(4, 'Fri', 1800)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-4" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 30%"></div>
+              <span id="flbl-4" class="text-[10px] text-[#464555] mt-1.5 font-medium">F</span>
+            </div>
+            <div onclick="selectFinanceChartBar(5, 'Sat', 4800)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-5" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 80%"></div>
+              <span id="flbl-5" class="text-[10px] text-[#464555] mt-1.5 font-medium">S</span>
+            </div>
+            <div onclick="selectFinanceChartBar(6, 'Sun', 1200)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-6" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 20%"></div>
+              <span id="flbl-6" class="text-[10px] text-[#464555] mt-1.5 font-medium">S</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Summary Footer -->
+        <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5] text-center">
+          <div>
+            <p class="text-[9px] text-[#464555]">Weekly Total</p>
+            <p class="text-xs font-bold text-[#181B25]">₹20,500</p>
+          </div>
+          <div>
+            <p class="text-[9px] text-[#464555]">Daily Average</p>
+            <p class="text-xs font-bold text-[#3525CD]">₹2,928/day</p>
+          </div>
+          <div>
+            <p class="text-[9px] text-[#464555]">Weekly Cap</p>
+            <p class="text-xs font-bold text-[#2E7D32]">₹35,000 (Safe)</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Transactions List -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm space-y-3">
+        <h3 class="text-sm font-bold text-[#181B25]">Recent Ledger Activity</h3>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-[#FFEBEE] text-[#E53935] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[18px]">coffee</span>
+              </div>
+              <div>
+                <p class="font-bold text-[#181B25]">Blue Tokai Coffee Roasters</p>
+                <p class="text-[10px] text-[#464555]">Dining • Today, 08:30 AM</p>
+              </div>
+            </div>
+            <p class="font-bold text-[#E53935]">-₹280</p>
+          </div>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-[#FFEBEE] text-[#E53935] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[18px]">local_taxi</span>
+              </div>
+              <div>
+                <p class="font-bold text-[#181B25]">Uber Premier Transit</p>
+                <p class="text-[10px] text-[#464555]">Transportation • Today, 07:45 AM</p>
+              </div>
+            </div>
+            <p class="font-bold text-[#E53935]">-₹450</p>
+          </div>
+
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5]">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[18px]">payments</span>
+              </div>
+              <div>
+                <p class="font-bold text-[#181B25]">Consulting Client Payment</p>
+                <p class="text-[10px] text-[#464555]">Direct Deposit • Yesterday</p>
+              </div>
+            </div>
+            <p class="font-bold text-[#10B981]">+₹45,000</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================ -->
+  <!-- FLOATING QUICK ADD PILL & BOTTOM DOCK (DayMeetBottomDock.kt) -->
+  <!-- ============================================================ -->
+  <div class="fixed bottom-0 left-0 right-0 z-30 pointer-events-none">
+    <div class="max-w-3xl mx-auto px-4 relative flex flex-col items-center">
+      
+      <!-- Floating Quick Add Pill Button (Identical to DayMeetBottomDock.kt line 38) -->
+      <button onclick="openQuickAddModal()" class="pointer-events-auto mb-2.5 h-[44px] px-5 rounded-full bg-[#4F46E5] text-white font-bold text-xs flex items-center gap-1.5 shadow-[0_8px_20px_rgba(79,70,229,0.35)] hover:bg-[#4338CA] active:scale-95 transition-transform select-none">
+        <span class="material-symbols-rounded text-[18px]">add</span>
+        <span>Quick Add</span>
+      </button>
+
+      <!-- Bottom Navigation Dock (Surface elevation 8dp, 60px height) -->
+      <nav class="pointer-events-auto w-full bg-[#FAF9FF]/95 backdrop-blur-md border-t border-[#E5E8F5] shadow-[0_-4px_16px_rgba(0,0,0,0.04)] h-[60px] flex items-center justify-around px-2">
+        
+        <!-- Tab 1: Home -->
+        <button onclick="switchTab('home')" id="nav-home" class="flex flex-col items-center justify-center flex-1 py-1 text-[#3525CD] transition">
+          <span class="material-symbols-rounded text-[22px]">home</span>
+          <span class="text-[10px] font-bold mt-0.5">Home</span>
+        </button>
+
+        <!-- Tab 2: Calendar -->
+        <button onclick="switchTab('calendar')" id="nav-calendar" class="flex flex-col items-center justify-center flex-1 py-1 text-[#464555] hover:text-[#181B25] transition">
+          <span class="material-symbols-rounded text-[22px]">calendar_today</span>
+          <span class="text-[10px] font-medium mt-0.5">Calendar</span>
+        </button>
+
+        <!-- Tab 3: Tasks with Badge -->
+        <button onclick="switchTab('tasks')" id="nav-tasks" class="flex flex-col items-center justify-center flex-1 py-1 text-[#464555] hover:text-[#181B25] transition relative">
+          <div class="relative">
+            <span class="material-symbols-rounded text-[22px]">check_circle</span>
+            <span id="nav-badge-tasks" class="absolute -top-1 -right-2 px-1 rounded-full bg-[#E53935] text-white text-[9px] font-bold">4</span>
+          </div>
+          <span class="text-[10px] font-medium mt-0.5">Tasks</span>
+        </button>
+
+        <!-- Tab 4: Insights -->
+        <button onclick="switchTab('insights')" id="nav-insights" class="flex flex-col items-center justify-center flex-1 py-1 text-[#464555] hover:text-[#181B25] transition">
+          <span class="material-symbols-rounded text-[22px]">trending_up</span>
+          <span class="text-[10px] font-medium mt-0.5">Insights</span>
+        </button>
+
+        <!-- Tab 5: More (33 modules) -->
+        <button onclick="switchTab('more')" id="nav-more" class="flex flex-col items-center justify-center flex-1 py-1 text-[#464555] hover:text-[#181B25] transition">
+          <span class="material-symbols-rounded text-[22px]">grid_view</span>
+          <span class="text-[10px] font-medium mt-0.5">More</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- MODALS & OVERLAYS (AI Assistant, Daily Briefing, Quick Add) -->
+  <!-- ============================================================ -->
+
+  <!-- 1. AI Copilot / Gemini Overlay (AiAssistantScreen.kt replica) -->
+  <div id="modal-copilot" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#E5E8F5] pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-xl bg-[#E2DFFF] text-[#3525CD] flex items-center justify-center">
+            <span class="material-symbols-rounded text-[18px]">auto_awesome</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-[#181B25] text-sm leading-tight">DayMeet AI Assistant (Gemini)</h3>
+            <p class="text-[10px] text-[#464555]">Natural language executive orchestrator</p>
+          </div>
+        </div>
+        <button onclick="closeAiAssistant()" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">✕</button>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <div class="bg-[#F1F3FF] p-3 rounded-xl text-[#3525CD] space-y-1 font-mono text-[11px]">
+          <p><strong>Try:</strong> "Reschedule my 2 PM meeting to tomorrow morning"</p>
+          <p><strong>Try:</strong> "How much can I spend on dinner without breaking budget?"</p>
+          <p><strong>Try:</strong> "Summarize action items from my last team meeting"</p>
+        </div>
+      </div>
+
+      <div class="flex gap-2">
+        <input id="copilot-input" type="text" placeholder="Ask AI to organize your day, create tasks, or check budget..." class="flex-1 text-xs border border-gray-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#3525CD]">
+        <button onclick="sendCopilotInstruction()" class="px-4 py-2 bg-[#3525CD] text-white text-xs font-bold rounded-xl hover:bg-[#2B1DAE] transition flex items-center gap-1">
+          <span>Send</span>
+          <span class="material-symbols-rounded text-[14px]">send</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Daily Briefing Modal (DailyBriefingScreen.kt replica) -->
+  <div id="modal-briefing" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#E5E8F5] pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">☀️</span>
+          <h3 class="font-bold text-[#181B25] text-base">Morning Synthesis Briefing</h3>
+        </div>
+        <button onclick="closeBriefingModal()" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">✕</button>
+      </div>
+
+      <div class="p-3 bg-[#FFF3E0] border border-[#FFE0B2] rounded-2xl text-xs text-[#B45309]">
+        <strong>Atmosphere:</strong> 72°F Sunny • Optimal focus window 10:00 AM – 01:00 PM. Wearable sleep readiness 85%.
+      </div>
+
+      <div class="space-y-2 text-xs text-[#464555]">
+        <p class="font-bold text-[#181B25]">Crucial Waypoints Today:</p>
+        <ul class="list-disc pl-4 space-y-1.5">
+          <li><strong>09:30 AM</strong> - Product Strategy Review with Alex, Sarah & David.</li>
+          <li><strong>12:00 PM</strong> - Finalize Mobile Design Tokens ahead of release build.</li>
+          <li><strong>02:00 PM</strong> - 90-min Deep Work Sanctuary (DND auto-activated).</li>
+          <li><strong>Tomorrow</strong> - Tata Power electricity bill due (₹2,400).</li>
+        </ul>
+      </div>
+
+      <button onclick="closeBriefingModal(); triggerToast('Briefing acknowledged! Have an energized, productive day! 🚀')" class="w-full py-3 bg-[#3525CD] text-white text-xs font-bold rounded-xl hover:bg-[#2B1DAE] transition">
+        Start My Day 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. Universal Quick Add Modal -->
+  <div id="modal-quickadd" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-[#E5E8F5] pb-3">
+        <h3 class="font-bold text-[#181B25] text-base">Universal Quick Add</h3>
+        <button onclick="closeQuickAddModal()" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">✕</button>
+      </div>
+
+      <!-- Quick Add Category Pills -->
+      <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+        <button onclick="selectQuickAddCategory('Task')" id="qa-tab-Task" class="px-3.5 py-1.5 rounded-full bg-[#3525CD] text-white font-bold">Task</button>
+        <button onclick="selectQuickAddCategory('Meeting')" id="qa-tab-Meeting" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Meeting</button>
+        <button onclick="selectQuickAddCategory('Expense')" id="qa-tab-Expense" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Expense</button>
+        <button onclick="selectQuickAddCategory('Note')" id="qa-tab-Note" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Note</button>
+        <button onclick="selectQuickAddCategory('Habit')" id="qa-tab-Habit" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Habit</button>
+      </div>
+
+      <input id="qa-title" type="text" placeholder="Title / Description (e.g. Call vendor, pay WiFi bill)" class="w-full text-xs border border-gray-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#3525CD]">
+      <input id="qa-time" type="text" placeholder="Time / Due (e.g. 03:30 PM, Tomorrow)" class="w-full text-xs border border-gray-300 rounded-xl px-3.5 py-2 focus:outline-none focus:border-[#3525CD]">
+
+      <button onclick="submitQuickAdd()" class="w-full py-2.5 bg-[#3525CD] text-white text-xs font-bold rounded-xl hover:bg-[#2B1DAE] transition">
+        Save to DayMeet Workspace
+      </button>
+    </div>
+  </div>
+
+  <!-- 4. Search Modal -->
+  <div id="modal-search" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-start justify-center p-4 pt-16">
+    <div class="bg-white w-full max-w-lg rounded-2xl p-4 shadow-2xl space-y-3">
+      <div class="flex items-center gap-2 border-b pb-2.5">
+        <span class="material-symbols-rounded text-gray-400">search</span>
+        <input id="search-input" oninput="handleSearch(this.value)" type="text" placeholder="Search tasks, meetings, expenses, contacts, documents..." class="w-full text-xs outline-none">
+        <button onclick="closeSearchModal()" class="text-xs text-gray-400 hover:text-gray-700">ESC</button>
+      </div>
+      <div id="search-results" class="space-y-1.5 max-h-60 overflow-y-auto text-xs">
+        <p class="text-[11px] text-gray-400 px-2 py-1">Quick results across 33 modules</p>
+        <div onclick="switchTab('tasks'); closeSearchModal()" class="p-2 rounded-lg hover:bg-purple-50 cursor-pointer flex items-center justify-between">
+          <span class="font-bold text-gray-900">Finalize Mobile Design Tokens</span>
+          <span class="text-[10px] text-purple-700 font-semibold">TASK</span>
+        </div>
+        <div onclick="switchTab('calendar'); closeSearchModal()" class="p-2 rounded-lg hover:bg-purple-50 cursor-pointer flex items-center justify-between">
+          <span class="font-bold text-gray-900">Product Strategy Review</span>
+          <span class="text-[10px] text-purple-700 font-semibold">MEETING</span>
+        </div>
+        <div onclick="switchTab('finance'); closeSearchModal()" class="p-2 rounded-lg hover:bg-purple-50 cursor-pointer flex items-center justify-between">
+          <span class="font-bold text-gray-900">Tata Power Electricity Bill</span>
+          <span class="text-[10px] text-purple-700 font-semibold">BILL</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Bar -->
+  <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-[#2C303A] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+    <span id="toast-text">All systems synced</span>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- JAVASCRIPT STATE & INTERACTIONS (1:1 with DayMeetViewModel)  -->
+  <!-- ============================================================ -->
+  <script>
+    // Initial State (Mirroring DayMeetRepository and DayMeetViewModel in Android)
+    let state = {
+      currentTab: 'home',
+      activeCategoryFilter: 'All',
+      selectedQuickAddCat: 'Task',
+      meditationLogged: false,
+      exerciseLogged: false,
+      meditationStreak: 19,
+      exerciseStreak: 14,
+      syncDeviceCalendarAlerts: true,
+      selectedFinanceDayIndex: 3,
+      crossStreamItems: [
+        { id: 'cs1', time: '09:30 AM', title: 'Product Strategy Review', subtitle: '4 attendees • Google Meet', tag: 'Meeting', tagType: 'meeting', isCompleted: false },
+        { id: 'cs2', time: '12:00 PM', title: 'Finalize Mobile Design Tokens', subtitle: 'Due at release freeze • 3 subtasks', tag: 'Priority', tagType: 'priority', isCompleted: false },
+        { id: 'cs3', time: '01:30 PM', title: 'Tata Power Electricity Bill', subtitle: '₹2,400 due tomorrow • 1-tap UPI', tag: 'Autopay', tagType: 'autopay', isCompleted: false },
+        { id: 'cs4', time: '02:00 PM', title: '90m Deep Work Sanctuary', subtitle: 'Calendar focus block • Slack DND', tag: 'Focus', tagType: 'focus', isCompleted: false },
+        { id: 'cs5', time: '04:30 PM', title: 'Review Chennai Trip Packing Checklist', subtitle: 'Flight 6E 412 in 3 days', tag: 'Travel', tagType: 'travel', isCompleted: true },
+        { id: 'cs6', time: '06:00 PM', title: 'Hydration Target Check (2.5L)', subtitle: '1.8L logged • 700ml remaining', tag: 'Wellness', tagType: 'wellness', isCompleted: true }
+      ]
+    };
+
+    // Color mapper for tags matching Android CrossStreamRowItem.kt
+    function getTagStyles(tagType) {
+      switch(tagType) {
+        case 'meeting': return { bg: '#EDE7F6', text: '#673AB7', line: '#3525CD' };
+        case 'priority': return { bg: '#FFEBEE', text: '#E53935', line: '#E53935' };
+        case 'expense': return { bg: '#E8F5E9', text: '#2E7D32', line: '#2E7D32' };
+        case 'focus': return { bg: '#EDE7F6', text: '#3525CD', line: '#3525CD' };
+        case 'wellness': return { bg: '#E1F5FE', text: '#0288D1', line: '#0288D1' };
+        case 'autopay': return { bg: '#ECEFF1', text: '#455A64', line: '#005338' };
+        case 'travel': return { bg: '#E8EAF6', text: '#3949AB', line: '#5C6BC0' };
+        default: return { bg: '#E5E8F5', text: '#464555', line: '#3525CD' };
+      }
+    }
+
+    // Render Cross Stream Items (Home Screen) with Horizontal Swipe-to-Complete
+    function renderCrossStream() {
+      const container = document.getElementById('cross-stream-list');
+      if (!container) return;
+
+      container.innerHTML = state.crossStreamItems.map(item => {
+        const style = getTagStyles(item.tagType);
+        const isCompleted = item.isCompleted;
+
+        return `
+          <div class="relative overflow-hidden rounded-[14px] select-none">
+            <!-- Background revealed during horizontal swipe -->
+            <div class="absolute inset-0 bg-[#10B981] text-white flex items-center justify-between px-4 rounded-[14px] font-bold text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[20px]">check_circle</span>
+                <span>Complete</span>
+              </div>
+              <span class="text-[10px] opacity-80">Release to finish</span>
+            </div>
+
+            <!-- Foreground Card with swipe listeners -->
+            <div id="cs-row-${item.id}"
+                 data-item-id="${item.id}"
+                 class="relative bg-white rounded-[14px] p-3 px-3.5 border ${item.tagType === 'priority' && !isCompleted ? 'border-[#E53935] bg-[#FFF8F8]' : 'border-[#E5E8F5]'} shadow-sm flex items-center justify-between gap-3 transition-transform duration-200 cursor-grab active:cursor-grabbing"
+                 style="touch-action: pan-y;">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <!-- Time -->
+                <span class="text-[11px] font-bold text-[#3525CD] w-14 shrink-0">${item.time}</span>
+
+                <!-- Indicator Line -->
+                <div class="w-[2px] h-8 shrink-0 rounded-full" style="background-color: ${style.line}"></div>
+
+                <!-- Checkbox Button -->
+                <button onclick="event.stopPropagation(); toggleStreamItem('${item.id}')" class="w-6 h-6 shrink-0 rounded-md border flex items-center justify-center transition-colors ${isCompleted ? 'bg-[#10B981] border-[#10B981] text-white' : 'bg-[#E5E8F5] border-[#C7C4D8] text-transparent hover:border-[#3525CD]'}">
+                  <span class="material-symbols-rounded text-[16px]">${isCompleted ? 'check' : ''}</span>
+                </button>
+
+                <!-- Text details -->
+                <div class="flex-1 min-w-0">
+                  <p id="title-${item.id}" class="text-xs font-semibold truncate transition-all ${isCompleted ? 'strike-line text-[#777587]' : 'text-[#181B25]'}">
+                    ${item.title}
+                  </p>
+                  <p class="text-[10px] text-[#464555] truncate ${isCompleted ? 'opacity-50' : ''}">${item.subtitle}</p>
+                </div>
+              </div>
+
+              <!-- Tag pill -->
+              <span class="shrink-0 px-2 py-1 rounded-md text-[10px] font-bold" style="background-color: ${style.bg}; color: ${style.text}">
+                ${item.tag}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      initSwipeGestures();
+      updateMetrics();
+    }
+
+    // Touch & Pointer Swipe-to-Complete Gesture Implementation
+    function initSwipeGestures() {
+      const rows = document.querySelectorAll('[data-item-id]');
+      rows.forEach(row => {
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        const itemId = row.getAttribute('data-item-id');
+
+        function onStart(e) {
+          startX = e.clientX || (e.touches && e.touches[0].clientX);
+          isDragging = true;
+          row.style.transition = 'none';
+        }
+
+        function onMove(e) {
+          if (!isDragging) return;
+          const x = (e.clientX || (e.touches && e.touches[0].clientX)) - startX;
+          if (x > 0) {
+            currentX = x;
+            row.style.transform = `translateX(${Math.min(currentX, 160)}px)`;
+          }
+        }
+
+        function onEnd() {
+          if (!isDragging) return;
+          isDragging = false;
+          row.style.transition = 'transform 0.25s ease-out';
+          if (currentX > 75) {
+            // Swipe threshold met: complete item
+            row.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+              const item = state.crossStreamItems.find(i => i.id === itemId);
+              if (item && !item.isCompleted) {
+                item.isCompleted = true;
+                triggerToast(`Swiped to complete: ${item.title} ✓`);
+              }
+              renderCrossStream();
+              renderTasksTab();
+            }, 200);
+          } else {
+            // Snap back
+            row.style.transform = 'translateX(0px)';
+          }
+          currentX = 0;
+        }
+
+        row.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        row.addEventListener('touchstart', onStart, { passive: true });
+        row.addEventListener('touchmove', onMove, { passive: true });
+        row.addEventListener('touchend', onEnd);
+      });
+    }
+
+    // Render Tasks Tab List
+    function renderTasksTab() {
+      const container = document.getElementById('tasks-full-container');
+      if (!container) return;
+
+      const filtered = state.crossStreamItems.filter(item => {
+        if (state.activeCategoryFilter === 'Pending') return !item.isCompleted;
+        if (state.activeCategoryFilter === 'Completed') return item.isCompleted;
+        return true;
+      });
+
+      container.innerHTML = filtered.map(item => {
+        const style = getTagStyles(item.tagType);
+        return `
+          <div class="bg-white rounded-xl p-3.5 border border-[#E5E8F5] shadow-sm flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+              <button onclick="toggleStreamItem('${item.id}')" class="w-6 h-6 rounded-md border flex items-center justify-center ${item.isCompleted ? 'bg-[#10B981] border-[#10B981] text-white' : 'bg-[#E5E8F5] border-[#C7C4D8] text-transparent'}">
+                <span class="material-symbols-rounded text-[16px]">${item.isCompleted ? 'check' : ''}</span>
+              </button>
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold ${item.isCompleted ? 'strike-line' : 'text-[#181B25]'}">${item.title}</p>
+                <p class="text-[10px] text-[#464555]">${item.subtitle} • Due ${item.time}</p>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold" style="background-color: ${style.bg}; color: ${style.text}">${item.tag}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Toggle Stream Item (Exact animation & strike-through logic as Android)
+    function toggleStreamItem(id) {
+      const item = state.crossStreamItems.find(i => i.id === id);
+      if (!item) return;
+
+      item.isCompleted = !item.isCompleted;
+      
+      triggerToast(item.isCompleted ? `Completed: ${item.title} ✓` : `Marked incomplete: ${item.title}`);
+      renderCrossStream();
+      renderTasksTab();
+    }
+
+    // Update Top Counters & Progress
+    function updateMetrics() {
+      const total = state.crossStreamItems.length;
+      const completed = state.crossStreamItems.filter(i => i.isCompleted).length;
+      const progressPercent = Math.round((completed / total) * 100);
+
+      const bar = document.getElementById('briefing-progress-bar');
+      const text = document.getElementById('briefing-progress-text');
+      const badge = document.getElementById('vitals-focus-badge');
+      const val = document.getElementById('vitals-focus-val');
+      const focusBar = document.getElementById('vitals-focus-bar');
+      const taskBadge = document.getElementById('nav-badge-tasks');
+      const taskMetric = document.getElementById('metric-tasks-count');
+
+      if (bar) bar.style.width = `${progressPercent}%`;
+      if (text) text.innerText = `${completed}/${total} Done`;
+      if (badge) badge.innerText = `${progressPercent}%`;
+      if (val) val.innerText = `${completed}/${total} Tasks`;
+      if (focusBar) focusBar.style.width = `${progressPercent}%`;
+      if (taskBadge) taskBadge.innerText = total - completed;
+      if (taskMetric) taskMetric.innerText = total;
+    }
+
+    // Tab Switching (Home, Calendar, Tasks, Insights, More, Finance)
+    function switchTab(tabId) {
+      state.currentTab = tabId;
+      const screens = ['home', 'calendar', 'tasks', 'insights', 'more', 'finance'];
+
+      screens.forEach(s => {
+        const el = document.getElementById(`screen-${s}`);
+        if (el) {
+          if (s === tabId) {
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        }
+      });
+
+      // Update Bottom Dock Nav Icons Active State
+      const navIds = ['home', 'calendar', 'tasks', 'insights', 'more'];
+      navIds.forEach(n => {
+        const btn = document.getElementById(`nav-${n}`);
+        if (!btn) return;
+        if (n === tabId || (n === 'more' && !navIds.includes(tabId))) {
+          btn.className = 'flex flex-col items-center justify-center flex-1 py-1 text-[#3525CD] transition';
+          btn.querySelector('span:last-child').className = 'text-[10px] font-bold mt-0.5';
+        } else {
+          btn.className = 'flex flex-col items-center justify-center flex-1 py-1 text-[#464555] hover:text-[#181B25] transition';
+          btn.querySelector('span:last-child').className = 'text-[10px] font-medium mt-0.5';
+        }
+      });
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function filterTasks(category) {
+      state.activeCategoryFilter = category;
+      ['all', 'pending', 'completed'].forEach(c => {
+        const btn = document.getElementById(`filter-${c}`);
+        if (!btn) return;
+        if (c.toLowerCase() === category.toLowerCase()) {
+          btn.className = 'px-3 py-1 rounded-full text-xs font-bold bg-[#181B25] text-white';
+        } else {
+          btn.className = 'px-3 py-1 rounded-full text-xs font-medium bg-[#EBEDFB] text-[#464555] hover:bg-[#E5E8F5]';
+        }
+      });
+      renderTasksTab();
+    }
+
+    // Bill Pay Handler
+    function payBill(id) {
+      const card = document.getElementById('electricity-bill-card');
+      if (card) {
+        card.style.opacity = '0.5';
+      }
+      triggerToast('Processing UPI payment ₹2,400 to Tata Power... Paid successfully! ✓');
+      setTimeout(() => {
+        if (card) card.remove();
+      }, 1200);
+    }
+
+    // Quick Add Modal Functions
+    function openQuickAddModal() {
+      document.getElementById('modal-quickadd').classList.remove('hidden');
+    }
+    function closeQuickAddModal() {
+      document.getElementById('modal-quickadd').classList.add('hidden');
+    }
+    function selectQuickAddCategory(cat) {
+      state.selectedQuickAddCat = cat;
+      ['Task', 'Meeting', 'Expense', 'Note', 'Habit'].forEach(c => {
+        const btn = document.getElementById(`qa-tab-${c}`);
+        if (!btn) return;
+        if (c === cat) {
+          btn.className = 'px-3.5 py-1.5 rounded-full bg-[#3525CD] text-white font-bold';
+        } else {
+          btn.className = 'px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium';
+        }
+      });
+    }
+    function openQuickAddWith(cat) {
+      openQuickAddModal();
+      selectQuickAddCategory(cat);
+      document.getElementById('qa-title').focus();
+    }
+    function submitQuickAdd() {
+      const titleInput = document.getElementById('qa-title');
+      const timeInput = document.getElementById('qa-time');
+      const title = titleInput.value.trim();
+      if (!title) {
+        triggerToast('Please enter an item title');
+        return;
+      }
+      const time = timeInput.value.trim() || '03:00 PM';
+      const cat = state.selectedQuickAddCat;
+
+      const tagMap = {
+        'Task': { tag: 'Task', type: 'priority' },
+        'Meeting': { tag: 'Meeting', type: 'meeting' },
+        'Expense': { tag: 'Expense', type: 'expense' },
+        'Note': { tag: 'Note', type: 'focus' },
+        'Habit': { tag: 'Habit', type: 'wellness' }
+      };
+
+      const mapped = tagMap[cat] || { tag: cat, type: 'focus' };
+
+      state.crossStreamItems.unshift({
+        id: 'cs_' + Date.now(),
+        time: time,
+        title: title,
+        subtitle: `Created via Quick Add • ${cat}`,
+        tag: mapped.tag,
+        tagType: mapped.type,
+        isCompleted: false
+      });
+
+      titleInput.value = '';
+      timeInput.value = '';
+      closeQuickAddModal();
+      renderCrossStream();
+      renderTasksTab();
+      triggerToast(`Created new ${cat}: "${title}" synced across modules!`);
+    }
+
+    // Copilot / AI Assistant Modal
+    function openAiAssistant() {
+      document.getElementById('modal-copilot').classList.remove('hidden');
+      document.getElementById('copilot-input').focus();
+    }
+    function closeAiAssistant() {
+      document.getElementById('modal-copilot').classList.add('hidden');
+    }
+    function sendCopilotInstruction() {
+      const inp = document.getElementById('copilot-input');
+      const text = inp.value.trim();
+      if (!text) return;
+      inp.value = '';
+      closeAiAssistant();
+      triggerToast(`AI Copilot executed: "${text}"`);
+    }
+
+    // Daily Briefing Modal
+    function openBriefingModal() {
+      document.getElementById('modal-briefing').classList.remove('hidden');
+    }
+    function closeBriefingModal() {
+      document.getElementById('modal-briefing').classList.add('hidden');
+    }
+
+    // Search Modal
+    function openSearchModal() {
+      document.getElementById('modal-search').classList.remove('hidden');
+      document.getElementById('search-input').focus();
+    }
+    function closeSearchModal() {
+      document.getElementById('modal-search').classList.add('hidden');
+    }
+    function handleSearch(query) {
+      // dynamic filter
+    }
+
+    // Habit Check-in Handlers
+    function logHabitMeditation() {
+      state.meditationLogged = !state.meditationLogged;
+      const btn = document.getElementById('habit-btn-meditation');
+      const badge = document.getElementById('habit-status-meditation');
+      const iconBox = document.getElementById('habit-icon-box-meditation');
+      const icon = document.getElementById('habit-icon-meditation');
+      const streak = document.getElementById('habit-streak-meditation');
+
+      if (state.meditationLogged) {
+        state.meditationStreak = 20;
+        if (btn) btn.className = 'p-2.5 rounded-xl border-2 border-[#673AB7] bg-[#F5F2FD] cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#673AB7] text-white';
+          badge.innerText = 'Completed ✓';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#673AB7] text-white flex items-center justify-center';
+        if (icon) icon.innerText = 'check';
+        if (streak) streak.innerText = '20d streak 🔥 • 15m logged';
+        triggerToast('Logged Morning Meditation! 20-day streak achieved! 🧘‍♂️');
+      } else {
+        state.meditationStreak = 19;
+        if (btn) btn.className = 'p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#673AB7] cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]';
+          badge.innerText = 'Tap to Log';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center';
+        if (icon) icon.innerText = 'self_improvement';
+        if (streak) streak.innerText = '19d streak • 15m';
+        triggerToast('Marked Morning Meditation as unlogged');
+      }
+    }
+
+    function logHabitExercise() {
+      state.exerciseLogged = !state.exerciseLogged;
+      const btn = document.getElementById('habit-btn-exercise');
+      const badge = document.getElementById('habit-status-exercise');
+      const iconBox = document.getElementById('habit-icon-box-exercise');
+      const icon = document.getElementById('habit-icon-exercise');
+      const streak = document.getElementById('habit-streak-exercise');
+
+      if (state.exerciseLogged) {
+        state.exerciseStreak = 15;
+        if (btn) btn.className = 'p-2.5 rounded-xl border-2 border-[#2E7D32] bg-[#E8F5E9]/50 cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#2E7D32] text-white';
+          badge.innerText = 'Completed ✓';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#2E7D32] text-white flex items-center justify-center';
+        if (icon) icon.innerText = 'check';
+        if (streak) streak.innerText = '15d streak 🔥 • 30m logged';
+        triggerToast('Logged Morning Exercise! 15-day streak achieved! 🏃');
+      } else {
+        state.exerciseStreak = 14;
+        if (btn) btn.className = 'p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#2E7D32] cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]';
+          badge.innerText = 'Tap to Log';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center';
+        if (icon) icon.innerText = 'fitness_center';
+        if (streak) streak.innerText = '14d streak • 30m';
+        triggerToast('Marked Morning Exercise as unlogged');
+      }
+    }
+
+    // Finance Bar Chart Interactive Selection
+    function selectFinanceChartBar(idx, dayName, amount) {
+      state.selectedFinanceDayIndex = idx;
+      const ceiling = 5000;
+      const diff = ceiling - amount;
+      const tooltipDay = document.getElementById('chart-tooltip-day');
+      const tooltipStatus = document.getElementById('chart-tooltip-status');
+
+      if (tooltipDay) tooltipDay.innerText = `${dayName}: ₹${amount.toLocaleString()}`;
+      if (tooltipStatus) {
+        if (diff >= 0) {
+          tooltipStatus.className = 'font-bold text-[#2E7D32]';
+          tooltipStatus.innerText = `₹${diff.toLocaleString()} safe buffer`;
+        } else {
+          tooltipStatus.className = 'font-bold text-[#E53935]';
+          tooltipStatus.innerText = `₹${(-diff).toLocaleString()} over limit`;
+        }
+      }
+
+      for (let i = 0; i < 7; i++) {
+        const bar = document.getElementById(`fbar-${i}`);
+        const lbl = document.getElementById(`flbl-${i}`);
+        if (bar) {
+          if (i === idx) {
+            bar.className = 'w-full max-w-[28px] rounded-t-md bg-[#3525CD] ring-2 ring-[#3525CD]/40 transition-all';
+          } else {
+            bar.className = 'w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all';
+          }
+        }
+        if (lbl) {
+          if (i === idx) {
+            lbl.className = 'text-[10px] text-[#3525CD] font-bold mt-1.5';
+          } else {
+            lbl.className = 'text-[10px] text-[#464555] mt-1.5 font-medium';
+          }
+        }
+      }
+    }
+
+    // Settings: Toggle Calendar Sync
+    function toggleCalendarSync() {
+      state.syncDeviceCalendarAlerts = !state.syncDeviceCalendarAlerts;
+      const btn = document.getElementById('cal-sync-toggle-btn');
+      const knob = document.getElementById('cal-sync-knob');
+      const desc = document.getElementById('cal-sync-desc');
+      const iconBox = document.getElementById('cal-sync-icon-box');
+
+      if (state.syncDeviceCalendarAlerts) {
+        if (btn) btn.className = 'w-12 h-6 rounded-full bg-[#3525CD] p-0.5 transition-colors relative flex items-center cursor-pointer';
+        if (knob) knob.className = 'w-5 h-5 rounded-full bg-white shadow-md transform translate-x-6 transition-transform';
+        if (desc) desc.innerText = 'Active: DayMeet alerts mirrored with local system calendar';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center transition-colors';
+        triggerToast('Device Calendar sync enabled: DayMeet alerts mirrored to system calendar');
+      } else {
+        if (btn) btn.className = 'w-12 h-6 rounded-full bg-gray-300 p-0.5 transition-colors relative flex items-center cursor-pointer';
+        if (knob) knob.className = 'w-5 h-5 rounded-full bg-white shadow-md transform translate-x-0 transition-transform';
+        if (desc) desc.innerText = 'Disabled: Only internal DayMeet alert engine will notify you';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center transition-colors';
+        triggerToast('Device Calendar sync disabled: internal alert engine only');
+      }
+    }
+
+    // SubScreen Trigger
+    function openSubScreen(screen) {
+      if (screen === 'automations') {
+        triggerToast('Rules & Automations: 5 workflows running (When → If → Then)');
+      } else if (screen === 'meetings') {
+        triggerToast('Opening Meetings Hub with automated MoM generation');
+      } else {
+        triggerToast(`Opening ${screen} module...`);
+      }
+    }
+
+    // Toast Notification Banner (DayMeet toast matching app_toast_banner)
+    let toastTimer = null;
+    function triggerToast(text) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toast-text');
+      if (!toast || !toastText) return;
+      toastText.innerText = text;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3200);
+    }
+
+    // Initial Load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCrossStream();
+      renderTasksTab();
+    });
+  </script>
 </body>
 </html>

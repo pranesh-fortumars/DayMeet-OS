@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -13,6 +15,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -30,19 +33,25 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
+import com.example.model.HabitItem
 import com.example.ui.theme.*
 import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 @Composable
 fun HomeScreen(
@@ -676,6 +685,14 @@ fun HomeScreen(
                         modifier = Modifier.weight(1f).clickable { viewModel.openSubScreen("habits") }
                     )
                 }
+
+                // Daily Habit Check-in Bento Widget (Single Tap Logging for Morning Meditation & Exercise)
+                DailyHabitCheckInCard(
+                    habits = habits,
+                    onLogMeditation = { viewModel.logMorningMeditation() },
+                    onLogExercise = { viewModel.logMorningExercise() },
+                    onOpenHabits = { viewModel.openSubScreen("habits") }
+                )
             }
         }
 
@@ -958,25 +975,32 @@ private fun CrossStreamRowItem(
     var isVisible by remember { mutableStateOf(true) }
     var isAnimatingOut by remember { mutableStateOf(false) }
 
+    val swipeOffset = remember { Animatable(0f) }
+    val density = LocalDensity.current
+    val thresholdPx = with(density) { 85.dp.toPx() }
+
     val strikeProgress = remember { Animatable(if (item.isCompleted) 1f else 0f) }
     val isDueSoon = remember(item.time) { TimeUtils.isDueWithinNextTwoHours(item.time) }
     val isWarning = isDueSoon && !item.isCompleted && !isToggledState && (item.tagType == "priority" || item.tagType == "task")
 
-    fun triggerToggle() {
+    fun triggerToggle(swipedOut: Boolean = false) {
         if (isAnimatingOut) return
         if (!isToggledState) {
             isAnimatingOut = true
             isToggledState = true
             coroutineScope.launch {
+                if (swipedOut) {
+                    launch { swipeOffset.animateTo(1200f, tween(320)) }
+                }
                 // Phase 1: Smooth CSS strike-through transition across title
                 strikeProgress.animateTo(
                     targetValue = 1f,
-                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                    animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
                 )
-                delay(80)
+                delay(60)
                 // Phase 2: Slide-out horizontally & shrink vertically
                 isVisible = false
-                delay(380)
+                delay(340)
                 // Phase 3: Remove from list
                 onRemove()
             }
@@ -997,151 +1021,436 @@ private fun CrossStreamRowItem(
             animationSpec = tween(durationMillis = 280)
         )
     ) {
-        Card(
-            shape = RoundedCornerShape(14.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (isWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning) 2.dp else 1.dp),
+        val currentOffset = swipeOffset.value
+        val progressFraction = (currentOffset / thresholdPx).coerceIn(0f, 1f)
+
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .then(
-                    if (isWarning) Modifier.border(1.5.dp, Color(0xFFE53935), RoundedCornerShape(14.dp)) else Modifier
-                )
-                .clickable { onItemClick() }
                 .testTag("cross_stream_${item.id}")
+                .testTag("swipe_to_complete_${item.id}")
         ) {
-            Row(
+            // Background Reveal: Swipe-to-Complete Emerald Layer
+            if (currentOffset > 2f) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(EmeraldSuccess)
+                        .padding(horizontal = 18.dp),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.graphicsLayer {
+                            alpha = progressFraction
+                            scaleX = 0.85f + (0.15f * progressFraction)
+                            scaleY = 0.85f + (0.15f * progressFraction)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = "Complete",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Text(
+                            text = if (currentOffset >= thresholdPx) "Release to Complete ✓" else "Swipe to Complete",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Foreground Card with Horizontal Drag Gesture
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning) 2.dp else 1.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                    .then(
+                        if (isWarning) Modifier.border(1.5.dp, Color(0xFFE53935), RoundedCornerShape(14.dp)) else Modifier
+                    )
+                    .pointerInput(item.id, isAnimatingOut) {
+                        if (isAnimatingOut) return@pointerInput
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                if (swipeOffset.value >= thresholdPx) {
+                                    triggerToggle(swipedOut = true)
+                                } else {
+                                    coroutineScope.launch {
+                                        swipeOffset.animateTo(0f, spring(stiffness = Spring.StiffnessMediumLow))
+                                    }
+                                }
+                            },
+                            onDragCancel = {
+                                coroutineScope.launch {
+                                    swipeOffset.animateTo(0f, spring())
+                                }
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                if (dragAmount > 0 || swipeOffset.value > 0) {
+                                    change.consume()
+                                    val nextVal = (swipeOffset.value + dragAmount).coerceAtLeast(0f)
+                                    coroutineScope.launch {
+                                        swipeOffset.snapTo(nextVal)
+                                    }
+                                }
+                            }
+                        )
+                    }
+                    .clickable { onItemClick() }
             ) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Time column
-                    Text(
-                        text = item.time,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Primary,
-                            fontSize = 11.sp
-                        ),
-                        modifier = Modifier.width(54.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        // Time column
+                        Text(
+                            text = item.time,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary,
+                                fontSize = 11.sp
+                            ),
+                            modifier = Modifier.width(54.dp)
+                        )
 
-                    // Vertical indicator line
-                    Box(
-                        modifier = Modifier
-                            .width(2.dp)
-                            .height(32.dp)
-                            .background(
-                                when (item.tagType) {
-                                    "priority" -> Color(0xFFE53935)
-                                    "expense" -> Color(0xFF2E7D32)
-                                    "focus" -> Primary
-                                    "wellness" -> SkyBlue
-                                    "autopay" -> Tertiary
-                                    "travel" -> Color(0xFF5C6BC0)
-                                    else -> Primary
+                        // Vertical indicator line
+                        Box(
+                            modifier = Modifier
+                                .width(2.dp)
+                                .height(32.dp)
+                                .background(
+                                    when (item.tagType) {
+                                        "priority" -> Color(0xFFE53935)
+                                        "expense" -> Color(0xFF2E7D32)
+                                        "focus" -> Primary
+                                        "wellness" -> SkyBlue
+                                        "autopay" -> Tertiary
+                                        "travel" -> Color(0xFF5C6BC0)
+                                        else -> Primary
+                                    }
+                                )
+                        )
+
+                        // Interactive check button
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isToggledState) EmeraldSuccess else SurfaceContainerHigh)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isToggledState) EmeraldSuccess else OutlineVariant,
+                                    shape = RoundedCornerShape(6.dp)
+                                )
+                                .clickable { triggerToggle() }
+                                .testTag("cross_stream_check_${item.id}"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isToggledState) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Completed",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+
+                        // Text details
+                        Column(modifier = Modifier.weight(1f)) {
+                            val textColor = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.55f) else OnSurface
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textColor
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.drawWithContent {
+                                    drawContent()
+                                    if (strikeProgress.value > 0f) {
+                                        val strokeW = 1.8.dp.toPx()
+                                        val y = size.height * 0.54f
+                                        drawLine(
+                                            color = OnSurfaceVariant,
+                                            start = Offset(0f, y),
+                                            end = Offset(size.width * strikeProgress.value, y),
+                                            strokeWidth = strokeW,
+                                            cap = StrokeCap.Round
+                                        )
+                                    }
                                 }
                             )
-                    )
-
-                    // Interactive check button
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (isToggledState) EmeraldSuccess else SurfaceContainerHigh)
-                            .border(
-                                width = 1.dp,
-                                color = if (isToggledState) EmeraldSuccess else OutlineVariant,
-                                shape = RoundedCornerShape(6.dp)
-                            )
-                            .clickable { triggerToggle() }
-                            .testTag("cross_stream_check_${item.id}"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (isToggledState) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Completed",
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
+                            Text(
+                                text = item.subtitle,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
 
-                    // Text details
-                    Column(modifier = Modifier.weight(1f)) {
-                        val textColor = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.55f) else OnSurface
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Tag pill
+                    val (tagBg, tagColor) = when (item.tagType) {
+                        "meeting" -> Color(0xFFEDE7F6) to Color(0xFF673AB7)
+                        "priority" -> Color(0xFFFFEBEE) to Color(0xFFE53935)
+                        "expense" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+                        "focus" -> Color(0xFFEDE7F6) to Primary
+                        "wellness" -> Color(0xFFE1F5FE) to Color(0xFF0288D1)
+                        "autopay" -> Color(0xFFECEFF1) to Color(0xFF455A64)
+                        "travel" -> Color(0xFFE8EAF6) to Color(0xFF3949AB)
+                        else -> SurfaceContainerHigh to OnSurfaceVariant
+                    }
+
+                    Text(
+                        text = item.tag,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = tagColor,
+                            fontSize = 10.sp
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(tagBg)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyHabitCheckInCard(
+    habits: List<HabitItem>,
+    onLogMeditation: () -> Unit,
+    onLogExercise: () -> Unit,
+    onOpenHabits: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val meditationHabit = habits.find { it.name.contains("Meditation", ignoreCase = true) || it.id == "h_meditation" }
+    val exerciseHabit = habits.find { it.name.contains("Exercise", ignoreCase = true) || it.name.contains("Walk", ignoreCase = true) || it.id == "h_exercise" }
+
+    val isMeditationDone = meditationHabit?.isCompletedToday == true
+    val isExerciseDone = exerciseHabit?.isCompletedToday == true
+
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("daily_habit_checkin_widget")
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFFFF3E0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SelfImprovement,
+                            contentDescription = null,
+                            tint = AmberWarning,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    Column {
                         Text(
-                            text = item.title,
+                            text = "Daily Habit Check-in",
                             style = MaterialTheme.typography.titleSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = textColor
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.drawWithContent {
-                                drawContent()
-                                if (strikeProgress.value > 0f) {
-                                    val strokeW = 1.8.dp.toPx()
-                                    val y = size.height * 0.54f
-                                    drawLine(
-                                        color = OnSurfaceVariant,
-                                        start = Offset(0f, y),
-                                        end = Offset(size.width * strikeProgress.value, y),
-                                        strokeWidth = strokeW,
-                                        cap = StrokeCap.Round
-                                    )
-                                }
-                            }
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
                         )
                         Text(
-                            text = item.subtitle,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant,
-                                fontSize = 11.sp
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            text = "Single-tap morning routine logging",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { onOpenHabits() }
+                ) {
+                    Text(
+                        text = "View All",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
 
-                // Tag pill
-                val (tagBg, tagColor) = when (item.tagType) {
-                    "meeting" -> Color(0xFFEDE7F6) to Color(0xFF673AB7)
-                    "priority" -> Color(0xFFFFEBEE) to Color(0xFFE53935)
-                    "expense" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
-                    "focus" -> Color(0xFFEDE7F6) to Primary
-                    "wellness" -> Color(0xFFE1F5FE) to Color(0xFF0288D1)
-                    "autopay" -> Color(0xFFECEFF1) to Color(0xFF455A64)
-                    "travel" -> Color(0xFFE8EAF6) to Color(0xFF3949AB)
-                    else -> SurfaceContainerHigh to OnSurfaceVariant
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Two Quick Tap Habit Pills
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                HabitSingleTapItem(
+                    title = "Morning Meditation",
+                    subtitle = "${meditationHabit?.streakDays ?: 19}d streak • 15m",
+                    isDone = isMeditationDone,
+                    icon = Icons.Default.SelfImprovement,
+                    activeColor = Color(0xFF673AB7),
+                    activeBg = Color(0xFFEDE7F6),
+                    testTag = "habit_checkin_meditation",
+                    onClick = onLogMeditation,
+                    modifier = Modifier.weight(1f)
+                )
+
+                HabitSingleTapItem(
+                    title = "Morning Exercise",
+                    subtitle = "${exerciseHabit?.streakDays ?: 14}d streak • 30m",
+                    isDone = isExerciseDone,
+                    icon = Icons.Default.FitnessCenter,
+                    activeColor = Color(0xFF2E7D32),
+                    activeBg = Color(0xFFE8F5E9),
+                    testTag = "habit_checkin_exercise",
+                    onClick = onLogExercise,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HabitSingleTapItem(
+    title: String,
+    subtitle: String,
+    isDone: Boolean,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    activeColor: Color,
+    activeBg: Color,
+    testTag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDone) activeBg else SurfaceContainerLow
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .border(
+                width = 1.dp,
+                color = if (isDone) activeColor.copy(alpha = 0.3f) else OutlineVariant,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable { onClick() }
+            .testTag(testTag)
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(if (isDone) activeColor else SurfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isDone) Icons.Default.Check else icon,
+                        contentDescription = null,
+                        tint = if (isDone) Color.White else OnSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
 
                 Text(
-                    text = item.tag,
+                    text = if (isDone) "Logged ✓" else "Tap to Log",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontWeight = FontWeight.Bold,
-                        color = tagColor,
+                        color = if (isDone) activeColor else Primary,
                         fontSize = 10.sp
                     ),
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(tagBg)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .background(if (isDone) activeColor.copy(alpha = 0.12f) else PrimaryFixed)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = OnSurface,
+                    fontSize = 12.sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    color = OnSurfaceVariant,
+                    fontSize = 10.sp
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -201,6 +201,19 @@ class DayMeetViewModel : ViewModel() {
     private val _isAutoCheckUpdateEnabled = MutableStateFlow(true)
     val isAutoCheckUpdateEnabled: StateFlow<Boolean> = _isAutoCheckUpdateEnabled.asStateFlow()
 
+    // Local device calendar notification alert sync setting
+    private val _syncDeviceCalendarAlerts = MutableStateFlow(true)
+    val syncDeviceCalendarAlerts: StateFlow<Boolean> = _syncDeviceCalendarAlerts.asStateFlow()
+
+    fun toggleSyncDeviceCalendarAlerts(enabled: Boolean? = null) {
+        val next = enabled ?: !_syncDeviceCalendarAlerts.value
+        _syncDeviceCalendarAlerts.value = next
+        showToast(
+            if (next) "Device calendar notifications synced with DayMeet alert system"
+            else "Device calendar notification sync paused"
+        )
+    }
+
     init {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             while (true) {
@@ -344,6 +357,28 @@ class DayMeetViewModel : ViewModel() {
         }
         val habit = _habits.value.firstOrNull { it.id == id }
         showToast("${habit?.name} marked ${if (habit?.isCompletedToday == true) "done! 🔥" else "incomplete"}")
+    }
+
+    fun logMorningMeditation() {
+        val meditation = _habits.value.find { it.name.contains("Meditation", ignoreCase = true) || it.id == "h_meditation" }
+        if (meditation != null) {
+            toggleHabit(meditation.id)
+        } else {
+            val newH = HabitItem("h_meditation", "Morning Meditation", 19, "Daily", true, "Mindfulness")
+            _habits.value = listOf(newH) + _habits.value
+            showToast("🧘 Morning Meditation marked done! 19d streak 🔥")
+        }
+    }
+
+    fun logMorningExercise() {
+        val exercise = _habits.value.find { it.name.contains("Exercise", ignoreCase = true) || it.name.contains("Walk", ignoreCase = true) || it.id == "h_exercise" }
+        if (exercise != null) {
+            toggleHabit(exercise.id)
+        } else {
+            val newH = HabitItem("h_exercise", "Morning Exercise", 14, "Daily", true, "Fitness")
+            _habits.value = listOf(newH) + _habits.value
+            showToast("🏃 Morning Exercise marked done! 14d streak 🔥")
+        }
     }
 
     // Shopping Actions

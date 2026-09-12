@@ -324,6 +324,55 @@
             <p class="text-[10px] text-[#464555] mt-1.5 truncate">66% consistency</p>
           </div>
         </div>
+
+        <!-- Bento 5: Daily Habit Check-in Card (Single-tap morning routine logging) -->
+        <div class="bg-white rounded-2xl p-3.5 border border-[#E5E8F5] shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-[#FFF3E0] text-[#D97706] flex items-center justify-center">
+                <span class="material-symbols-rounded text-[18px]">self_improvement</span>
+              </div>
+              <div>
+                <p class="text-xs font-bold text-[#181B25]">Daily Habit Check-in</p>
+                <p class="text-[10px] text-[#464555]">Single-tap morning routine logging</p>
+              </div>
+            </div>
+            <button onclick="triggerToast('Viewing all 5 habits & streaks')" class="text-xs font-bold text-[#3525CD] flex items-center gap-0.5 hover:underline">
+              <span>View All</span>
+              <span class="material-symbols-rounded text-[14px]">chevron_right</span>
+            </button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <!-- Morning Meditation Button -->
+            <div onclick="logHabitMeditation()" id="habit-btn-meditation" class="p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#673AB7] cursor-pointer transition flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <div id="habit-icon-box-meditation" class="w-7 h-7 rounded-full bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center">
+                  <span id="habit-icon-meditation" class="material-symbols-rounded text-[16px]">self_improvement</span>
+                </div>
+                <span id="habit-status-meditation" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]">Tap to Log</span>
+              </div>
+              <div class="mt-2">
+                <p class="text-xs font-bold text-[#181B25] truncate">Morning Meditation</p>
+                <p id="habit-streak-meditation" class="text-[10px] text-[#464555]">19d streak • 15m</p>
+              </div>
+            </div>
+
+            <!-- Morning Exercise Button -->
+            <div onclick="logHabitExercise()" id="habit-btn-exercise" class="p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#2E7D32] cursor-pointer transition flex flex-col justify-between">
+              <div class="flex items-center justify-between">
+                <div id="habit-icon-box-exercise" class="w-7 h-7 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center">
+                  <span id="habit-icon-exercise" class="material-symbols-rounded text-[16px]">fitness_center</span>
+                </div>
+                <span id="habit-status-exercise" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]">Tap to Log</span>
+              </div>
+              <div class="mt-2">
+                <p class="text-xs font-bold text-[#181B25] truncate">Morning Exercise</p>
+                <p id="habit-streak-exercise" class="text-[10px] text-[#464555]">14d streak • 30m</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 7. Cross-Module Stream (Full View) -->
@@ -651,6 +700,25 @@
           <p class="text-[10px] text-[#464555]">Passports & health cards</p>
         </div>
       </div>
+
+      <!-- Settings: Device Calendar Alerts & Notification Sync -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="cal-sync-icon-box" class="w-10 h-10 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center transition-colors">
+              <span class="material-symbols-rounded text-[22px]">event_available</span>
+            </div>
+            <div>
+              <p class="text-xs font-bold text-[#181B25]">Sync Device Calendar Notifications</p>
+              <p id="cal-sync-desc" class="text-[10px] text-[#464555]">Active: DayMeet alerts mirrored with local system calendar</p>
+            </div>
+          </div>
+          <!-- Toggle Switch -->
+          <button onclick="toggleCalendarSync()" id="cal-sync-toggle-btn" class="w-12 h-6 rounded-full bg-[#3525CD] p-0.5 transition-colors relative flex items-center cursor-pointer">
+            <div id="cal-sync-knob" class="w-5 h-5 rounded-full bg-white shadow-md transform translate-x-6 transition-transform"></div>
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ============================================================ -->
@@ -684,6 +752,84 @@
           <p class="text-xs text-[#D97706] font-semibold">Upcoming Bills (48h)</p>
           <p class="text-2xl font-black text-[#181B25] mt-1">₹2,400</p>
           <p class="text-[11px] text-[#D32F2F] mt-0.5">Tata Power Electricity</p>
+        </div>
+      </div>
+
+      <!-- D3.js / Recharts-based Bar Chart: Daily Spending vs Daily Budget Ceiling -->
+      <div class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-[#181B25]">Daily Spending vs Budget Ceiling</h3>
+            <p class="text-[10px] text-[#464555]">Current week expenditure against daily ₹5,000 ceiling</p>
+          </div>
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#2E7D32]">Ceiling ₹5k/day</span>
+        </div>
+
+        <!-- Interactive Tooltip Callout -->
+        <div id="finance-chart-tooltip" class="bg-[#F4F3FB] p-2.5 rounded-xl flex items-center justify-between text-xs transition">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3525CD]"></span>
+            <span id="chart-tooltip-day" class="font-bold text-[#181B25]">Thu (Today): ₹3,450</span>
+          </div>
+          <span id="chart-tooltip-status" class="font-bold text-[#2E7D32]">₹1,550 safe buffer</span>
+        </div>
+
+        <!-- Chart Container with Reference Line -->
+        <div class="relative h-40 w-full pt-4">
+          <!-- ₹5,000 Budget Ceiling Reference Line (dashed red/amber) -->
+          <div class="absolute left-0 right-0 top-7 border-b border-dashed border-[#E53935] flex justify-end pointer-events-none z-10">
+            <span class="text-[9px] font-bold text-[#C62828] bg-[#FFEBEE] px-2 py-0.5 rounded -mt-2.5 shadow-xs">--- Budget Ceiling ₹5,000</span>
+          </div>
+          <!-- ₹2,500 Guideline -->
+          <div class="absolute left-0 right-0 top-24 border-b border-gray-100 pointer-events-none"></div>
+
+          <!-- The Bars (Mon to Sun) -->
+          <div class="relative h-full flex items-end justify-between px-2 gap-2 pb-5">
+            <div onclick="selectFinanceChartBar(0, 'Mon', 2100)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-0" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 35%"></div>
+              <span id="flbl-0" class="text-[10px] text-[#464555] mt-1.5 font-medium">M</span>
+            </div>
+            <div onclick="selectFinanceChartBar(1, 'Tue', 4350)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-1" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 72.5%"></div>
+              <span id="flbl-1" class="text-[10px] text-[#464555] mt-1.5 font-medium">T</span>
+            </div>
+            <div onclick="selectFinanceChartBar(2, 'Wed', 2800)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-2" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 46.6%"></div>
+              <span id="flbl-2" class="text-[10px] text-[#464555] mt-1.5 font-medium">W</span>
+            </div>
+            <div onclick="selectFinanceChartBar(3, 'Thu (Today)', 3450)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-3" class="w-full max-w-[28px] rounded-t-md bg-[#3525CD] ring-2 ring-[#3525CD]/40 transition-all" style="height: 57.5%"></div>
+              <span id="flbl-3" class="text-[10px] text-[#3525CD] font-bold mt-1.5">T</span>
+            </div>
+            <div onclick="selectFinanceChartBar(4, 'Fri', 1800)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-4" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 30%"></div>
+              <span id="flbl-4" class="text-[10px] text-[#464555] mt-1.5 font-medium">F</span>
+            </div>
+            <div onclick="selectFinanceChartBar(5, 'Sat', 4800)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-5" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 80%"></div>
+              <span id="flbl-5" class="text-[10px] text-[#464555] mt-1.5 font-medium">S</span>
+            </div>
+            <div onclick="selectFinanceChartBar(6, 'Sun', 1200)" class="flex-1 flex flex-col items-center group cursor-pointer h-full justify-end">
+              <div id="fbar-6" class="w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all" style="height: 20%"></div>
+              <span id="flbl-6" class="text-[10px] text-[#464555] mt-1.5 font-medium">S</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weekly Summary Footer -->
+        <div class="grid grid-cols-3 gap-2 p-2.5 rounded-xl bg-[#FAF9FF] border border-[#E5E8F5] text-center">
+          <div>
+            <p class="text-[9px] text-[#464555]">Weekly Total</p>
+            <p class="text-xs font-bold text-[#181B25]">₹20,500</p>
+          </div>
+          <div>
+            <p class="text-[9px] text-[#464555]">Daily Average</p>
+            <p class="text-xs font-bold text-[#3525CD]">₹2,928/day</p>
+          </div>
+          <div>
+            <p class="text-[9px] text-[#464555]">Weekly Cap</p>
+            <p class="text-xs font-bold text-[#2E7D32]">₹35,000 (Safe)</p>
+          </div>
         </div>
       </div>
 
@@ -922,6 +1068,12 @@
       currentTab: 'home',
       activeCategoryFilter: 'All',
       selectedQuickAddCat: 'Task',
+      meditationLogged: false,
+      exerciseLogged: false,
+      meditationStreak: 19,
+      exerciseStreak: 14,
+      syncDeviceCalendarAlerts: true,
+      selectedFinanceDayIndex: 3,
       crossStreamItems: [
         { id: 'cs1', time: '09:30 AM', title: 'Product Strategy Review', subtitle: '4 attendees • Google Meet', tag: 'Meeting', tagType: 'meeting', isCompleted: false },
         { id: 'cs2', time: '12:00 PM', title: 'Finalize Mobile Design Tokens', subtitle: 'Due at release freeze • 3 subtasks', tag: 'Priority', tagType: 'priority', isCompleted: false },
@@ -946,7 +1098,7 @@
       }
     }
 
-    // Render Cross Stream Items (Home Screen)
+    // Render Cross Stream Items (Home Screen) with Horizontal Swipe-to-Complete
     function renderCrossStream() {
       const container = document.getElementById('cross-stream-list');
       if (!container) return;
@@ -956,37 +1108,110 @@
         const isCompleted = item.isCompleted;
 
         return `
-          <div id="cs-row-${item.id}" class="bg-white rounded-[14px] p-3 px-3.5 border ${item.tagType === 'priority' && !isCompleted ? 'border-[#E53935] bg-[#FFF8F8]' : 'border-[#E5E8F5]'} shadow-sm flex items-center justify-between gap-3 transition-all duration-300">
-            <div class="flex items-center gap-3 flex-1 min-w-0">
-              <!-- Time -->
-              <span class="text-[11px] font-bold text-[#3525CD] w-14 shrink-0">${item.time}</span>
-
-              <!-- Indicator Line -->
-              <div class="w-[2px] h-8 shrink-0 rounded-full" style="background-color: ${style.line}"></div>
-
-              <!-- Checkbox (Interactive Toggle with strike-through & removal) -->
-              <button onclick="toggleStreamItem('${item.id}')" class="w-6 h-6 shrink-0 rounded-md border flex items-center justify-center transition-colors ${isCompleted ? 'bg-[#10B981] border-[#10B981] text-white' : 'bg-[#E5E8F5] border-[#C7C4D8] text-transparent hover:border-[#3525CD]'}">
-                <span class="material-symbols-rounded text-[16px]">${isCompleted ? 'check' : ''}</span>
-              </button>
-
-              <!-- Text details -->
-              <div class="flex-1 min-w-0">
-                <p id="title-${item.id}" class="text-xs font-semibold truncate transition-all ${isCompleted ? 'strike-line text-[#777587]' : 'text-[#181B25]'}">
-                  ${item.title}
-                </p>
-                <p class="text-[10px] text-[#464555] truncate ${isCompleted ? 'opacity-50' : ''}">${item.subtitle}</p>
+          <div class="relative overflow-hidden rounded-[14px] select-none">
+            <!-- Background revealed during horizontal swipe -->
+            <div class="absolute inset-0 bg-[#10B981] text-white flex items-center justify-between px-4 rounded-[14px] font-bold text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="material-symbols-rounded text-[20px]">check_circle</span>
+                <span>Complete</span>
               </div>
+              <span class="text-[10px] opacity-80">Release to finish</span>
             </div>
 
-            <!-- Tag pill -->
-            <span class="shrink-0 px-2 py-1 rounded-md text-[10px] font-bold" style="background-color: ${style.bg}; color: ${style.text}">
-              ${item.tag}
-            </span>
+            <!-- Foreground Card with swipe listeners -->
+            <div id="cs-row-${item.id}"
+                 data-item-id="${item.id}"
+                 class="relative bg-white rounded-[14px] p-3 px-3.5 border ${item.tagType === 'priority' && !isCompleted ? 'border-[#E53935] bg-[#FFF8F8]' : 'border-[#E5E8F5]'} shadow-sm flex items-center justify-between gap-3 transition-transform duration-200 cursor-grab active:cursor-grabbing"
+                 style="touch-action: pan-y;">
+              <div class="flex items-center gap-3 flex-1 min-w-0">
+                <!-- Time -->
+                <span class="text-[11px] font-bold text-[#3525CD] w-14 shrink-0">${item.time}</span>
+
+                <!-- Indicator Line -->
+                <div class="w-[2px] h-8 shrink-0 rounded-full" style="background-color: ${style.line}"></div>
+
+                <!-- Checkbox Button -->
+                <button onclick="event.stopPropagation(); toggleStreamItem('${item.id}')" class="w-6 h-6 shrink-0 rounded-md border flex items-center justify-center transition-colors ${isCompleted ? 'bg-[#10B981] border-[#10B981] text-white' : 'bg-[#E5E8F5] border-[#C7C4D8] text-transparent hover:border-[#3525CD]'}">
+                  <span class="material-symbols-rounded text-[16px]">${isCompleted ? 'check' : ''}</span>
+                </button>
+
+                <!-- Text details -->
+                <div class="flex-1 min-w-0">
+                  <p id="title-${item.id}" class="text-xs font-semibold truncate transition-all ${isCompleted ? 'strike-line text-[#777587]' : 'text-[#181B25]'}">
+                    ${item.title}
+                  </p>
+                  <p class="text-[10px] text-[#464555] truncate ${isCompleted ? 'opacity-50' : ''}">${item.subtitle}</p>
+                </div>
+              </div>
+
+              <!-- Tag pill -->
+              <span class="shrink-0 px-2 py-1 rounded-md text-[10px] font-bold" style="background-color: ${style.bg}; color: ${style.text}">
+                ${item.tag}
+              </span>
+            </div>
           </div>
         `;
       }).join('');
 
+      initSwipeGestures();
       updateMetrics();
+    }
+
+    // Touch & Pointer Swipe-to-Complete Gesture Implementation
+    function initSwipeGestures() {
+      const rows = document.querySelectorAll('[data-item-id]');
+      rows.forEach(row => {
+        let startX = 0;
+        let currentX = 0;
+        let isDragging = false;
+        const itemId = row.getAttribute('data-item-id');
+
+        function onStart(e) {
+          startX = e.clientX || (e.touches && e.touches[0].clientX);
+          isDragging = true;
+          row.style.transition = 'none';
+        }
+
+        function onMove(e) {
+          if (!isDragging) return;
+          const x = (e.clientX || (e.touches && e.touches[0].clientX)) - startX;
+          if (x > 0) {
+            currentX = x;
+            row.style.transform = `translateX(${Math.min(currentX, 160)}px)`;
+          }
+        }
+
+        function onEnd() {
+          if (!isDragging) return;
+          isDragging = false;
+          row.style.transition = 'transform 0.25s ease-out';
+          if (currentX > 75) {
+            // Swipe threshold met: complete item
+            row.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+              const item = state.crossStreamItems.find(i => i.id === itemId);
+              if (item && !item.isCompleted) {
+                item.isCompleted = true;
+                triggerToast(`Swiped to complete: ${item.title} ✓`);
+              }
+              renderCrossStream();
+              renderTasksTab();
+            }, 200);
+          } else {
+            // Snap back
+            row.style.transform = 'translateX(0px)';
+          }
+          currentX = 0;
+        }
+
+        row.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        row.addEventListener('touchstart', onStart, { passive: true });
+        row.addEventListener('touchmove', onMove, { passive: true });
+        row.addEventListener('touchend', onEnd);
+      });
     }
 
     // Render Tasks Tab List
@@ -1211,6 +1436,135 @@
     }
     function handleSearch(query) {
       // dynamic filter
+    }
+
+    // Habit Check-in Handlers
+    function logHabitMeditation() {
+      state.meditationLogged = !state.meditationLogged;
+      const btn = document.getElementById('habit-btn-meditation');
+      const badge = document.getElementById('habit-status-meditation');
+      const iconBox = document.getElementById('habit-icon-box-meditation');
+      const icon = document.getElementById('habit-icon-meditation');
+      const streak = document.getElementById('habit-streak-meditation');
+
+      if (state.meditationLogged) {
+        state.meditationStreak = 20;
+        if (btn) btn.className = 'p-2.5 rounded-xl border-2 border-[#673AB7] bg-[#F5F2FD] cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#673AB7] text-white';
+          badge.innerText = 'Completed ✓';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#673AB7] text-white flex items-center justify-center';
+        if (icon) icon.innerText = 'check';
+        if (streak) streak.innerText = '20d streak 🔥 • 15m logged';
+        triggerToast('Logged Morning Meditation! 20-day streak achieved! 🧘‍♂️');
+      } else {
+        state.meditationStreak = 19;
+        if (btn) btn.className = 'p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#673AB7] cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]';
+          badge.innerText = 'Tap to Log';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center';
+        if (icon) icon.innerText = 'self_improvement';
+        if (streak) streak.innerText = '19d streak • 15m';
+        triggerToast('Marked Morning Meditation as unlogged');
+      }
+    }
+
+    function logHabitExercise() {
+      state.exerciseLogged = !state.exerciseLogged;
+      const btn = document.getElementById('habit-btn-exercise');
+      const badge = document.getElementById('habit-status-exercise');
+      const iconBox = document.getElementById('habit-icon-box-exercise');
+      const icon = document.getElementById('habit-icon-exercise');
+      const streak = document.getElementById('habit-streak-exercise');
+
+      if (state.exerciseLogged) {
+        state.exerciseStreak = 15;
+        if (btn) btn.className = 'p-2.5 rounded-xl border-2 border-[#2E7D32] bg-[#E8F5E9]/50 cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#2E7D32] text-white';
+          badge.innerText = 'Completed ✓';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#2E7D32] text-white flex items-center justify-center';
+        if (icon) icon.innerText = 'check';
+        if (streak) streak.innerText = '15d streak 🔥 • 30m logged';
+        triggerToast('Logged Morning Exercise! 15-day streak achieved! 🏃');
+      } else {
+        state.exerciseStreak = 14;
+        if (btn) btn.className = 'p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#2E7D32] cursor-pointer transition flex flex-col justify-between';
+        if (badge) {
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#3525CD]/10 text-[#3525CD]';
+          badge.innerText = 'Tap to Log';
+        }
+        if (iconBox) iconBox.className = 'w-7 h-7 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center';
+        if (icon) icon.innerText = 'fitness_center';
+        if (streak) streak.innerText = '14d streak • 30m';
+        triggerToast('Marked Morning Exercise as unlogged');
+      }
+    }
+
+    // Finance Bar Chart Interactive Selection
+    function selectFinanceChartBar(idx, dayName, amount) {
+      state.selectedFinanceDayIndex = idx;
+      const ceiling = 5000;
+      const diff = ceiling - amount;
+      const tooltipDay = document.getElementById('chart-tooltip-day');
+      const tooltipStatus = document.getElementById('chart-tooltip-status');
+
+      if (tooltipDay) tooltipDay.innerText = `${dayName}: ₹${amount.toLocaleString()}`;
+      if (tooltipStatus) {
+        if (diff >= 0) {
+          tooltipStatus.className = 'font-bold text-[#2E7D32]';
+          tooltipStatus.innerText = `₹${diff.toLocaleString()} safe buffer`;
+        } else {
+          tooltipStatus.className = 'font-bold text-[#E53935]';
+          tooltipStatus.innerText = `₹${(-diff).toLocaleString()} over limit`;
+        }
+      }
+
+      for (let i = 0; i < 7; i++) {
+        const bar = document.getElementById(`fbar-${i}`);
+        const lbl = document.getElementById(`flbl-${i}`);
+        if (bar) {
+          if (i === idx) {
+            bar.className = 'w-full max-w-[28px] rounded-t-md bg-[#3525CD] ring-2 ring-[#3525CD]/40 transition-all';
+          } else {
+            bar.className = 'w-full max-w-[28px] rounded-t-md bg-[#D9D7FF] group-hover:bg-[#3525CD] transition-all';
+          }
+        }
+        if (lbl) {
+          if (i === idx) {
+            lbl.className = 'text-[10px] text-[#3525CD] font-bold mt-1.5';
+          } else {
+            lbl.className = 'text-[10px] text-[#464555] mt-1.5 font-medium';
+          }
+        }
+      }
+    }
+
+    // Settings: Toggle Calendar Sync
+    function toggleCalendarSync() {
+      state.syncDeviceCalendarAlerts = !state.syncDeviceCalendarAlerts;
+      const btn = document.getElementById('cal-sync-toggle-btn');
+      const knob = document.getElementById('cal-sync-knob');
+      const desc = document.getElementById('cal-sync-desc');
+      const iconBox = document.getElementById('cal-sync-icon-box');
+
+      if (state.syncDeviceCalendarAlerts) {
+        if (btn) btn.className = 'w-12 h-6 rounded-full bg-[#3525CD] p-0.5 transition-colors relative flex items-center cursor-pointer';
+        if (knob) knob.className = 'w-5 h-5 rounded-full bg-white shadow-md transform translate-x-6 transition-transform';
+        if (desc) desc.innerText = 'Active: DayMeet alerts mirrored with local system calendar';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center transition-colors';
+        triggerToast('Device Calendar sync enabled: DayMeet alerts mirrored to system calendar');
+      } else {
+        if (btn) btn.className = 'w-12 h-6 rounded-full bg-gray-300 p-0.5 transition-colors relative flex items-center cursor-pointer';
+        if (knob) knob.className = 'w-5 h-5 rounded-full bg-white shadow-md transform translate-x-0 transition-transform';
+        if (desc) desc.innerText = 'Disabled: Only internal DayMeet alert engine will notify you';
+        if (iconBox) iconBox.className = 'w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center transition-colors';
+        triggerToast('Device Calendar sync disabled: internal alert engine only');
+      }
     }
 
     // SubScreen Trigger

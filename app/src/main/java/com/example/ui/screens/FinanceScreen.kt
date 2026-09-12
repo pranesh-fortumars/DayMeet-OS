@@ -16,11 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.FinanceTransaction
@@ -389,79 +392,12 @@ fun FinanceScreen(
             }
         }
 
-        // Weekly Spending Cadence Chart
+        // Weekly Spending vs Budget Ceiling (D3 / Recharts-style Interactive Bar Chart)
         item {
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Weekly Spending Cadence",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface
-                            )
-                        )
-                        Text(
-                            text = "Avg $48/day",
-                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    val weekDays = listOf(
-                        Triple("M", 0.35f, false),
-                        Triple("T", 0.65f, false),
-                        Triple("W", 0.50f, false),
-                        Triple("T", 0.43f, true),
-                        Triple("F", 0.15f, false),
-                        Triple("S", 0.20f, false),
-                        Triple("S", 0.10f, false)
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(100.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
-                        weekDays.forEach { (label, ratio, isToday) ->
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Bottom,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .width(18.dp)
-                                        .height((70 * ratio).dp)
-                                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                        .background(if (isToday) Primary else SurfaceContainerHigh)
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isToday) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isToday) Primary else OnSurfaceVariant
-                                    )
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            DailySpendingWeeklyBarChart(
+                todaySpend = spentToday,
+                dailyCeiling = dailyLimit
+            )
         }
 
         // Today's Transactions
@@ -730,6 +666,310 @@ private fun UpcomingBillRowItem(
                             .background(PrimaryFixed)
                             .clickable { onPayEarly() }
                             .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailySpendingWeeklyBarChart(
+    todaySpend: Double,
+    dailyCeiling: Double = 5000.0,
+    modifier: Modifier = Modifier
+) {
+    data class DaySpendData(
+        val dayLabel: String,
+        val fullDayName: String,
+        val amount: Double,
+        val isToday: Boolean = false
+    )
+
+    val weekData = remember(todaySpend) {
+        listOf(
+            DaySpendData("M", "Mon", 2100.0),
+            DaySpendData("T", "Tue", 4350.0),
+            DaySpendData("W", "Wed", 2800.0),
+            DaySpendData("T", "Thu (Today)", todaySpend, isToday = true),
+            DaySpendData("F", "Fri", 1800.0),
+            DaySpendData("S", "Sat", 4800.0),
+            DaySpendData("S", "Sun", 1200.0)
+        )
+    }
+
+    var selectedDayIndex by remember { mutableStateOf(3) } // default Thu (Today)
+    val selectedDay = weekData.getOrNull(selectedDayIndex) ?: weekData[3]
+
+    val maxScale = 6000.0 // ceiling is 5000, max scale 6000
+    val totalWeekSpend = weekData.sumOf { it.amount }
+    val avgDaily = totalWeekSpend / 7.0
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("finance_spending_bar_chart")
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header & Tag
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Daily Spending vs Budget Ceiling",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                    Text(
+                        text = "Current week expenditure against daily ₹5,000 ceiling",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE8F5E9))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Ceiling ₹5k/day",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32),
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Interactive Tooltip (Recharts-style Callout)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceContainerHigh)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (selectedDay.amount > dailyCeiling) Color(0xFFD32F2F) else Primary)
+                        )
+                        Text(
+                            text = "${selectedDay.fullDayName}: ₹${String.format("%,.0f", selectedDay.amount)}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                    }
+
+                    val diff = dailyCeiling - selectedDay.amount
+                    val statusText = if (diff >= 0) "₹${String.format("%,.0f", diff)} buffer" else "₹${String.format("%,.0f", -diff)} over limit"
+                    val statusColor = if (diff >= 0) Color(0xFF2E7D32) else Color(0xFFD32F2F)
+
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // The Chart Canvas & Bars Container
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(140.dp)
+            ) {
+                // Background reference line at ceiling (₹5,000 / 6,000 = 83.3% height from bottom -> y = 16.7% from top)
+                val ceilingRatio = (dailyCeiling / maxScale).toFloat() // ~0.833
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val ceilingY = size.height * (1f - ceilingRatio)
+                    val midY = size.height * (1f - (2500f / 6000f))
+
+                    // 2500 guideline
+                    drawLine(
+                        color = Color(0xFFE0E0E0),
+                        start = Offset(0f, midY),
+                        end = Offset(size.width, midY),
+                        strokeWidth = 1.dp.toPx()
+                    )
+
+                    // 5000 ceiling reference line (dashed red/amber)
+                    drawLine(
+                        color = Color(0xFFE53935).copy(alpha = 0.7f),
+                        start = Offset(0f, ceilingY),
+                        end = Offset(size.width, ceilingY),
+                        strokeWidth = 1.5.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    )
+                }
+
+                // Reference line badge
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(y = 8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFFFEBEE))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "--- Budget Ceiling ₹5,000",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFFC62828),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    )
+                }
+
+                // Bar items Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    weekData.forEachIndexed { index, item ->
+                        val barRatio = (item.amount / maxScale).toFloat().coerceIn(0.04f, 1f)
+                        val isSelected = index == selectedDayIndex
+                        val isOverCeiling = item.amount > dailyCeiling
+
+                        val barColor = when {
+                            isOverCeiling -> Color(0xFFE53935)
+                            item.isToday -> Primary
+                            isSelected -> Primary.copy(alpha = 0.85f)
+                            else -> PrimaryFixedDim
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom,
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable { selectedDayIndex = index }
+                                .padding(horizontal = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .fillMaxHeight(barRatio)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                    .background(barColor)
+                                    .then(
+                                        if (isSelected) Modifier.border(
+                                            width = 1.5.dp,
+                                            color = if (isOverCeiling) Color(0xFFB71C1C) else Primary,
+                                            shape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
+                                        ) else Modifier
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // X-Axis Day Labels
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                weekData.forEachIndexed { index, item ->
+                    val isSelected = index == selectedDayIndex
+                    Text(
+                        text = item.dayLabel,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontSize = 11.sp,
+                            fontWeight = if (item.isToday || isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (item.isToday) Primary else if (isSelected) OnSurface else OnSurfaceVariant
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { selectedDayIndex = index },
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Footer Metrics
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceContainerLow)
+                    .padding(10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Weekly Total",
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                    )
+                    Text(
+                        text = "₹${String.format("%,.0f", totalWeekSpend)}",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Daily Average",
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                    )
+                    Text(
+                        text = "₹${String.format("%,.0f", avgDaily)}/day",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = Primary)
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Weekly Budget Cap",
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                    )
+                    Text(
+                        text = "₹35,000 (Safe)",
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
                     )
                 }
             }

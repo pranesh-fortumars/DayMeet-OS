@@ -373,7 +373,87 @@ fun MoreScreen(
             }
         }
 
-        // 7. Production Releases & In-App Auto Updates
+        // 7. System Notifications & Device Calendar Sync
+        item {
+            SectionHeader(title = "SYSTEM NOTIFICATIONS & CALENDAR SYNC")
+        }
+
+        item {
+            val isCalendarSyncEnabled by viewModel.syncDeviceCalendarAlerts.collectAsStateWithLifecycle()
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings_calendar_sync_card")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isCalendarSyncEnabled) Color(0xFFE8F5E9) else SurfaceContainerHigh),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.EventAvailable,
+                                contentDescription = null,
+                                tint = if (isCalendarSyncEnabled) Color(0xFF2E7D32) else OnSurfaceVariant,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                text = "Sync Device Calendar Notifications",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = if (isCalendarSyncEnabled)
+                                    "Active: DayMeet alerts mirrored with local system calendar"
+                                else
+                                    "Disabled: Only internal DayMeet alert engine will notify you",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isCalendarSyncEnabled,
+                        onCheckedChange = { viewModel.toggleSyncDeviceCalendarAlerts() },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Primary,
+                            uncheckedThumbColor = Color.White,
+                            uncheckedTrackColor = SurfaceContainerHigh
+                        ),
+                        modifier = Modifier.testTag("calendar_sync_toggle")
+                    )
+                }
+            }
+        }
+
+        // 8. Production Releases & In-App Auto Updates
         item {
             SectionHeader("PRODUCTION RELEASES & AUTO-UPDATES")
         }

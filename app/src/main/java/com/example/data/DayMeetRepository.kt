@@ -471,11 +471,12 @@ object DayMeetRepository {
     )
 
     fun getInitialHabits(): List<HabitItem> = listOf(
+        HabitItem("h_meditation", "Morning Meditation", 19, "Daily", false, "Mindfulness"),
+        HabitItem("h_exercise", "Morning Exercise", 14, "Daily", false, "Fitness"),
         HabitItem("h1", "Wake up early (06:30 AM)", 18, "Daily", true, "Wellness"),
         HabitItem("h2", "Drink 2.5L Water", 12, "Daily", false, "Health"),
         HabitItem("h3", "Read 20 pages", 7, "Daily", false, "Learning"),
-        HabitItem("h4", "Midday 4-7-8 Breathwork", 14, "Daily", true, "Mindfulness"),
-        HabitItem("h5", "Evening Walk (30 min)", 5, "Daily", true, "Fitness")
+        HabitItem("h4", "Midday 4-7-8 Breathwork", 14, "Daily", true, "Mindfulness")
     )
 
     fun getInitialNotes(): List<NoteItem> = listOf(
