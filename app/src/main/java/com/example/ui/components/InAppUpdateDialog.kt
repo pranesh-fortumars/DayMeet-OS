@@ -12,6 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,8 +26,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import android.content.pm.PackageManager
+import android.os.Build
+import com.example.BuildConfig
 import com.example.model.AppUpdateInfo
 import com.example.ui.theme.*
+import com.example.util.AppUpdateManager
 
 @Composable
 fun InAppUpdateDialog(
@@ -35,6 +41,50 @@ fun InAppUpdateDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+
+    // Query current installed version code directly from device package manager
+    val installedPackageVersionCode = remember(context) {
+        try {
+            val pInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.packageManager.getPackageInfo(
+                    context.packageName,
+                    PackageManager.PackageInfoFlags.of(0)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                context.packageManager.getPackageInfo(context.packageName, 0)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                pInfo.longVersionCode.toInt()
+            } else {
+                @Suppress("DEPRECATION")
+                pInfo.versionCode
+            }
+        } catch (e: Exception) {
+            BuildConfig.VERSION_CODE
+        }
+    }
+
+    // Factor in any locally applied updates persisted in storage
+    val effectiveInstalledCode = remember(installedPackageVersionCode) {
+        maxOf(installedPackageVersionCode, AppUpdateManager.getEffectiveVersionCode(context))
+    }
+
+    // Determine latest available version code from Google Play Store or direct channel
+    val latestAvailableVersionCode = remember(updateInfo) {
+        updateInfo.playUpdateInfo?.availableVersionCode() ?: updateInfo.latestVersionCode
+    }
+
+    // Version Check: Ensure the dialog ONLY triggers when a strictly higher version code is detected
+    val isStrictlyHigherVersion = latestAvailableVersionCode > effectiveInstalledCode
+
+    if (!isStrictlyHigherVersion || !updateInfo.isUpdateAvailable) {
+        // Automatically dismiss dialog if the available version is not strictly higher
+        LaunchedEffect(Unit) {
+            onDismiss()
+        }
+        return
+    }
 
     Dialog(
         onDismissRequest = {
