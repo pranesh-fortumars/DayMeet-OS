@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,6 +21,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 
@@ -369,6 +371,15 @@ fun MoreScreen(
                 }
             }
         }
+
+        // 7. Production Releases & In-App Auto Updates
+        item {
+            SectionHeader("PRODUCTION RELEASES & AUTO-UPDATES")
+        }
+
+        item {
+            AppUpdatesCard(viewModel = viewModel)
+        }
     }
 }
 
@@ -472,6 +483,204 @@ private fun ModuleListRow(
                 tint = OnSurfaceVariant,
                 modifier = Modifier.size(18.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
+    val updateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
+    val isAutoCheckEnabled by viewModel.isAutoCheckUpdateEnabled.collectAsStateWithLifecycle()
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("app_updates_card")
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PrimaryFixed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudSync,
+                            contentDescription = "Cloud Sync",
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Production Auto-Update",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                        Text(
+                            text = "Release Channel: Production (Main)",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+
+                val hasUpdate = updateInfo?.isUpdateAvailable == true
+                Text(
+                    text = if (hasUpdate) "Update Available" else "Latest Build",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasUpdate) Primary else EmeraldSuccess,
+                        fontSize = 11.sp
+                    ),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (hasUpdate) PrimaryFixed else EmeraldSuccess.copy(alpha = 0.12f))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+
+            HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+            // Current Version & Status Info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Installed Version",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                    Text(
+                        text = "DayMeet v${updateInfo?.currentVersionName ?: "1.0"} (Build ${updateInfo?.currentVersionCode ?: 1})",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = OnSurface
+                        )
+                    )
+                }
+
+                if (updateInfo?.isUpdateAvailable == true) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            text = "Production Target",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Primary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                        Text(
+                            text = "v${updateInfo?.latestVersionName} (Build ${updateInfo?.latestVersionCode})",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Automatic Check Toggle Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceContainerHigh.copy(alpha = 0.5f))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Auto-Check on Startup",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = OnSurface
+                        )
+                    )
+                    Text(
+                        text = "Notifies and prompts update when a new production build is published",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+                Switch(
+                    checked = isAutoCheckEnabled,
+                    onCheckedChange = { viewModel.toggleAutoCheckUpdates() },
+                    modifier = Modifier.testTag("toggle_auto_update")
+                )
+            }
+
+            // Actions Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = { viewModel.checkForAppUpdates(manual = true) },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("check_updates_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Check Updates", style = MaterialTheme.typography.labelMedium)
+                }
+
+                Button(
+                    onClick = { viewModel.openUpdateDialog() },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("view_update_dialog_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SystemUpdate,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = if (updateInfo?.isUpdateAvailable == true) "Update Now" else "Update Details",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
         }
     }
 }

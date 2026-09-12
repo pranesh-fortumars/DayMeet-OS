@@ -50,4 +50,12 @@ class ExampleRobolectricTest {
     assertTrue(remainingFeed.none { it.id == targetTask.id })
     assertEquals(initialFeed.size - 1, remainingFeed.size)
   }
+
+  @Test
+  fun `toggleAutoCheckUpdates changes preference state`() {
+    val viewModel = DayMeetViewModel()
+    val initial = viewModel.isAutoCheckUpdateEnabled.value
+    viewModel.toggleAutoCheckUpdates()
+    assertEquals(!initial, viewModel.isAutoCheckUpdateEnabled.value)
+  }
 }

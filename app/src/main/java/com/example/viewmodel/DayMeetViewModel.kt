@@ -1,9 +1,11 @@
 package com.example.viewmodel
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.DayMeetRepository
 import com.example.model.*
+import com.example.util.AppUpdateManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -186,6 +188,16 @@ class DayMeetViewModel : ViewModel() {
     private val _toastMessage = MutableStateFlow<String?>(null)
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
+    // App Update & Production Sync state
+    private val _appUpdateInfo = MutableStateFlow<AppUpdateInfo?>(null)
+    val appUpdateInfo: StateFlow<AppUpdateInfo?> = _appUpdateInfo.asStateFlow()
+
+    private val _showUpdateDialog = MutableStateFlow(false)
+    val showUpdateDialog: StateFlow<Boolean> = _showUpdateDialog.asStateFlow()
+
+    private val _isAutoCheckUpdateEnabled = MutableStateFlow(true)
+    val isAutoCheckUpdateEnabled: StateFlow<Boolean> = _isAutoCheckUpdateEnabled.asStateFlow()
+
     init {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             while (true) {
@@ -193,6 +205,14 @@ class DayMeetViewModel : ViewModel() {
                 if (_isFocusRunning.value && !_isFocusCompleted.value && _focusTimerRemaining.value > 0) {
                     _focusTimerRemaining.value -= 1
                 }
+            }
+        }
+
+        // Automatic background check for production updates on app startup
+        viewModelScope.launch {
+            delay(1500)
+            if (_isAutoCheckUpdateEnabled.value) {
+                checkForAppUpdates(manual = false)
             }
         }
     }
@@ -677,5 +697,82 @@ class DayMeetViewModel : ViewModel() {
                 _toastMessage.value = null
             }
         }
+    }
+
+    // App In-App Production Update Functions
+    fun checkForAppUpdates(manual: Boolean = false) {
+        viewModelScope.launch {
+            try {
+                val update = AppUpdateManager.checkForUpdates()
+                if (update.isUpdateAvailable) {
+                    _appUpdateInfo.value = update
+                    _showUpdateDialog.value = true
+                    if (manual) {
+                        showToast("New production release available: v${update.latestVersionName}")
+                    }
+                } else if (manual) {
+                    showToast("DayMeet is up to date (v${update.currentVersionName})")
+                }
+            } catch (e: Exception) {
+                if (manual) showToast("Could not check for updates")
+            }
+        }
+    }
+
+    fun startAppUpdateDownload(context: Context) {
+        val current = _appUpdateInfo.value ?: return
+        _appUpdateInfo.value = current.copy(isDownloading = true, downloadProgress = 0.05f)
+        viewModelScope.launch {
+            val result = AppUpdateManager.downloadApk(
+                context = context,
+                updateInfo = current,
+                onProgress = { p ->
+                    _appUpdateInfo.value = _appUpdateInfo.value?.copy(downloadProgress = p)
+                }
+            )
+            result.onSuccess { file ->
+                _appUpdateInfo.value = _appUpdateInfo.value?.copy(
+                    isDownloading = false,
+                    downloadProgress = 1f,
+                    isReadyToInstall = true,
+                    downloadedApkFile = file
+                )
+                showToast("Update ready! Launching installer...")
+                AppUpdateManager.promptInstallApk(context, file)
+            }.onFailure { err ->
+                _appUpdateInfo.value = _appUpdateInfo.value?.copy(
+                    isDownloading = false,
+                    errorMessage = err.message
+                )
+                showToast("Update download failed: ${err.message}")
+            }
+        }
+    }
+
+    fun installDownloadedUpdate(context: Context) {
+        val file = _appUpdateInfo.value?.downloadedApkFile
+        if (file != null) {
+            AppUpdateManager.promptInstallApk(context, file)
+        } else {
+            startAppUpdateDownload(context)
+        }
+    }
+
+    fun dismissUpdateDialog() {
+        _showUpdateDialog.value = false
+    }
+
+    fun openUpdateDialog() {
+        if (_appUpdateInfo.value == null) {
+            checkForAppUpdates(manual = true)
+        } else {
+            _showUpdateDialog.value = true
+        }
+    }
+
+    fun toggleAutoCheckUpdates() {
+        _isAutoCheckUpdateEnabled.value = !_isAutoCheckUpdateEnabled.value
+        val state = if (_isAutoCheckUpdateEnabled.value) "enabled" else "disabled"
+        showToast("Automatic update checks $state")
     }
 }

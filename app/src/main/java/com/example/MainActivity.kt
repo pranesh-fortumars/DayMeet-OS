@@ -22,6 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.components.DayMeetBottomDock
 import com.example.ui.components.DayMeetHeader
+import com.example.ui.components.InAppUpdateDialog
 import com.example.ui.screens.*
 import com.example.ui.theme.InverseOnSurface
 import com.example.ui.theme.InverseSurface
@@ -52,10 +53,13 @@ fun DayMeetApp(
     val showDailyBriefing by viewModel.showDailyBriefing.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
+    val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
+    val showUpdateDialog by viewModel.showUpdateDialog.collectAsStateWithLifecycle()
 
     // Handle back button on sub-screens
-    BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing) {
-        if (showSearchOverlay) viewModel.closeSearch()
+    BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
+        if (showUpdateDialog) viewModel.dismissUpdateDialog()
+        else if (showSearchOverlay) viewModel.closeSearch()
         else if (showDailyBriefing) viewModel.closeDailyBriefing()
         else if (showMeetingMinutes) viewModel.closeMeetingMinutes()
         else if (showAiAssistant) viewModel.closeAiAssistant()
@@ -202,6 +206,17 @@ fun DayMeetApp(
                 GlobalSearchDialog(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeSearch() }
+                )
+            }
+
+            // In-App Production Update Dialog
+            if (showUpdateDialog && appUpdateInfo != null) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                InAppUpdateDialog(
+                    updateInfo = appUpdateInfo!!,
+                    onStartDownload = { viewModel.startAppUpdateDownload(context) },
+                    onInstall = { viewModel.installDownloadedUpdate(context) },
+                    onDismiss = { viewModel.dismissUpdateDialog() }
                 )
             }
         }
