@@ -39,6 +39,14 @@ fun CalendarScreen(
     val calendarMode by viewModel.calendarMode.collectAsState()
     val timelineEvents by viewModel.timelineEvents.collectAsState()
 
+    val displayedEvents = remember(timelineEvents, calendarMode) {
+        if (calendarMode == "By Category") {
+            timelineEvents.sortedBy { it.type.name }
+        } else {
+            timelineEvents
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Surface)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -229,6 +237,10 @@ fun CalendarScreen(
 
             // Daily Momentum Progress Summary
             item {
+                val totalEvts = timelineEvents.size
+                val doneEvts = timelineEvents.count { it.isCompleted }
+                val progressEvts = if (totalEvts > 0) doneEvts.toFloat() / totalEvts else 0f
+
                 Card(
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -260,13 +272,13 @@ fun CalendarScreen(
                                     drawArc(
                                         color = Primary,
                                         startAngle = -90f,
-                                        sweepAngle = 360f * 0.42f,
+                                        sweepAngle = 360f * progressEvts,
                                         useCenter = false,
                                         style = stroke
                                     )
                                 }
                                 Text(
-                                    text = "42%",
+                                    text = "${(progressEvts * 100).toInt()}%",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = OnSurface
@@ -283,7 +295,7 @@ fun CalendarScreen(
                                     )
                                 )
                                 Text(
-                                    text = "2 of 6 objectives accomplished",
+                                    text = "$doneEvts of $totalEvts objectives accomplished",
                                     style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                                 )
                             }
@@ -324,7 +336,7 @@ fun CalendarScreen(
             }
 
             // Timeline Items
-            items(timelineEvents, key = { it.id }) { event ->
+            items(displayedEvents, key = { it.id }) { event ->
                 TimelineRow(
                     event = event,
                     onToggleDone = { viewModel.toggleTimelineTask(event.id) },
@@ -336,43 +348,46 @@ fun CalendarScreen(
         }
 
         // Floating Action Dock: Reschedule Incomplete
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 86.dp)
-        ) {
-            Surface(
-                shape = RoundedCornerShape(99.dp),
-                color = InverseSurface,
-                shadowElevation = 8.dp,
+        val incompleteCount = timelineEvents.count { !it.isCompleted }
+        if (incompleteCount > 0) {
+            Box(
                 modifier = Modifier
-                    .clickable { viewModel.showToast("2 tasks rescheduled for optimal focus") }
-                    .testTag("reschedule_pill_btn")
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 86.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = InverseSurface,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .clickable { viewModel.showToast("$incompleteCount tasks rescheduled for optimal focus") }
+                        .testTag("reschedule_pill_btn")
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Update,
-                        contentDescription = null,
-                        tint = SecondaryContainer,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = "Reschedule Incomplete (2)",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            color = InverseOnSurface,
-                            fontWeight = FontWeight.SemiBold
+                    Row(
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Update,
+                            contentDescription = null,
+                            tint = SecondaryContainer,
+                            modifier = Modifier.size(18.dp)
                         )
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .clip(CircleShape)
-                            .background(SecondaryContainer)
-                    )
+                        Text(
+                            text = "Reschedule Incomplete ($incompleteCount)",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                color = InverseOnSurface,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(SecondaryContainer)
+                        )
+                    }
                 }
             }
         }

@@ -40,9 +40,27 @@ fun HomeScreen(
     val healthMetrics by viewModel.healthMetrics.collectAsState()
     val upcomingBills by viewModel.upcomingBills.collectAsState()
     val meetings by viewModel.meetings.collectAsState()
+    val feedItems by viewModel.feedItems.collectAsState()
+    val habits by viewModel.habits.collectAsState()
+    val transactions by viewModel.transactions.collectAsState()
 
     val electricityBill = upcomingBills.firstOrNull { it.id == "b1" }
     val nextMeeting = meetings.firstOrNull()
+
+    val todaySpend = remember(transactions) {
+        transactions.filter { it.amount < 0 }.sumOf { -it.amount }
+    }
+    val dailyLimit = 5000.0
+    val spendProgress = (todaySpend / dailyLimit).toFloat().coerceIn(0f, 1f)
+    val spendStatus = if (todaySpend <= dailyLimit) "Under Budget" else "Over Budget"
+
+    val completedTasks = feedItems.count { it.isCompleted }
+    val totalTasks = feedItems.size
+    val taskProgress = if (totalTasks > 0) completedTasks.toFloat() / totalTasks else 0f
+
+    val completedHabits = habits.count { it.isCompletedToday }
+    val totalHabits = habits.size
+    val habitProgress = if (totalHabits > 0) completedHabits.toFloat() / totalHabits else 0f
 
     LazyColumn(
         modifier = modifier
@@ -180,10 +198,14 @@ fun HomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        BriefingMetricItem(number = "3", label = "Meetings", modifier = Modifier.weight(1f))
-                        BriefingMetricItem(number = "6", label = "Tasks", modifier = Modifier.weight(1f))
-                        BriefingMetricItem(number = "₹1,250", label = "Spent", modifier = Modifier.weight(1f))
-                        BriefingMetricItem(number = "7.8k", label = "Steps", modifier = Modifier.weight(1f))
+                        BriefingMetricItem(number = "${meetings.size}", label = "Meetings", modifier = Modifier.weight(1f))
+                        BriefingMetricItem(number = "$totalTasks", label = "Tasks", modifier = Modifier.weight(1f))
+                        BriefingMetricItem(number = "₹${String.format("%.0f", todaySpend)}", label = "Spent", modifier = Modifier.weight(1f))
+                        BriefingMetricItem(
+                            number = "${healthMetrics.steps / 1000}.${(healthMetrics.steps % 1000) / 100}k",
+                            label = "Steps",
+                            modifier = Modifier.weight(1f)
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -200,7 +222,7 @@ fun HomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             LinearProgressIndicator(
-                                progress = { 0.25f },
+                                progress = { taskProgress },
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(6.dp)
@@ -209,7 +231,7 @@ fun HomeScreen(
                                 trackColor = SurfaceContainerHigh
                             )
                             Text(
-                                text = "1/4 Done",
+                                text = "$completedTasks/$totalTasks Done",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = OnSurfaceVariant,
                                     fontSize = 11.sp
@@ -569,26 +591,26 @@ fun HomeScreen(
                     // Focus & Work Card
                     VitalsBentoCard(
                         icon = Icons.Default.FilterCenterFocus,
-                        badge = "60%",
+                        badge = "${(taskProgress * 100).toInt()}%",
                         badgeColor = Primary,
                         title = "Focus & Work",
-                        mainValue = "6/10 Tasks",
-                        progress = 0.60f,
+                        mainValue = "$completedTasks/$totalTasks Tasks",
+                        progress = taskProgress,
                         progressColor = Primary,
-                        subtext = "3 of 5 meetings done",
+                        subtext = "${meetings.size} meetings scheduled",
                         modifier = Modifier.weight(1f).clickable { viewModel.navigateTo("tasks") }
                     )
 
                     // Finance Card
                     VitalsBentoCard(
                         icon = Icons.Default.AccountBalanceWallet,
-                        badge = "Under Budget",
-                        badgeColor = Tertiary,
+                        badge = spendStatus,
+                        badgeColor = if (todaySpend <= dailyLimit) Tertiary else Color(0xFFD32F2F),
                         title = "Finance (Daily)",
-                        mainValue = "₹3,450 / 5k",
-                        progress = 0.69f,
-                        progressColor = Tertiary,
-                        subtext = "69% of daily ceiling",
+                        mainValue = "₹${String.format("%.0f", todaySpend)} / 5k",
+                        progress = spendProgress,
+                        progressColor = if (todaySpend <= dailyLimit) Tertiary else Color(0xFFD32F2F),
+                        subtext = "${(spendProgress * 100).toInt()}% of daily ceiling",
                         modifier = Modifier.weight(1f).clickable { viewModel.navigateTo("finance") }
                     )
                 }
@@ -605,22 +627,22 @@ fun HomeScreen(
                         badgeColor = SkyBlue,
                         title = "Health & Vitality",
                         mainValue = "${healthMetrics.steps} Steps",
-                        progress = healthMetrics.hydration / healthMetrics.hydrationTarget,
+                        progress = (healthMetrics.hydration / healthMetrics.hydrationTarget).coerceIn(0f, 1f),
                         progressColor = SkyBlue,
-                        subtext = "Sleep: ${healthMetrics.sleepDuration} (${healthMetrics.score}/100)",
+                        subtext = "Hydration: ${healthMetrics.hydration}L / ${healthMetrics.hydrationTarget}L",
                         modifier = Modifier.weight(1f).clickable { viewModel.navigateTo("insights") }
                     )
 
                     // Habits Card
                     VitalsBentoCard(
                         icon = Icons.Default.LocalFireDepartment,
-                        badge = "18d streak",
+                        badge = "${habits.maxOfOrNull { it.streakDays } ?: 18}d streak",
                         badgeColor = AmberWarning,
                         title = "Habits & Goals",
-                        mainValue = "4 / 5 Preserved",
-                        progress = 0.80f,
+                        mainValue = "$completedHabits / $totalHabits Done",
+                        progress = habitProgress,
                         progressColor = AmberWarning,
-                        subtext = "Save ₹50k (65%)",
+                        subtext = "${(habitProgress * 100).toInt()}% consistency",
                         modifier = Modifier.weight(1f).clickable { viewModel.openSubScreen("habits") }
                     )
                 }

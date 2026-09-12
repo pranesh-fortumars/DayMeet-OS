@@ -36,6 +36,14 @@ fun FinanceScreen(
     val transactions by viewModel.transactions.collectAsState()
     val upcomingBills by viewModel.upcomingBills.collectAsState()
 
+    val dailyLimit = 5000.0
+    val spentToday = remember(transactions) {
+        transactions.filter { it.amount < 0 }.sumOf { -it.amount }
+    }
+    val leftToday = (dailyLimit - spentToday).coerceAtLeast(0.0)
+    val spentPercent = ((spentToday / dailyLimit) * 100).coerceIn(0.0, 100.0).toInt()
+    val sweepAngle = (360f * (spentToday / dailyLimit).toFloat()).coerceIn(0f, 360f)
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -146,7 +154,7 @@ fun FinanceScreen(
                     ) {
                         Column {
                             Text(
-                                text = "$68.50 left",
+                                text = "₹${String.format("%.0f", leftToday)} left",
                                 style = MaterialTheme.typography.headlineLarge.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 28.sp,
@@ -154,7 +162,7 @@ fun FinanceScreen(
                                 )
                             )
                             Text(
-                                text = "of $120.00 daily budget limit",
+                                text = "of ₹${String.format("%.0f", dailyLimit)} daily budget limit",
                                 style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                             )
                         }
@@ -172,16 +180,16 @@ fun FinanceScreen(
                                     style = stroke
                                 )
                                 drawArc(
-                                    color = Primary,
+                                    color = if (spentToday <= dailyLimit) Primary else Color(0xFFD32F2F),
                                     startAngle = -90f,
-                                    sweepAngle = 360f * (51.5f / 120.0f),
+                                    sweepAngle = sweepAngle,
                                     useCenter = false,
                                     style = stroke
                                 )
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "43%",
+                                    text = "$spentPercent%",
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = OnSurface
@@ -201,18 +209,17 @@ fun FinanceScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Linear breakdown bar
+                    val progressRatio = (spentToday / dailyLimit).toFloat().coerceIn(0.01f, 1f)
+                    val remainingRatio = (1f - progressRatio).coerceAtLeast(0.01f)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
                             .clip(CircleShape)
                     ) {
-                        Box(modifier = Modifier.weight(24.5f).fillMaxHeight().background(Primary))
+                        Box(modifier = Modifier.weight(progressRatio).fillMaxHeight().background(if (spentToday <= dailyLimit) Primary else Color(0xFFD32F2F)))
                         Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color.White))
-                        Box(modifier = Modifier.weight(5.0f).fillMaxHeight().background(Secondary))
-                        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color.White))
-                        Box(modifier = Modifier.weight(22.0f).fillMaxHeight().background(Tertiary))
-                        Box(modifier = Modifier.weight(68.5f).fillMaxHeight().background(SurfaceContainerHigh))
+                        Box(modifier = Modifier.weight(remainingRatio).fillMaxHeight().background(SurfaceContainerHigh))
                     }
 
                     Spacer(modifier = Modifier.height(14.dp))
@@ -230,7 +237,7 @@ fun FinanceScreen(
                                 style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
                             )
                             Text(
-                                text = "$51.50",
+                                text = "₹${String.format("%.0f", spentToday)}",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = OnSurface
@@ -326,7 +333,7 @@ fun FinanceScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { viewModel.showToast("Expense logger opened") },
+                    onClick = { viewModel.openCreateTask("Expense") },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
                     modifier = Modifier.weight(1f).height(44.dp).testTag("log_expense_btn")
@@ -344,7 +351,7 @@ fun FinanceScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.showToast("Income logger opened") },
+                    onClick = { viewModel.openCreateTask("Income") },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = SurfaceContainerLowest,
@@ -515,7 +522,7 @@ fun FinanceScreen(
         items(upcomingBills, key = { it.id }) { bill ->
             UpcomingBillRowItem(
                 bill = bill,
-                onPayEarly = { viewModel.showToast("Payment scheduled for ${bill.name}") }
+                onPayEarly = { viewModel.payBill(bill.id) }
             )
         }
     }
