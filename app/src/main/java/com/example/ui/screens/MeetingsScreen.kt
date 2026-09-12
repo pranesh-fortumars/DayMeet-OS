@@ -316,6 +316,7 @@ private fun MeetingCardItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
+            .clickable { onAgenda() }
             .testTag("meeting_card_${meeting.id}")
     ) {
         Column(modifier = Modifier.padding(16.dp)) {

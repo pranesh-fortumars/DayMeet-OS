@@ -149,7 +149,10 @@ fun HomeScreen(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth().testTag("daily_briefing_card")
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.openDailyBriefing() }
+                    .testTag("daily_briefing_card")
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -323,7 +326,10 @@ fun HomeScreen(
                 shape = RoundedCornerShape(18.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth().testTag("hero_meeting_card")
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.openMeetingMinutes() }
+                    .testTag("hero_meeting_card")
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -979,6 +985,30 @@ private fun CrossStreamRowItem(
                             }
                         )
                 )
+
+                // Interactive check button
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (item.isCompleted) EmeraldSuccess else SurfaceContainerHigh)
+                        .border(
+                            width = 1.dp,
+                            color = if (item.isCompleted) EmeraldSuccess else OutlineVariant,
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .clickable { onToggleDone() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (item.isCompleted) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Completed",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
 
                 // Text details
                 Column(modifier = Modifier.weight(1f)) {

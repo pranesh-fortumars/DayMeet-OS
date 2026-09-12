@@ -151,7 +151,13 @@ fun GlobalSearchDialog(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow),
                                 modifier = Modifier.fillMaxWidth().clickable {
-                                    viewModel.showToast("Opening $type: $resTitle")
+                                    when (type) {
+                                        "Meeting" -> viewModel.navigateTo("meetings")
+                                        "Task" -> viewModel.navigateTo("tasks")
+                                        "Note" -> viewModel.openSubScreen("notes")
+                                        "Automation" -> viewModel.openSubScreen("automations")
+                                        else -> viewModel.showToast("Opening $type: $resTitle")
+                                    }
                                     onDismiss()
                                 }
                             ) {

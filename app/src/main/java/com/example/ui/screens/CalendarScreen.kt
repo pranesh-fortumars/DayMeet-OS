@@ -47,6 +47,10 @@ fun CalendarScreen(
         }
     }
 
+    val incompleteCount = remember(timelineEvents) {
+        timelineEvents.count { !it.isCompleted }
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Surface)) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -345,48 +349,60 @@ fun CalendarScreen(
                     onReschedule = { viewModel.showToast("Rescheduled to next open slot") }
                 )
             }
-        }
-
-        // Floating Action Dock: Reschedule Incomplete
-        val incompleteCount = timelineEvents.count { !it.isCompleted }
-        if (incompleteCount > 0) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 86.dp)
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(99.dp),
-                    color = InverseSurface,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier
-                        .clickable { viewModel.showToast("$incompleteCount tasks rescheduled for optimal focus") }
-                        .testTag("reschedule_pill_btn")
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            if (incompleteCount > 0) {
+                item {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = InverseSurface,
+                        shadowElevation = 2.dp,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { viewModel.showToast("$incompleteCount tasks rescheduled for optimal focus") }
+                            .testTag("reschedule_pill_btn")
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Update,
-                            contentDescription = null,
-                            tint = SecondaryContainer,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = "Reschedule Incomplete ($incompleteCount)",
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                color = InverseOnSurface,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(SecondaryContainer)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Update,
+                                    contentDescription = null,
+                                    tint = SecondaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Column {
+                                    Text(
+                                        text = "Smart Reschedule ($incompleteCount)",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            color = InverseOnSurface,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                    Text(
+                                        text = "Auto-align pending items into optimal focus blocks",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = InverseOnSurface.copy(alpha = 0.8f)
+                                        )
+                                    )
+                                }
+                            }
+                            Button(
+                                onClick = { viewModel.showToast("$incompleteCount tasks rescheduled for optimal focus") },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SecondaryContainer,
+                                    contentColor = OnSecondaryContainer
+                                ),
+                                shape = RoundedCornerShape(99.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text("Align", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                            }
+                        }
                     }
                 }
             }

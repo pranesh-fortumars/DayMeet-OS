@@ -126,7 +126,10 @@ fun TasksScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
                 elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-                modifier = Modifier.fillMaxWidth().testTag("task_item_${task.id}")
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { viewModel.toggleFeedTaskDone(task.id) }
+                    .testTag("task_item_${task.id}")
             ) {
                 Row(
                     modifier = Modifier
@@ -142,10 +145,9 @@ fun TasksScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (task.isCompleted) EmeraldSuccess else SurfaceContainer)
-                                .clickable { viewModel.toggleFeedTaskDone(task.id) },
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (task.isCompleted) EmeraldSuccess else SurfaceContainerHigh),
                             contentAlignment = Alignment.Center
                         ) {
                             if (task.isCompleted) {
@@ -153,7 +155,7 @@ fun TasksScreen(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = null,
                                     tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                             }
                         }

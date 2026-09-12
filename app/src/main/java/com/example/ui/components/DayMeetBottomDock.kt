@@ -142,7 +142,7 @@ private fun DockNavItem(
         modifier = Modifier
             .defaultMinSize(minWidth = 56.dp, minHeight = 48.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(interactionSource = interactionSource, indication = null) { onClick() }
+            .clickable { onClick() }
             .padding(vertical = 4.dp, horizontal = 6.dp)
             .testTag(testTag),
         horizontalAlignment = Alignment.CenterHorizontally,
