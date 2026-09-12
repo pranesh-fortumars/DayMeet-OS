@@ -79,10 +79,10 @@ fun InAppUpdateDialog(
         )
     }
 
-    // Retrieve the latest available version code from Google Play Store or update payload
+    // Retrieve the latest available version code strictly from Google Play Store
     var playStoreVersionCode by remember(updateInfo) {
         mutableStateOf(
-            updateInfo.playUpdateInfo?.availableVersionCode() ?: updateInfo.latestVersionCode
+            updateInfo.playUpdateInfo?.availableVersionCode() ?: 0
         )
     }
 
@@ -102,13 +102,12 @@ fun InAppUpdateDialog(
     }
 
     // Version Check: Only show the update dialog if the Play Store version code is
-    // strictly greater than the currently installed version code (BuildConfig.VERSION_CODE & effectiveInstalled),
-    // preventing any infinite update loops.
-    val isStrictlyGreater = playStoreVersionCode > BuildConfig.VERSION_CODE &&
-            playStoreVersionCode > currentInstalledVersionCode
+    // strictly greater than the current APK's BuildConfig.VERSION_CODE.
+    // This strictly prevents the infinite update loop when no higher version exists in the Play Store.
+    val isStrictlyGreater = playStoreVersionCode > BuildConfig.VERSION_CODE
 
-    if (!isStrictlyGreater || !updateInfo.isUpdateAvailable) {
-        // Automatically dismiss dialog and do not show if version is not strictly greater
+    if (!isStrictlyGreater) {
+        // Do NOT render dialog if the Play Store version code is not strictly greater than local version
         LaunchedEffect(Unit) {
             onDismiss()
         }

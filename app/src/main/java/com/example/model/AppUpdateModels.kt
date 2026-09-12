@@ -1,6 +1,7 @@
 package com.example.model
 
 import java.io.File
+import com.example.BuildConfig
 import com.google.android.play.core.appupdate.AppUpdateInfo as PlayAppUpdateInfo
 
 enum class UpdateChannel {
@@ -15,10 +16,10 @@ enum class PlayUpdateMode {
 
 data class AppUpdateInfo(
     val isUpdateAvailable: Boolean = false,
-    val currentVersionName: String = "1.0",
-    val currentVersionCode: Int = 1,
-    val latestVersionName: String = "1.1",
-    val latestVersionCode: Int = 2,
+    val currentVersionName: String = BuildConfig.VERSION_NAME,
+    val currentVersionCode: Int = BuildConfig.VERSION_CODE,
+    val latestVersionName: String = BuildConfig.VERSION_NAME,
+    val latestVersionCode: Int = BuildConfig.VERSION_CODE,
     val releaseDate: String = "September 2026",
     val releaseNotes: List<String> = listOf(
         "Google Play In-App Updates API integration",

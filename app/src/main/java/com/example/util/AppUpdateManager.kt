@@ -127,8 +127,8 @@ object AppUpdateManager {
         currentVersionCode: Int = context?.let { getEffectiveVersionCode(it) } ?: BuildConfig.VERSION_CODE,
         currentVersionName: String = context?.let { getEffectiveVersionName(it) } ?: BuildConfig.VERSION_NAME
     ): AppUpdateInfo = withContext(Dispatchers.IO) {
-        val latestCode = 2
-        val latestName = "1.1"
+        val latestCode = BuildConfig.VERSION_CODE
+        val latestName = BuildConfig.VERSION_NAME
 
         val isAvailable = latestCode > currentVersionCode
 

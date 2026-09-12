@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.BuildConfig
 import com.example.data.DayMeetRepository
 import com.example.model.*
 import com.example.util.AppUpdateManager
@@ -729,7 +730,8 @@ class DayMeetViewModel : ViewModel() {
                 }
 
                 _appUpdateInfo.value = update
-                if (update.isUpdateAvailable) {
+                val hasHigherVersion = update.isUpdateAvailable && update.latestVersionCode > BuildConfig.VERSION_CODE
+                if (hasHigherVersion) {
                     val isDismissed = context != null && AppUpdateManager.isVersionDismissed(context, update.latestVersionCode)
                     if (manual || !isDismissed) {
                         _showUpdateDialog.value = true
