@@ -39,6 +39,30 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        try {
+            val playManager = com.example.util.PlayAppUpdateManager.getOrCreate(this)
+            playManager.appUpdateInfo.addOnSuccessListener { info ->
+                if (info.updateAvailability() == com.google.android.play.core.install.model.UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                    try {
+                        playManager.startUpdateFlowForResult(
+                            info,
+                            this,
+                            com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE).build(),
+                            com.example.util.PlayAppUpdateManager.PLAY_UPDATE_REQUEST_CODE
+                        )
+                    } catch (_: Exception) {}
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        com.example.util.PlayAppUpdateManager.unregisterInstallListener()
+    }
 }
 
 @Composable
@@ -55,6 +79,13 @@ fun DayMeetApp(
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
     val showUpdateDialog by viewModel.showUpdateDialog.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = context as? android.app.Activity
+
+    // Check for Google Play production updates on startup
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.checkForAppUpdates(context = context, manual = false)
+    }
 
     // Handle back button on sub-screens
     BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
@@ -211,11 +242,22 @@ fun DayMeetApp(
 
             // In-App Production Update Dialog
             if (showUpdateDialog && appUpdateInfo != null) {
-                val context = androidx.compose.ui.platform.LocalContext.current
                 InAppUpdateDialog(
                     updateInfo = appUpdateInfo!!,
-                    onStartDownload = { viewModel.startAppUpdateDownload(context) },
-                    onInstall = { viewModel.installDownloadedUpdate(context) },
+                    onStartDownload = {
+                        if (activity != null) {
+                            viewModel.launchUpdate(activity)
+                        } else {
+                            viewModel.startAppUpdateDownload(context)
+                        }
+                    },
+                    onInstall = {
+                        if (appUpdateInfo?.updateChannel == com.example.model.UpdateChannel.GOOGLE_PLAY) {
+                            viewModel.completePlayUpdate(context)
+                        } else {
+                            viewModel.installDownloadedUpdate(context)
+                        }
+                    },
                     onDismiss = { viewModel.dismissUpdateDialog() }
                 )
             }

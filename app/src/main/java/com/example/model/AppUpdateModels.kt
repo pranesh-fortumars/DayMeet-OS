@@ -1,6 +1,17 @@
 package com.example.model
 
 import java.io.File
+import com.google.android.play.core.appupdate.AppUpdateInfo as PlayAppUpdateInfo
+
+enum class UpdateChannel {
+    GOOGLE_PLAY,
+    DIRECT_PRODUCTION_APK
+}
+
+enum class PlayUpdateMode {
+    FLEXIBLE,
+    IMMEDIATE
+}
 
 data class AppUpdateInfo(
     val isUpdateAvailable: Boolean = false,
@@ -10,6 +21,7 @@ data class AppUpdateInfo(
     val latestVersionCode: Int = 2,
     val releaseDate: String = "September 2026",
     val releaseNotes: List<String> = listOf(
+        "Google Play In-App Updates API integration",
         "Monthly habit consistency heatmap with daily tracking",
         "Smooth CSS strike-through and slide-out task completion animation",
         "Visual 2-hour urgency warning indicators with red border",
@@ -19,7 +31,13 @@ data class AppUpdateInfo(
     val isMandatory: Boolean = false,
     val isDownloading: Boolean = false,
     val downloadProgress: Float = 0f,
+    val bytesDownloaded: Long = 0L,
+    val totalBytesToDownload: Long = 0L,
     val downloadedApkFile: File? = null,
     val isReadyToInstall: Boolean = false,
+    val updateChannel: UpdateChannel = UpdateChannel.GOOGLE_PLAY,
+    val updateMode: PlayUpdateMode = PlayUpdateMode.FLEXIBLE,
+    val playUpdateInfo: PlayAppUpdateInfo? = null,
     val errorMessage: String? = null
 )
+

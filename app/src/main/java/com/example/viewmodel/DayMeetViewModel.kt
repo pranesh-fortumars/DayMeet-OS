@@ -1,11 +1,13 @@
 package com.example.viewmodel
 
+import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.data.DayMeetRepository
 import com.example.model.*
 import com.example.util.AppUpdateManager
+import com.example.util.PlayAppUpdateManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -699,22 +701,72 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
-    // App In-App Production Update Functions
-    fun checkForAppUpdates(manual: Boolean = false) {
+    // Google Play In-App Production Update Functions
+    fun checkForAppUpdates(context: Context? = null, manual: Boolean = false) {
         viewModelScope.launch {
             try {
-                val update = AppUpdateManager.checkForUpdates()
+                val update = if (context != null) {
+                    PlayAppUpdateManager.checkPlayUpdate(
+                        context = context,
+                        onProgressUpdate = { bytes, total, status ->
+                            val progress = if (total > 0) (bytes.toFloat() / total).coerceIn(0f, 1f) else 0f
+                            val isDownloaded = status == com.google.android.play.core.install.model.InstallStatus.DOWNLOADED
+                            _appUpdateInfo.value = _appUpdateInfo.value?.copy(
+                                downloadProgress = progress,
+                                bytesDownloaded = bytes,
+                                totalBytesToDownload = total,
+                                isDownloading = !isDownloaded && progress > 0f,
+                                isReadyToInstall = isDownloaded
+                            )
+                            if (isDownloaded) {
+                                showToast("Google Play update downloaded! Ready to install.")
+                            }
+                        }
+                    )
+                } else {
+                    AppUpdateManager.checkForUpdates()
+                }
+
+                _appUpdateInfo.value = update
                 if (update.isUpdateAvailable) {
-                    _appUpdateInfo.value = update
                     _showUpdateDialog.value = true
                     if (manual) {
-                        showToast("New production release available: v${update.latestVersionName}")
+                        val channelName = if (update.updateChannel == UpdateChannel.GOOGLE_PLAY) "Google Play" else "Production"
+                        showToast("New $channelName update available: ${update.latestVersionName}")
                     }
                 } else if (manual) {
                     showToast("DayMeet is up to date (v${update.currentVersionName})")
                 }
             } catch (e: Exception) {
                 if (manual) showToast("Could not check for updates")
+            }
+        }
+    }
+
+    fun launchUpdate(activity: Activity) {
+        val current = _appUpdateInfo.value ?: return
+        if (current.updateChannel == UpdateChannel.GOOGLE_PLAY && current.playUpdateInfo != null) {
+            val launched = PlayAppUpdateManager.startPlayUpdate(
+                activity = activity,
+                playInfo = current.playUpdateInfo,
+                mode = current.updateMode
+            )
+            if (launched) {
+                _showUpdateDialog.value = false
+                showToast("Starting Google Play update flow...")
+            } else {
+                startAppUpdateDownload(activity)
+            }
+        } else {
+            startAppUpdateDownload(activity)
+        }
+    }
+
+    fun completePlayUpdate(context: Context) {
+        viewModelScope.launch {
+            val completed = PlayAppUpdateManager.completePlayUpdate(context)
+            if (!completed) {
+                installDownloadedUpdate(context)
             }
         }
     }
@@ -762,9 +814,9 @@ class DayMeetViewModel : ViewModel() {
         _showUpdateDialog.value = false
     }
 
-    fun openUpdateDialog() {
+    fun openUpdateDialog(context: Context? = null) {
         if (_appUpdateInfo.value == null) {
-            checkForAppUpdates(manual = true)
+            checkForAppUpdates(context = context, manual = true)
         } else {
             _showUpdateDialog.value = true
         }

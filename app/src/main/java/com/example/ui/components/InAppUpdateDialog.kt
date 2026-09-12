@@ -92,13 +92,28 @@ fun InAppUpdateDialog(
                                     color = OnSurface
                                 )
                             )
-                            Text(
-                                text = "Production Release ${updateInfo.latestVersionName}",
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = Primary,
-                                    fontWeight = FontWeight.SemiBold
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = if (updateInfo.updateChannel == com.example.model.UpdateChannel.GOOGLE_PLAY)
+                                        "Google Play In-App Update"
+                                    else
+                                        "Production APK Update",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Primary,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 )
-                            )
+                                Text(
+                                    text = "• ${updateInfo.latestVersionName}",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
                         }
                     }
 
@@ -299,7 +314,11 @@ fun InAppUpdateDialog(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (updateInfo.isReadyToInstall) "Install Now" else "Update Now",
+                            text = when {
+                                updateInfo.isReadyToInstall -> "Restart to Install"
+                                updateInfo.updateChannel == com.example.model.UpdateChannel.GOOGLE_PLAY -> "Update via Google Play"
+                                else -> "Update Now"
+                            },
                             style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
                         )
                     }

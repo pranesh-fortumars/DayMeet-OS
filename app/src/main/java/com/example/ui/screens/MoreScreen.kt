@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -491,6 +492,7 @@ private fun ModuleListRow(
 private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
     val updateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
     val isAutoCheckEnabled by viewModel.isAutoCheckUpdateEnabled.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     Card(
         shape = RoundedCornerShape(18.dp),
@@ -530,14 +532,14 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                     }
                     Column {
                         Text(
-                            text = "Production Auto-Update",
+                            text = "Google Play In-App Updates",
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = OnSurface
                             )
                         )
                         Text(
-                            text = "Release Channel: Production (Main)",
+                            text = "Play Core API • Production Channel",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 11.sp
@@ -589,7 +591,7 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                 if (updateInfo?.isUpdateAvailable == true) {
                     Column(horizontalAlignment = Alignment.End) {
                         Text(
-                            text = "Production Target",
+                            text = "Play Store Release",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = Primary,
                                 fontSize = 11.sp,
@@ -626,7 +628,7 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                         )
                     )
                     Text(
-                        text = "Notifies and prompts update when a new production build is published",
+                        text = "Automatically checks Google Play when new releases are published to production",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = OnSurfaceVariant,
                             fontSize = 11.sp
@@ -646,7 +648,7 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedButton(
-                    onClick = { viewModel.checkForAppUpdates(manual = true) },
+                    onClick = { viewModel.checkForAppUpdates(context = context, manual = true) },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .weight(1f)
@@ -658,11 +660,11 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Check Updates", style = MaterialTheme.typography.labelMedium)
+                    Text("Check Play", style = MaterialTheme.typography.labelMedium)
                 }
 
                 Button(
-                    onClick = { viewModel.openUpdateDialog() },
+                    onClick = { viewModel.openUpdateDialog(context = context) },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),
                     modifier = Modifier
