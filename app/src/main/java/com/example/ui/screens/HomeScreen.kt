@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
 import com.example.ui.theme.*
@@ -51,16 +53,16 @@ fun HomeScreen(
         transactions.filter { it.amount < 0 }.sumOf { -it.amount }
     }
     val dailyLimit = 5000.0
-    val spendProgress = (todaySpend / dailyLimit).toFloat().coerceIn(0f, 1f)
-    val spendStatus = if (todaySpend <= dailyLimit) "Under Budget" else "Over Budget"
+    val spendProgress = remember(todaySpend) { (todaySpend / dailyLimit).toFloat().coerceIn(0f, 1f) }
+    val spendStatus = remember(todaySpend) { if (todaySpend <= dailyLimit) "Under Budget" else "Over Budget" }
 
-    val completedTasks = feedItems.count { it.isCompleted }
+    val completedTasks = remember(feedItems) { feedItems.count { it.isCompleted } }
     val totalTasks = feedItems.size
-    val taskProgress = if (totalTasks > 0) completedTasks.toFloat() / totalTasks else 0f
+    val taskProgress = remember(completedTasks, totalTasks) { if (totalTasks > 0) completedTasks.toFloat() / totalTasks else 0f }
 
-    val completedHabits = habits.count { it.isCompletedToday }
+    val completedHabits = remember(habits) { habits.count { it.isCompletedToday } }
     val totalHabits = habits.size
-    val habitProgress = if (totalHabits > 0) completedHabits.toFloat() / totalHabits else 0f
+    val habitProgress = remember(completedHabits, totalHabits) { if (totalHabits > 0) completedHabits.toFloat() / totalHabits else 0f }
 
     LazyColumn(
         modifier = modifier
@@ -414,22 +416,43 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Overlapping Avatars
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        val context = LocalContext.current
+                        val sampleAttendees = remember {
                             listOf(
-                                DayMeetRepository.ALEX_AVATAR,
-                                DayMeetRepository.MAYA_AVATAR,
-                                DayMeetRepository.DAVID_AVATAR
-                            ).forEachIndexed { index, url ->
-                                AsyncImage(
-                                    model = url,
-                                    contentDescription = "Attendee",
+                                Triple("AC", PrimaryFixed, DayMeetRepository.ALEX_AVATAR),
+                                Triple("ML", SecondaryFixed, DayMeetRepository.MAYA_AVATAR),
+                                Triple("DK", TertiaryFixed, DayMeetRepository.DAVID_AVATAR)
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            sampleAttendees.forEachIndexed { index, (initials, bgColor, url) ->
+                                Box(
                                     modifier = Modifier
                                         .offset(x = (-index * 8).dp)
                                         .size(28.dp)
                                         .clip(CircleShape)
+                                        .background(bgColor)
                                         .border(2.dp, Color.White, CircleShape),
-                                    contentScale = ContentScale.Crop
-                                )
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = initials,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnSurface
+                                        )
+                                    )
+                                    AsyncImage(
+                                        model = ImageRequest.Builder(context)
+                                            .data(url)
+                                            .crossfade(true)
+                                            .build(),
+                                        contentDescription = "Attendee $initials",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                }
                             }
                             Box(
                                 modifier = Modifier

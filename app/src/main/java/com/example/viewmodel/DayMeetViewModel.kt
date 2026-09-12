@@ -187,7 +187,7 @@ class DayMeetViewModel : ViewModel() {
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
     init {
-        viewModelScope.launch {
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.Default) {
             while (true) {
                 delay(1000)
                 if (_isFocusRunning.value && !_isFocusCompleted.value && _focusTimerRemaining.value > 0) {
