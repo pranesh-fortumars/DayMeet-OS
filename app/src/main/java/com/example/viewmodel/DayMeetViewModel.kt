@@ -534,9 +534,25 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    fun removeFeedTask(id: String) {
+        val task = _feedItems.value.firstOrNull { it.id == id }
+        _feedItems.value = _feedItems.value.filterNot { it.id == id }
+        if (task != null) {
+            showToast("Completed: ${task.title} (Removed)")
+        }
+    }
+
     fun toggleCrossStreamDone(id: String) {
         _crossStreamItems.value = _crossStreamItems.value.map { item ->
             if (item.id == id) item.copy(isCompleted = !item.isCompleted) else item
+        }
+    }
+
+    fun removeCrossStreamItem(id: String) {
+        val item = _crossStreamItems.value.firstOrNull { it.id == id }
+        _crossStreamItems.value = _crossStreamItems.value.filterNot { it.id == id }
+        if (item != null) {
+            showToast("Completed: ${item.title} (Removed)")
         }
     }
 

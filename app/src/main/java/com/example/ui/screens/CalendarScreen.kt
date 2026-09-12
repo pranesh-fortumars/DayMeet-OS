@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.*
 import com.example.ui.theme.*
+import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
 
 @Composable
@@ -418,6 +419,9 @@ private fun TimelineRow(
     onMeetingJoin: () -> Unit,
     onReschedule: () -> Unit
 ) {
+    val isDueSoon = remember(event.time, event.period) { TimeUtils.isDueWithinNextTwoHours(event.time, event.period) }
+    val isTaskWarning = isDueSoon && !event.isCompleted && (event.type == TimelineType.TASK || event.type == TimelineType.TASK_GROUP)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -500,13 +504,19 @@ private fun TimelineRow(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (event.isHappeningNow) SurfaceContainerLowest else SurfaceContainerLowest
+                containerColor = if (isTaskWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (event.isHappeningNow) 3.dp else 1.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (event.isHappeningNow || isTaskWarning) 3.dp else 1.dp),
             modifier = Modifier
                 .weight(1f)
                 .then(
-                    if (event.isHappeningNow) Modifier.border(1.5.dp, Primary.copy(alpha = 0.3f), RoundedCornerShape(16.dp)) else Modifier
+                    if (isTaskWarning) {
+                        Modifier.border(1.5.dp, Color(0xFFE53935), RoundedCornerShape(16.dp))
+                    } else if (event.isHappeningNow) {
+                        Modifier.border(1.5.dp, Primary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                    } else {
+                        Modifier
+                    }
                 )
         ) {
             Column(modifier = Modifier.padding(14.dp)) {

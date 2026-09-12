@@ -1,6 +1,16 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,17 +24,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.FeedCategory
 import com.example.model.FeedItem
 import com.example.model.Priority
 import com.example.ui.theme.*
+import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun TasksScreen(
@@ -122,70 +137,210 @@ fun TasksScreen(
 
         // Task Items
         items(displayedTasks, key = { it.id }) { task ->
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+            AnimatedTaskItemRow(
+                task = task,
+                onToggle = { viewModel.toggleFeedTaskDone(task.id) },
+                onRemove = { viewModel.removeFeedTask(task.id) }
+            )
+        }
+    }
+}
+
+@Composable
+fun AnimatedTaskItemRow(
+    task: FeedItem,
+    onToggle: () -> Unit,
+    onRemove: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var isToggledState by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
+    var isVisible by remember { mutableStateOf(true) }
+    var isAnimatingOut by remember { mutableStateOf(false) }
+
+    val strikeProgress = remember { Animatable(if (task.isCompleted) 1f else 0f) }
+    val isDueSoon = remember(task.time) { TimeUtils.isDueWithinNextTwoHours(task.time) }
+    val isWarning = isDueSoon && !task.isCompleted && !isToggledState
+
+    fun triggerCheckboxToggle() {
+        if (isAnimatingOut) return
+        if (!isToggledState) {
+            // Smooth CSS strike-through transition and slide-out animation sequence
+            isAnimatingOut = true
+            isToggledState = true
+            coroutineScope.launch {
+                // Phase 1: Smooth CSS strikethrough line drawn across text
+                strikeProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                )
+                // Brief pause so the satisfying strike-through is visually experienced
+                delay(80)
+                // Phase 2: Slide-out horizontally & collapse vertically
+                isVisible = false
+                // Phase 3: Await completion of slide-out transition
+                delay(380)
+                // Phase 4: Officially remove task from the list
+                onRemove()
+            }
+        } else {
+            // If already completed (in Completed tab), uncheck normally
+            onToggle()
+        }
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn() + expandVertically(),
+        exit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> (fullWidth * 1.3f).toInt() },
+            animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+        ) + shrinkVertically(
+            animationSpec = tween(durationMillis = 280, delayMillis = 30, easing = FastOutSlowInEasing)
+        ) + fadeOut(
+            animationSpec = tween(durationMillis = 280)
+        ),
+        modifier = modifier
+    ) {
+        Card(
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning) 2.dp else 1.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(
+                    if (isWarning) {
+                        Modifier.border(
+                            width = 2.dp,
+                            color = Color(0xFFE53935),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                    } else {
+                        Modifier
+                    }
+                )
+                .clickable { triggerCheckboxToggle() }
+                .testTag("task_item_${task.id}")
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { viewModel.toggleFeedTaskDone(task.id) }
-                    .testTag("task_item_${task.id}")
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (task.isCompleted) EmeraldSuccess else SurfaceContainerHigh),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (task.isCompleted) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        }
-
-                        Column {
-                            Text(
-                                text = task.title,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = OnSurface,
-                                    textDecoration = if (task.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                                )
+                    // Checkbox with spring/bounce and color transition
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(
+                                if (isToggledState) EmeraldSuccess
+                                else if (isWarning) Color(0xFFFFEBEE)
+                                else SurfaceContainerHigh
                             )
-                            Text(
-                                text = task.subtitle,
-                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                            .clickable { triggerCheckboxToggle() }
+                            .testTag("task_checkbox_${task.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isToggledState) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Completed",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        } else if (isWarning) {
+                            Icon(
+                                imageVector = Icons.Default.PriorityHigh,
+                                contentDescription = "Due Soon Warning",
+                                tint = Color(0xFFE53935),
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
 
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        // Title with CSS-style strike-through animation
+                        Box {
+                            val textColor = if (isToggledState) {
+                                OnSurfaceVariant.copy(alpha = 0.55f)
+                            } else {
+                                OnSurface
+                            }
+                            Text(
+                                text = task.title,
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    color = textColor,
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                modifier = Modifier.drawWithContent {
+                                    drawContent()
+                                    if (strikeProgress.value > 0f) {
+                                        val strokeW = 2.dp.toPx()
+                                        val y = size.height * 0.52f
+                                        drawLine(
+                                            color = OnSurfaceVariant,
+                                            start = Offset(0f, y),
+                                            end = Offset(size.width * strikeProgress.value, y),
+                                            strokeWidth = strokeW,
+                                            cap = StrokeCap.Round
+                                        )
+                                    }
+                                }
+                            )
+                        }
+                        Text(
+                            text = task.subtitle,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant
+                            )
+                        )
+                    }
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     task.statusTag?.let { tag ->
                         Text(
                             text = tag,
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                color = Primary
+                                color = if (isWarning) Color(0xFFD32F2F) else Primary
                             ),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(PrimaryFixed)
+                                .background(if (isWarning) Color(0xFFFFEBEE) else PrimaryFixed)
                                 .padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+
+                    // Existing time display with warning indicator
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = "Due Time",
+                            tint = if (isWarning) Color(0xFFE53935) else OnSurfaceVariant,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = task.time,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (isWarning) Color(0xFFE53935) else OnSurfaceVariant,
+                                fontWeight = if (isWarning) FontWeight.Bold else FontWeight.Normal
+                            )
                         )
                     }
                 }

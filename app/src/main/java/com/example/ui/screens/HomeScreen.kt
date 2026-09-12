@@ -1,5 +1,14 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,7 +26,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -27,7 +39,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
 import com.example.ui.theme.*
+import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(
@@ -708,6 +723,7 @@ fun HomeScreen(
             CrossStreamRowItem(
                 item = streamItem,
                 onToggleDone = { viewModel.toggleCrossStreamDone(streamItem.id) },
+                onRemove = { viewModel.removeCrossStreamItem(streamItem.id) },
                 onItemClick = {
                     when (streamItem.tagType) {
                         "meeting" -> viewModel.navigateTo("meetings")
@@ -934,132 +950,198 @@ private fun VitalsBentoCard(
 private fun CrossStreamRowItem(
     item: CrossStreamItem,
     onToggleDone: () -> Unit,
+    onRemove: () -> Unit,
     onItemClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onItemClick() }
-            .testTag("cross_stream_${item.id}")
+    val coroutineScope = rememberCoroutineScope()
+    var isToggledState by remember(item.isCompleted) { mutableStateOf(item.isCompleted) }
+    var isVisible by remember { mutableStateOf(true) }
+    var isAnimatingOut by remember { mutableStateOf(false) }
+
+    val strikeProgress = remember { Animatable(if (item.isCompleted) 1f else 0f) }
+    val isDueSoon = remember(item.time) { TimeUtils.isDueWithinNextTwoHours(item.time) }
+    val isWarning = isDueSoon && !item.isCompleted && !isToggledState && (item.tagType == "priority" || item.tagType == "task")
+
+    fun triggerToggle() {
+        if (isAnimatingOut) return
+        if (!isToggledState) {
+            isAnimatingOut = true
+            isToggledState = true
+            coroutineScope.launch {
+                // Phase 1: Smooth CSS strike-through transition across title
+                strikeProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                )
+                delay(80)
+                // Phase 2: Slide-out horizontally & shrink vertically
+                isVisible = false
+                delay(380)
+                // Phase 3: Remove from list
+                onRemove()
+            }
+        } else {
+            onToggleDone()
+        }
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn() + expandVertically(),
+        exit = slideOutHorizontally(
+            targetOffsetX = { fullWidth -> (fullWidth * 1.3f).toInt() },
+            animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+        ) + shrinkVertically(
+            animationSpec = tween(durationMillis = 280, delayMillis = 30, easing = FastOutSlowInEasing)
+        ) + fadeOut(
+            animationSpec = tween(durationMillis = 280)
+        )
     ) {
-        Row(
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning) 2.dp else 1.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .then(
+                    if (isWarning) Modifier.border(1.5.dp, Color(0xFFE53935), RoundedCornerShape(14.dp)) else Modifier
+                )
+                .clickable { onItemClick() }
+                .testTag("cross_stream_${item.id}")
         ) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Time column
-                Text(
-                    text = item.time,
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = Primary,
-                        fontSize = 11.sp
-                    ),
-                    modifier = Modifier.width(54.dp)
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    // Time column
+                    Text(
+                        text = item.time,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Primary,
+                            fontSize = 11.sp
+                        ),
+                        modifier = Modifier.width(54.dp)
+                    )
 
-                // Vertical indicator line
-                Box(
-                    modifier = Modifier
-                        .width(2.dp)
-                        .height(32.dp)
-                        .background(
-                            when (item.tagType) {
-                                "priority" -> Color(0xFFE53935)
-                                "expense" -> Color(0xFF2E7D32)
-                                "focus" -> Primary
-                                "wellness" -> SkyBlue
-                                "autopay" -> Tertiary
-                                "travel" -> Color(0xFF5C6BC0)
-                                else -> Primary
+                    // Vertical indicator line
+                    Box(
+                        modifier = Modifier
+                            .width(2.dp)
+                            .height(32.dp)
+                            .background(
+                                when (item.tagType) {
+                                    "priority" -> Color(0xFFE53935)
+                                    "expense" -> Color(0xFF2E7D32)
+                                    "focus" -> Primary
+                                    "wellness" -> SkyBlue
+                                    "autopay" -> Tertiary
+                                    "travel" -> Color(0xFF5C6BC0)
+                                    else -> Primary
+                                }
+                            )
+                    )
+
+                    // Interactive check button
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isToggledState) EmeraldSuccess else SurfaceContainerHigh)
+                            .border(
+                                width = 1.dp,
+                                color = if (isToggledState) EmeraldSuccess else OutlineVariant,
+                                shape = RoundedCornerShape(6.dp)
+                            )
+                            .clickable { triggerToggle() }
+                            .testTag("cross_stream_check_${item.id}"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isToggledState) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Completed",
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+
+                    // Text details
+                    Column(modifier = Modifier.weight(1f)) {
+                        val textColor = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.55f) else OnSurface
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = textColor
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.drawWithContent {
+                                drawContent()
+                                if (strikeProgress.value > 0f) {
+                                    val strokeW = 1.8.dp.toPx()
+                                    val y = size.height * 0.54f
+                                    drawLine(
+                                        color = OnSurfaceVariant,
+                                        start = Offset(0f, y),
+                                        end = Offset(size.width * strikeProgress.value, y),
+                                        strokeWidth = strokeW,
+                                        cap = StrokeCap.Round
+                                    )
+                                }
                             }
                         )
-                )
-
-                // Interactive check button
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (item.isCompleted) EmeraldSuccess else SurfaceContainerHigh)
-                        .border(
-                            width = 1.dp,
-                            color = if (item.isCompleted) EmeraldSuccess else OutlineVariant,
-                            shape = RoundedCornerShape(6.dp)
-                        )
-                        .clickable { onToggleDone() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (item.isCompleted) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Completed",
-                            tint = Color.White,
-                            modifier = Modifier.size(16.dp)
+                        Text(
+                            text = item.subtitle,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant,
+                                fontSize = 11.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                // Text details
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = OnSurface,
-                            textDecoration = if (item.isCompleted) TextDecoration.LineThrough else TextDecoration.None
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = item.subtitle,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = OnSurfaceVariant,
-                            fontSize = 11.sp
-                        ),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Tag pill
+                val (tagBg, tagColor) = when (item.tagType) {
+                    "meeting" -> Color(0xFFEDE7F6) to Color(0xFF673AB7)
+                    "priority" -> Color(0xFFFFEBEE) to Color(0xFFE53935)
+                    "expense" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+                    "focus" -> Color(0xFFEDE7F6) to Primary
+                    "wellness" -> Color(0xFFE1F5FE) to Color(0xFF0288D1)
+                    "autopay" -> Color(0xFFECEFF1) to Color(0xFF455A64)
+                    "travel" -> Color(0xFFE8EAF6) to Color(0xFF3949AB)
+                    else -> SurfaceContainerHigh to OnSurfaceVariant
                 }
+
+                Text(
+                    text = item.tag,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = tagColor,
+                        fontSize = 10.sp
+                    ),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(tagBg)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Tag pill
-            val (tagBg, tagColor) = when (item.tagType) {
-                "meeting" -> Color(0xFFEDE7F6) to Color(0xFF673AB7)
-                "priority" -> Color(0xFFFFEBEE) to Color(0xFFE53935)
-                "expense" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
-                "focus" -> Color(0xFFEDE7F6) to Primary
-                "wellness" -> Color(0xFFE1F5FE) to Color(0xFF0288D1)
-                "autopay" -> Color(0xFFECEFF1) to Color(0xFF455A64)
-                "travel" -> Color(0xFFE8EAF6) to Color(0xFF3949AB)
-                else -> SurfaceContainerHigh to OnSurfaceVariant
-            }
-
-            Text(
-                text = item.tag,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontWeight = FontWeight.Bold,
-                    color = tagColor,
-                    fontSize = 10.sp
-                ),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(tagBg)
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            )
         }
     }
 }
