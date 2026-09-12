@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DayMeet — All-in-One Daily Life Super App</title>
+  <meta name="description" content="DayMeet: Personal digital command center for Productivity, Meetings, Tasks, Finance, Health, Habits, Goals, and Automations.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"Space Grotesk"', 'monospace']
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#6750A4',
+              light: '#EDE7F6',
+              dark: '#21005D',
+              fixed: '#EADDFF'
+            },
+            surface: {
+              bg: '#F8F9FE',
+              card: '#FFFFFF',
+              dark: '#141218'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #F8F9FE; color: #1C1B1F; }
+    .badge-blur { backdrop-filter: blur(8px); }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between antialiased">
+
+  <!-- Top Announcement Bar for Vercel Deployment -->
+  <div class="bg-[#141218] text-white px-4 py-2.5 text-xs flex flex-wrap items-center justify-between border-b border-gray-800">
+    <div class="flex items-center gap-2">
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        VERCEL DEPLOYED
+      </span>
+      <span class="font-medium text-gray-300">DayMeet All-in-One Daily Life Super App • Web Edition & Mobile Companion</span>
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-gray-400 hidden sm:inline">Production Build v2.4.0</span>
+      <button onclick="openBriefingModal()" class="text-xs bg-primary text-white font-semibold px-3 py-1 rounded-md hover:bg-purple-700 transition">
+        Launch Daily Briefing ☀️
+      </button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <!-- Logo & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-700 to-indigo-500 flex items-center justify-center text-white font-bold shadow-md shadow-purple-500/20">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-extrabold tracking-tight text-gray-900 leading-none">DayMeet</h1>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-100 text-primary">Super App</span>
+          </div>
+          <p class="text-xs text-gray-500 font-medium">Thursday, October 24 • Digital Command Center</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="flex items-center gap-3">
+        <button onclick="toggleQuickAddModal()" class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-white bg-primary hover:bg-purple-700 shadow-sm transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Quick Add
+        </button>
+        <button onclick="openAiCopilot()" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 transition">
+          <svg class="w-4 h-4 text-purple-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+          <span>Gemini Copilot</span>
+        </button>
+        <div class="flex items-center gap-2 pl-2 border-l border-gray-200">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150" alt="Alex Chen" class="w-9 h-9 rounded-full object-cover ring-2 ring-purple-100">
+          <div class="hidden md:block text-left">
+            <p class="text-xs font-bold text-gray-800 leading-none">Alex Chen</p>
+            <p class="text-[10px] text-gray-500">Product Lead</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <div class="bg-white border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 flex overflow-x-auto space-x-2 py-2 text-xs font-bold scrollbar-none">
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="px-3.5 py-1.5 rounded-lg bg-gray-900 text-white shadow-sm">Home Dashboard</button>
+      <button onclick="switchTab('automations')" id="tab-automations" class="px-3.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition">Automations Engine (5 Active)</button>
+      <button onclick="switchTab('finance')" id="tab-finance" class="px-3.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition">Finance & Ledger</button>
+      <button onclick="switchTab('health')" id="tab-health" class="px-3.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition">Health & Bio-Sync</button>
+      <button onclick="switchTab('tasks')" id="tab-tasks" class="px-3.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition">Tasks & Focus</button>
+      <button onclick="switchTab('more')" id="tab-more" class="px-3.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition">Command Center (33 Modules)</button>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full">
+
+    <!-- TAB 1: DASHBOARD -->
+    <div id="view-dashboard" class="space-y-6">
+      
+      <!-- Greeting & Top Banner -->
+      <div class="bg-gradient-to-r from-purple-700 via-indigo-700 to-purple-900 rounded-2xl p-6 text-white shadow-lg shadow-purple-900/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/20 text-purple-100 backdrop-blur-sm mb-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            All 33 Super App Modules Synchronized
+          </span>
+          <h2 class="text-2xl font-black tracking-tight">Good morning, Alex</h2>
+          <p class="text-sm text-purple-200 mt-1 max-w-xl">
+            You have 3 meetings, 6 tasks due today, and ₹1,550 safe spend remaining under today's cap.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="openBriefingModal()" class="px-4 py-2.5 bg-white text-purple-900 text-xs font-bold rounded-xl hover:bg-purple-50 transition shadow-sm">
+            Read AI Briefing ☀️
+          </button>
+          <button onclick="triggerToast('Joined Google Meet: Product Strategy Review')" class="px-4 py-2.5 bg-purple-500/30 text-white text-xs font-bold rounded-xl hover:bg-purple-500/40 border border-white/20 transition">
+            Join Next Meeting 🎥
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Metrics 4-Col Grid -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+          <div class="flex items-center justify-between text-gray-500 text-xs font-semibold">
+            <span>Next Meeting</span>
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          </div>
+          <p class="text-base font-extrabold text-gray-900 mt-1 truncate">Product Strategy</p>
+          <p class="text-xs text-purple-700 font-bold">09:30 AM • 45m Google Meet</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+          <div class="flex items-center justify-between text-gray-500 text-xs font-semibold">
+            <span>Daily Budget Cap</span>
+            <span class="text-xs text-emerald-600 font-bold">Safe</span>
+          </div>
+          <p class="text-base font-extrabold text-gray-900 mt-1">₹3,450 / ₹5,000</p>
+          <p class="text-xs text-gray-500 font-medium">₹1,550 buffer left today</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+          <div class="flex items-center justify-between text-gray-500 text-xs font-semibold">
+            <span>Bio-Sync Health</span>
+            <span class="text-xs text-purple-600 font-bold">88/100</span>
+          </div>
+          <p class="text-base font-extrabold text-gray-900 mt-1">7,845 / 10k Steps</p>
+          <p class="text-xs text-gray-500 font-medium">Sleep 7h 20m • Oura Ring</p>
+        </div>
+
+        <div class="bg-white p-4 rounded-2xl border border-gray-200/80 shadow-sm">
+          <div class="flex items-center justify-between text-gray-500 text-xs font-semibold">
+            <span>Active Workflows</span>
+            <span class="text-xs text-blue-600 font-bold">5 Rules</span>
+          </div>
+          <p class="text-base font-extrabold text-gray-900 mt-1">When → If → Then</p>
+          <p class="text-xs text-gray-500 font-medium">Meeting action items auto-synced</p>
+        </div>
+      </div>
+
+      <!-- Main 2-Column Split: Tasks & Schedule -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left: Tasks & Checklist (2 cols) -->
+        <div class="lg:col-span-2 space-y-4">
+          <div class="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-extrabold text-gray-900">Today's Priority Tasks</h3>
+                <p class="text-xs text-gray-500">Cross-module checklist with subtasks and priority</p>
+              </div>
+              <button onclick="toggleQuickAddModal('Task')" class="text-xs font-bold text-primary hover:underline">
+                + Add Task
+              </button>
+            </div>
+
+            <!-- Task Items -->
+            <div class="space-y-3" id="tasks-container">
+              <!-- Item 1 -->
+              <div class="p-3.5 rounded-xl border border-gray-200 hover:border-purple-200 bg-gray-50/50 flex items-start justify-between gap-3 transition">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" onchange="triggerToast('Task completed!')" class="mt-1 w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-gray-300">
+                  <div>
+                    <p class="text-sm font-bold text-gray-900">Finalize Mobile Design Tokens</p>
+                    <p class="text-xs text-gray-500">Workspace sync • Due 12:00 PM build freeze</p>
+                    <div class="flex items-center gap-2 mt-2">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-600 border border-rose-200">HIGH</span>
+                      <span class="text-[10px] text-gray-500">3 subtasks</span>
+                    </div>
+                  </div>
+                </div>
+                <span class="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-1 rounded-md">12:00 PM</span>
+              </div>
+
+              <!-- Item 2 -->
+              <div class="p-3.5 rounded-xl border border-gray-200 hover:border-purple-200 bg-gray-50/50 flex items-start justify-between gap-3 transition">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" onchange="triggerToast('Task completed!')" class="mt-1 w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-gray-300">
+                  <div>
+                    <p class="text-sm font-bold text-gray-900">Pay Electricity Bill (Tata Power ₹2,400)</p>
+                    <p class="text-xs text-gray-500">Auto-detected from biller alert • Due in 2 days</p>
+                    <div class="flex items-center gap-2 mt-2">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">URGENT</span>
+                      <span class="text-[10px] text-emerald-600 font-semibold">1-Tap Pay Ready</span>
+                    </div>
+                  </div>
+                </div>
+                <button onclick="triggerToast('Paid ₹2,400 to Tata Power via UPI')" class="text-xs font-bold bg-emerald-600 text-white px-3 py-1 rounded-lg hover:bg-emerald-700 transition">
+                  Pay Now
+                </button>
+              </div>
+
+              <!-- Item 3 -->
+              <div class="p-3.5 rounded-xl border border-gray-200 hover:border-purple-200 bg-gray-50/50 flex items-start justify-between gap-3 transition">
+                <div class="flex items-start gap-3">
+                  <input type="checkbox" onchange="triggerToast('Task completed!')" class="mt-1 w-4 h-4 rounded text-purple-600 focus:ring-purple-500 border-gray-300">
+                  <div>
+                    <p class="text-sm font-bold text-gray-900">Review Chennai Trip Packing Checklist</p>
+                    <p class="text-xs text-gray-500">Flight 6E 412 • Departure in 3 days</p>
+                    <div class="flex items-center gap-2 mt-2">
+                      <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">TRAVEL</span>
+                    </div>
+                  </div>
+                </div>
+                <span class="text-xs font-bold text-gray-500">Trip Sync</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Schedule & Health preview (1 col) -->
+        <div class="space-y-4">
+          <!-- Next Meeting Card -->
+          <div class="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">LIVE IN 30M</span>
+              <span class="text-xs text-gray-500 font-mono">09:30 AM</span>
+            </div>
+            <h4 class="text-base font-extrabold text-gray-900">Product Strategy Review</h4>
+            <p class="text-xs text-gray-500 mt-1">Google Meet • 4 Attendees</p>
+            <div class="flex -space-x-2 my-3 overflow-hidden">
+              <img class="inline-block h-7 w-7 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" alt="">
+              <img class="inline-block h-7 w-7 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" alt="">
+              <img class="inline-block h-7 w-7 rounded-full ring-2 ring-white" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" alt="">
+            </div>
+            <button onclick="triggerToast('Opening Google Meet video conference...')" class="w-full py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition">
+              Launch Video Call 📹
+            </button>
+          </div>
+
+          <!-- Habit Streaks -->
+          <div class="bg-white rounded-2xl border border-gray-200/80 p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-extrabold text-gray-900">Daily Habit Streaks 🔥</h4>
+              <span class="text-xs font-bold text-amber-600">18-Day Streak</span>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                <span class="font-medium text-gray-800">💧 Drink 2.5L Water</span>
+                <span class="font-bold text-purple-700">1.8 / 2.5L</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                <span class="font-medium text-gray-800">🏃 Morning 30m Run</span>
+                <span class="font-bold text-emerald-600">Completed ✓</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                <span class="font-medium text-gray-800">🧘 15m Mindfulness</span>
+                <span class="font-bold text-gray-500">Pending</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: AUTOMATIONS ENGINE -->
+    <div id="view-automations" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-xs">⚡</span>
+              <h2 class="text-lg font-extrabold text-gray-900">Rules & Automations Engine</h2>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">When → If → Then workflows connecting meetings, tasks, finance, and health</p>
+          </div>
+          <span class="px-3 py-1 bg-emerald-100 text-emerald-800 font-bold text-xs rounded-full">5 Active Workflows</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Rule 1 -->
+          <div class="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">PRODUCTIVITY</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+            <h4 class="font-bold text-gray-900 text-sm">Meeting Follow-up Orchestrator</h4>
+            <div class="space-y-1 text-xs font-mono bg-white p-2.5 rounded-lg border border-gray-200">
+              <p><strong class="text-blue-600">WHEN:</strong> Calendar meeting ends</p>
+              <p><strong class="text-amber-600">IF:</strong> Alex is organizer & action items found</p>
+              <p><strong class="text-emerald-600">THEN:</strong> Auto-create tasks & draft follow-up Slack</p>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-1">
+              <span class="text-gray-500">28 runs this month</span>
+              <button onclick="triggerToast('Triggered test execution: Meeting Follow-up Orchestrator')" class="text-purple-700 font-bold hover:underline">Test Trigger →</button>
+            </div>
+          </div>
+
+          <!-- Rule 2 -->
+          <div class="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">FINANCE</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+            <h4 class="font-bold text-gray-900 text-sm">Daily Expense Safeguard</h4>
+            <div class="space-y-1 text-xs font-mono bg-white p-2.5 rounded-lg border border-gray-200">
+              <p><strong class="text-blue-600">WHEN:</strong> Daily expense ledger exceeds ₹3,500</p>
+              <p><strong class="text-amber-600">IF:</strong> Category is Dining or Shopping</p>
+              <p><strong class="text-emerald-600">THEN:</strong> Send push alert & pause non-essential debits</p>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-1">
+              <span class="text-gray-500">Saved ₹8,400 past 30 days</span>
+              <button onclick="triggerToast('Triggered test execution: Daily Expense Safeguard')" class="text-purple-700 font-bold hover:underline">Test Trigger →</button>
+            </div>
+          </div>
+
+          <!-- Rule 3 -->
+          <div class="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-100 text-teal-800">HEALTH</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+            <h4 class="font-bold text-gray-900 text-sm">Deep Work Sanctuary</h4>
+            <div class="space-y-1 text-xs font-mono bg-white p-2.5 rounded-lg border border-gray-200">
+              <p><strong class="text-blue-600">WHEN:</strong> Deep Work calendar block begins</p>
+              <p><strong class="text-amber-600">IF:</strong> Scheduled on Google Calendar</p>
+              <p><strong class="text-emerald-600">THEN:</strong> Activate DND & set Slack status to Focus</p>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-1">
+              <span class="text-gray-500">14 focus sessions protected</span>
+              <button onclick="triggerToast('Triggered test execution: Deep Work Sanctuary')" class="text-purple-700 font-bold hover:underline">Test Trigger →</button>
+            </div>
+          </div>
+
+          <!-- Rule 4 -->
+          <div class="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-100 text-orange-800">DEADLINES</span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked class="sr-only peer">
+                <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+            <h4 class="font-bold text-gray-900 text-sm">Critical Bill Early Warning</h4>
+            <div class="space-y-1 text-xs font-mono bg-white p-2.5 rounded-lg border border-gray-200">
+              <p><strong class="text-blue-600">WHEN:</strong> Recurring bill due in &lt; 48 hours</p>
+              <p><strong class="text-amber-600">IF:</strong> Category is Rent, Card or Electricity</p>
+              <p><strong class="text-emerald-600">THEN:</strong> Pin banner to Home Dashboard & schedule buffer</p>
+            </div>
+            <div class="flex items-center justify-between text-xs pt-1">
+              <span class="text-gray-500">Zero late fees logged</span>
+              <button onclick="triggerToast('Triggered test execution: Critical Bill Early Warning')" class="text-purple-700 font-bold hover:underline">Test Trigger →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: FINANCE -->
+    <div id="view-finance" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-sm">
+        <h2 class="text-lg font-extrabold text-gray-900 mb-4">Finance, Ledger & Subscriptions</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div class="p-4 bg-purple-50 rounded-xl">
+            <p class="text-xs text-purple-700 font-semibold">Total Liquid Balance</p>
+            <p class="text-2xl font-black text-purple-900 mt-1">₹1,42,850</p>
+            <p class="text-[11px] text-gray-500">HDFC ••4109 & ICICI ••8912</p>
+          </div>
+          <div class="p-4 bg-emerald-50 rounded-xl">
+            <p class="text-xs text-emerald-700 font-semibold">Today's Total Spend</p>
+            <p class="text-2xl font-black text-emerald-900 mt-1">₹3,450</p>
+            <p class="text-[11px] text-emerald-700">Under daily ceiling of ₹5,000</p>
+          </div>
+          <div class="p-4 bg-orange-50 rounded-xl">
+            <p class="text-xs text-orange-700 font-semibold">Active Subscriptions</p>
+            <p class="text-2xl font-black text-orange-900 mt-1">₹3,228/mo</p>
+            <p class="text-[11px] text-orange-700">4 services (Netflix, Figma, Airtel, Spotify)</p>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-bold text-gray-800 mb-3">Recent Transactions</h3>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
+            <div>
+              <p class="font-bold text-gray-900">Blue Tokai Coffee Roasters</p>
+              <p class="text-gray-500">Food & Dining • Today, 08:30 AM</p>
+            </div>
+            <p class="font-bold text-rose-600">-₹280</p>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
+            <div>
+              <p class="font-bold text-gray-900">Uber Premier Transit</p>
+              <p class="text-gray-500">Transportation • Today, 07:45 AM</p>
+            </div>
+            <p class="font-bold text-rose-600">-₹450</p>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
+            <div>
+              <p class="font-bold text-gray-900">Consulting Milestone Payment</p>
+              <p class="text-gray-500">Direct Deposit • Yesterday</p>
+            </div>
+            <p class="font-bold text-emerald-600">+₹45,000</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: HEALTH -->
+    <div id="view-health" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-extrabold text-gray-900">Health Score & Bio-Sync</h2>
+          <span class="px-2.5 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full">Oura Ring Connected</span>
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-4 bg-gray-50 rounded-xl text-center">
+            <p class="text-xs text-gray-500 font-semibold">Sleep Duration</p>
+            <p class="text-xl font-bold text-gray-900 mt-1">7h 20m</p>
+            <p class="text-[11px] text-emerald-600 font-medium">85% Optimal Quality</p>
+          </div>
+          <div class="p-4 bg-gray-50 rounded-xl text-center">
+            <p class="text-xs text-gray-500 font-semibold">Steps Walked</p>
+            <p class="text-xl font-bold text-gray-900 mt-1">7,845</p>
+            <p class="text-[11px] text-purple-600 font-medium">Target: 10,000</p>
+          </div>
+          <div class="p-4 bg-gray-50 rounded-xl text-center">
+            <p class="text-xs text-gray-500 font-semibold">Hydration</p>
+            <p class="text-xl font-bold text-gray-900 mt-1">1.8 L</p>
+            <p class="text-[11px] text-blue-600 font-medium">Target: 2.5 L</p>
+          </div>
+          <div class="p-4 bg-gray-50 rounded-xl text-center">
+            <p class="text-xs text-gray-500 font-semibold">Active Calories</p>
+            <p class="text-xl font-bold text-gray-900 mt-1">480 kcal</p>
+            <p class="text-[11px] text-amber-600 font-medium">Target: 600 kcal</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: TASKS -->
+    <div id="view-tasks" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-sm">
+        <h2 class="text-lg font-extrabold text-gray-900 mb-2">Deep Focus & Workspace</h2>
+        <p class="text-xs text-gray-500 mb-4">Pomodoro timer, workspace filters, and subtask breakdown</p>
+        <div class="p-6 bg-purple-900 text-white rounded-2xl text-center">
+          <p class="text-xs uppercase tracking-widest text-purple-300 font-mono">Pomodoro Focus Session</p>
+          <p class="text-5xl font-black font-mono my-3">25:00</p>
+          <div class="flex justify-center gap-3">
+            <button onclick="triggerToast('Focus timer started! DND activated.')" class="px-6 py-2 bg-white text-purple-900 font-bold rounded-xl text-xs">Start Focus</button>
+            <button onclick="triggerToast('Focus session paused.')" class="px-4 py-2 bg-purple-800 text-white font-bold rounded-xl text-xs">Pause</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 6: COMMAND CENTER (33 MODULES) -->
+    <div id="view-more" class="hidden space-y-4">
+      <div class="bg-white rounded-2xl border border-gray-200/80 p-6 shadow-sm">
+        <h2 class="text-lg font-extrabold text-gray-900 mb-1">Super App Command Center</h2>
+        <p class="text-xs text-gray-500 mb-6">Directory of all 33 integrated life modules</p>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div onclick="switchTab('automations')" class="p-4 rounded-xl border border-gray-200 hover:border-purple-300 cursor-pointer bg-gray-50/50 hover:bg-purple-50/40 transition">
+            <p class="font-bold text-gray-900 text-sm">⚡ Rules & Automations</p>
+            <p class="text-xs text-gray-500">When → If → Then workflow engine</p>
+          </div>
+          <div onclick="switchTab('finance')" class="p-4 rounded-xl border border-gray-200 hover:border-purple-300 cursor-pointer bg-gray-50/50 hover:bg-purple-50/40 transition">
+            <p class="font-bold text-gray-900 text-sm">💳 Finance & Subscriptions</p>
+            <p class="text-xs text-gray-500">Spend ceiling, recurring bills, accounts</p>
+          </div>
+          <div onclick="switchTab('health')" class="p-4 rounded-xl border border-gray-200 hover:border-purple-300 cursor-pointer bg-gray-50/50 hover:bg-purple-50/40 transition">
+            <p class="font-bold text-gray-900 text-sm">❤️ Health & Bio-Sync</p>
+            <p class="text-xs text-gray-500">Oura sleep, steps, water, heart rate</p>
+          </div>
+          <div onclick="triggerToast('Opening Travel Itinerary: Chennai flight 6E 412 in 3 days')" class="p-4 rounded-xl border border-gray-200 hover:border-purple-300 cursor-pointer bg-gray-50/50 hover:bg-purple-50/40 transition">
+            <p class="font-bold text-gray-900 text-sm">✈️ Travel & Trips</p>
+            <p class="text-xs text-gray-500">Chennai 6E 412, hotel reservation & packing</p>
+          </div>
+          <div onclick="triggerToast('Decrypted Secure Document Vault')" class="p-4 rounded-xl border border-gray-200 hover:border-purple-300 cursor-pointer bg-gray-50/50 hover:bg-purple-50/40 transition">
+            <p class="font-bold text-gray-900 text-sm">🔒 Secure Document Vault</p>
+            <p class="text-xs text-gray-500">Passport, health insurance, on-device AES</p>
+          </div>
+          <div onclick="triggerToast('Shopping list: 4 items (₹450 estimated)')" class="p-4 rounded-xl border border-gray-200 hover:border-purple-300 cursor-pointer bg-gray-50/50 hover:bg-purple-50/40 transition">
+            <p class="font-bold text-gray-900 text-sm">🛒 Shopping & Groceries</p>
+            <p class="text-xs text-gray-500">Aisle checklist with auto-budget estimation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modals & Dialogs -->
+
+  <!-- 1. AI Copilot Modal -->
+  <div id="modal-copilot" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">✨</span>
+          <h3 class="font-bold text-gray-900">DayMeet AI Copilot (Gemini)</h3>
+        </div>
+        <button onclick="closeAiCopilot()" class="text-gray-400 hover:text-gray-600">✕</button>
+      </div>
+      <p class="text-xs text-gray-600">Ask natural language instructions to reschedule meetings, log expenses, create tasks, or analyze your health metrics.</p>
+      <div class="p-3 bg-purple-50 rounded-xl text-xs text-purple-900 font-mono space-y-1">
+        <p><strong>Try:</strong> "Reschedule my 2 PM meeting to tomorrow morning"</p>
+        <p><strong>Try:</strong> "How much can I spend on dinner tonight without exceeding my budget?"</p>
+      </div>
+      <div class="flex gap-2">
+        <input type="text" placeholder="Type an instruction or question..." class="flex-1 text-xs border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-purple-600">
+        <button onclick="triggerToast('AI instruction dispatched!')" class="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-purple-700">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Daily Briefing Modal -->
+  <div id="modal-briefing" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-lg rounded-2xl p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b pb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">☀️</span>
+          <h3 class="font-bold text-gray-900">Morning AI Synthesis Briefing</h3>
+        </div>
+        <button onclick="closeBriefingModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+      </div>
+      <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
+        <strong>Conditions:</strong> 72°F Sunny • Optimal focus window between 10:00 AM and 01:00 PM. Sleep quality 85%.
+      </div>
+      <div class="space-y-2 text-xs">
+        <p class="font-bold text-gray-800">Critical Path Today:</p>
+        <ul class="list-disc pl-4 space-y-1 text-gray-600">
+          <li><strong>09:30 AM</strong> - Product Strategy Review with Alex, Sarah & David.</li>
+          <li><strong>12:00 PM</strong> - Finalize Mobile Design Tokens before release freeze.</li>
+          <li><strong>02:00 PM</strong> - 90-min Deep Work Sanctuary (DND auto-activates).</li>
+          <li><strong>Tomorrow</strong> - Tata Power bill due (₹2,400).</li>
+        </ul>
+      </div>
+      <button onclick="closeBriefingModal(); triggerToast('Briefing acknowledged! Have an energized day! 🚀')" class="w-full py-3 bg-primary text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition">
+        Start My Day 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- 3. Universal Quick Add Modal -->
+  <div id="modal-quickadd" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-md rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-bold text-gray-900">Universal Quick Add</h3>
+        <button onclick="toggleQuickAddModal()" class="text-gray-400 hover:text-gray-600">✕</button>
+      </div>
+      <div class="flex gap-2 overflow-x-auto pb-1 text-xs">
+        <button class="px-3 py-1 rounded-full bg-purple-700 text-white font-bold">Task</button>
+        <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">Meeting</button>
+        <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">Expense</button>
+        <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">Note</button>
+        <button class="px-3 py-1 rounded-full bg-gray-100 text-gray-700 font-medium">Habit</button>
+      </div>
+      <input type="text" placeholder="Title / Description" class="w-full text-xs border border-gray-300 rounded-xl px-3 py-2.5 focus:outline-none focus:border-purple-600">
+      <textarea placeholder="Notes or Context" rows="3" class="w-full text-xs border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:border-purple-600"></textarea>
+      <button onclick="toggleQuickAddModal(); triggerToast('Item created and synced across all modules!')" class="w-full py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-purple-700 transition">
+        Save to Workspace
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast Notification Bar -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-xs font-medium px-4 py-2.5 rounded-full shadow-lg opacity-0 transition-opacity pointer-events-none z-50 flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toast-text">Message</span>
+  </div>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p>© 2026 DayMeet. All-in-One Daily Life Super App.</p>
+      <div class="flex items-center gap-4 text-gray-600 font-medium">
+        <a href="https://vercel.com" target="_blank" class="hover:text-purple-700">Deploy to Vercel</a>
+        <span>•</span>
+        <a href="#" onclick="triggerToast('Android APK build ready for download from AI Studio export')" class="hover:text-purple-700">Download Android APK</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function switchTab(tabId) {
+      const tabs = ['dashboard', 'automations', 'finance', 'health', 'tasks', 'more'];
+      tabs.forEach(t => {
+        const view = document.getElementById(`view-${t}`);
+        const btn = document.getElementById(`tab-${t}`);
+        if (t === tabId) {
+          view.classList.remove('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-lg bg-gray-900 text-white shadow-sm';
+        } else {
+          view.classList.add('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-lg text-gray-600 hover:bg-gray-100 transition';
+        }
+      });
+    }
+
+    function toggleQuickAddModal(type) {
+      const el = document.getElementById('modal-quickadd');
+      el.classList.toggle('hidden');
+    }
+
+    function openBriefingModal() {
+      document.getElementById('modal-briefing').classList.remove('hidden');
+    }
+
+    function closeBriefingModal() {
+      document.getElementById('modal-briefing').classList.add('hidden');
+    }
+
+    function openAiCopilot() {
+      document.getElementById('modal-copilot').classList.remove('hidden');
+    }
+
+    function closeAiCopilot() {
+      document.getElementById('modal-copilot').classList.add('hidden');
+    }
+
+    let toastTimer = null;
+    function triggerToast(text) {
+      const toast = document.getElementById('toast');
+      const toastText = document.getElementById('toast-text');
+      toastText.innerText = text;
+      toast.classList.remove('opacity-0');
+      toast.classList.add('opacity-100');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.remove('opacity-100');
+        toast.classList.add('opacity-0');
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

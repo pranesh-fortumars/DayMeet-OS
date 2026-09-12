@@ -1,0 +1,8 @@
+{
+  "name": "daymeet-super-app",
+  "version": "1.0.0",
+  "description": "DayMeet - All-in-One Daily Life Super App (Web Edition & Mobile Companion)",
+  "scripts": {
+    "build": "echo 'Ready for Vercel deployment'"
+  }
+}
