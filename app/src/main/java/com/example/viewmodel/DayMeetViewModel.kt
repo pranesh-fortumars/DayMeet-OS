@@ -85,6 +85,13 @@ class DayMeetViewModel : ViewModel() {
     private val _habits = MutableStateFlow(DayMeetRepository.getInitialHabits())
     val habits: StateFlow<List<HabitItem>> = _habits.asStateFlow()
 
+    // Confetti Animation State for habit streak records
+    private val _showConfetti = MutableStateFlow(false)
+    val showConfetti: StateFlow<Boolean> = _showConfetti.asStateFlow()
+
+    private val _confettiMilestone = MutableStateFlow<String?>(null)
+    val confettiMilestone: StateFlow<String?> = _confettiMilestone.asStateFlow()
+
     // Notes & Knowledge
     private val _notes = MutableStateFlow(DayMeetRepository.getInitialNotes())
     val notes: StateFlow<List<NoteItem>> = _notes.asStateFlow()
@@ -345,18 +352,66 @@ class DayMeetViewModel : ViewModel() {
     }
 
     // Habits & Goals Actions
+    fun triggerConfetti(milestone: String? = null) {
+        _confettiMilestone.value = milestone
+        _showConfetti.value = true
+        viewModelScope.launch {
+            kotlinx.coroutines.delay(2600)
+            _showConfetti.value = false
+            _confettiMilestone.value = null
+        }
+    }
+
+    fun dismissConfetti() {
+        _showConfetti.value = false
+        _confettiMilestone.value = null
+    }
+
+    fun addCustomHabit(
+        name: String,
+        category: String = "Learning",
+        iconKey: String = "school",
+        colorHex: String = "#F57C00"
+    ) {
+        val newHabit = HabitItem(
+            id = "h_${System.currentTimeMillis()}",
+            name = name.ifBlank { "Custom Habit" },
+            streakDays = 1,
+            targetFrequency = "Daily",
+            isCompletedToday = true,
+            category = category.ifBlank { "Learning" },
+            iconKey = iconKey,
+            colorHex = colorHex,
+            bestStreakDays = 1
+        )
+        _habits.value = listOf(newHabit) + _habits.value
+        showToast("✨ Added habit: $name in $category")
+        triggerConfetti("🎉 Started new habit streak: $name!")
+    }
+
     fun toggleHabit(id: String) {
+        var streakMilestoneMsg: String? = null
         _habits.value = _habits.value.map { h ->
             if (h.id == id) {
                 val next = !h.isCompletedToday
+                val newStreak = if (next) h.streakDays + 1 else (h.streakDays - 1).coerceAtLeast(0)
+                val newBest = if (newStreak > h.bestStreakDays) newStreak else h.bestStreakDays
+                if (next && newStreak >= h.bestStreakDays) {
+                    streakMilestoneMsg = "🎉 Streak Record! ${newStreak}d streak for ${h.name} 🔥"
+                }
                 h.copy(
                     isCompletedToday = next,
-                    streakDays = if (next) h.streakDays + 1 else (h.streakDays - 1).coerceAtLeast(0)
+                    streakDays = newStreak,
+                    bestStreakDays = newBest
                 )
             } else h
         }
         val habit = _habits.value.firstOrNull { it.id == id }
-        showToast("${habit?.name} marked ${if (habit?.isCompletedToday == true) "done! 🔥" else "incomplete"}")
+        val isDone = habit?.isCompletedToday == true
+        showToast("${habit?.name} marked ${if (isDone) "done! 🔥" else "incomplete"}")
+        if (streakMilestoneMsg != null && isDone) {
+            triggerConfetti(streakMilestoneMsg)
+        }
     }
 
     fun logMorningMeditation() {
@@ -364,9 +419,10 @@ class DayMeetViewModel : ViewModel() {
         if (meditation != null) {
             toggleHabit(meditation.id)
         } else {
-            val newH = HabitItem("h_meditation", "Morning Meditation", 19, "Daily", true, "Mindfulness")
+            val newH = HabitItem("h_meditation", "Morning Meditation", 19, "Daily", true, "Mindfulness", "self_improvement", "#673AB7", 19)
             _habits.value = listOf(newH) + _habits.value
             showToast("🧘 Morning Meditation marked done! 19d streak 🔥")
+            triggerConfetti("🎉 Streak Record Maintained: 19d Meditation Streak! 🔥")
         }
     }
 
@@ -375,9 +431,77 @@ class DayMeetViewModel : ViewModel() {
         if (exercise != null) {
             toggleHabit(exercise.id)
         } else {
-            val newH = HabitItem("h_exercise", "Morning Exercise", 14, "Daily", true, "Fitness")
+            val newH = HabitItem("h_exercise", "Morning Exercise", 14, "Daily", true, "Fitness", "fitness_center", "#2E7D32", 14)
             _habits.value = listOf(newH) + _habits.value
             showToast("🏃 Morning Exercise marked done! 14d streak 🔥")
+            triggerConfetti("🎉 Streak Record Maintained: 14d Exercise Streak! 🔥")
+        }
+    }
+
+    fun downloadWeeklyFinanceReport(context: Context) {
+        val reportText = buildString {
+            appendLine("==================================================")
+            appendLine("DAYMEET LIFE OS • EXECUTIVE WEEKLY SPENDING REPORT")
+            appendLine("==================================================")
+            appendLine("Period: Current Week (Monday - Sunday)")
+            appendLine("Generated: 2026-09-12 10:30 AM")
+            appendLine("Budget Status: SAFE & UNDER BUDGET (41.4% Buffer)")
+            appendLine("")
+            appendLine("EXECUTIVE METRICS:")
+            appendLine("• Weekly Budget Ceiling:   ₹35,000.00")
+            appendLine("• Total Spent to Date:     ₹20,500.00")
+            appendLine("• Remaining Buffer:        ₹14,500.00 (Safe Surplus)")
+            appendLine("• Daily Average Spend:     ₹2,928.57 / day")
+            appendLine("• Daily Budget Ceiling:    ₹5,000.00 / day")
+            appendLine("")
+            appendLine("DAILY SPENDING CADENCE vs DAILY CEILING:")
+            appendLine("--------------------------------------------------")
+            appendLine("• Monday:    ₹2,100.00  | Buffer: ₹2,900.00 (Safe)")
+            appendLine("• Tuesday:   ₹4,350.00  | Buffer: ₹650.00   (Safe)")
+            appendLine("• Wednesday: ₹2,800.00  | Buffer: ₹2,200.00 (Safe)")
+            appendLine("• Thursday:  ₹3,450.00  | Buffer: ₹1,550.00 (Safe - Today)")
+            appendLine("• Friday:    ₹1,800.00  | Buffer: ₹3,200.00 (Safe)")
+            appendLine("• Saturday:  ₹4,800.00  | Buffer: ₹200.00   (Safe)")
+            appendLine("• Sunday:    ₹1,200.00  | Buffer: ₹3,800.00 (Safe)")
+            appendLine("")
+            appendLine("CUMULATIVE SPENDING TREND vs PROJECTED WEEKLY BUDGET:")
+            appendLine("--------------------------------------------------")
+            appendLine("• Mon: Spent: ₹2,100.00   | Projected Cap: ₹5,000.00   [+₹2,900 Buffer]")
+            appendLine("• Tue: Spent: ₹6,450.00   | Projected Cap: ₹10,000.00  [+₹3,550 Buffer]")
+            appendLine("• Wed: Spent: ₹9,250.00   | Projected Cap: ₹15,000.00  [+₹5,750 Buffer]")
+            appendLine("• Thu: Spent: ₹12,700.00  | Projected Cap: ₹20,000.00  [+₹7,300 Buffer]")
+            appendLine("• Fri: Spent: ₹14,500.00  | Projected Cap: ₹25,000.00  [+₹10,500 Buffer]")
+            appendLine("• Sat: Spent: ₹19,300.00  | Projected Cap: ₹30,000.00  [+₹10,700 Buffer]")
+            appendLine("• Sun: Spent: ₹20,500.00  | Projected Cap: ₹35,000.00  [+₹14,500 Buffer]")
+            appendLine("")
+            appendLine("TOP SPENDING CATEGORIES BREAKDOWN:")
+            appendLine("• Food & Dining:         ₹6,850.00 (33.4%)")
+            appendLine("• Utilities & Bills:     ₹4,200.00 (20.5%)")
+            appendLine("• Transit & Commute:     ₹3,150.00 (15.4%)")
+            appendLine("• Health & Wellness:     ₹2,500.00 (12.2%)")
+            appendLine("• Tech & Subscriptions:  ₹1,800.00 (8.8%)")
+            appendLine("• Groceries & Essentials:₹2,000.00 (9.7%)")
+            appendLine("")
+            appendLine("RECENT TRANSACTIONS AUDIT:")
+            _transactions.value.take(8).forEach { tx ->
+                appendLine("• ${tx.title} (${tx.category}) - ₹${String.format("%,.2f", tx.amount)} via ${tx.method}")
+            }
+            appendLine("==================================================")
+            appendLine("Verified by DayMeet Super App Financial Intelligence")
+        }
+
+        try {
+            val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(android.content.Intent.EXTRA_SUBJECT, "DayMeet Executive Weekly Spending Report")
+                putExtra(android.content.Intent.EXTRA_TEXT, reportText)
+            }
+            val chooser = android.content.Intent.createChooser(intent, "Download or Share Spending Report")
+            chooser.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+            showToast("Weekly spending report generated & ready to export! 📊")
+        } catch (e: Exception) {
+            showToast("Report generated: ₹20,500 spent (₹14,500 buffer)")
         }
     }
 

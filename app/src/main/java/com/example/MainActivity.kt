@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.components.DayMeetBottomDock
 import com.example.ui.components.DayMeetHeader
 import com.example.ui.components.InAppUpdateDialog
+import com.example.ui.components.ConfettiOverlay
 import com.example.ui.screens.*
 import com.example.ui.theme.InverseOnSurface
 import com.example.ui.theme.InverseSurface
@@ -81,6 +82,8 @@ fun DayMeetApp(
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
     val showUpdateDialog by viewModel.showUpdateDialog.collectAsStateWithLifecycle()
+    val showConfetti by viewModel.showConfetti.collectAsStateWithLifecycle()
+    val confettiMilestone by viewModel.confettiMilestone.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
 
@@ -266,6 +269,13 @@ fun DayMeetApp(
                     onDismiss = { viewModel.dismissUpdateDialog(context) }
                 )
             }
+
+            // Confetti Overlay for habit streak records
+            ConfettiOverlay(
+                visible = showConfetti,
+                milestoneText = confettiMilestone,
+                onDismiss = { viewModel.dismissConfetti() }
+            )
         }
     }
 }

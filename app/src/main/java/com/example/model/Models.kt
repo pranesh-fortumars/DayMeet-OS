@@ -200,9 +200,12 @@ data class HabitItem(
     val id: String,
     val name: String,
     val streakDays: Int,
-    val targetFrequency: String,
-    val isCompletedToday: Boolean,
-    val category: String
+    val targetFrequency: String = "Daily",
+    val isCompletedToday: Boolean = false,
+    val category: String = "Mindfulness",
+    val iconKey: String = "self_improvement",
+    val colorHex: String = "#673AB7",
+    val bestStreakDays: Int = 18
 )
 
 data class NoteItem(

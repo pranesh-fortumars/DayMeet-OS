@@ -16,6 +16,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -686,11 +688,13 @@ fun HomeScreen(
                     )
                 }
 
-                // Daily Habit Check-in Bento Widget (Single Tap Logging for Morning Meditation & Exercise)
+                // Daily Habit Check-in Bento Widget (Single Tap Logging with Categorization & Custom Habits)
                 DailyHabitCheckInCard(
                     habits = habits,
-                    onLogMeditation = { viewModel.logMorningMeditation() },
-                    onLogExercise = { viewModel.logMorningExercise() },
+                    onToggleHabit = { viewModel.toggleHabit(it) },
+                    onAddCustomHabit = { name, cat, icon, color ->
+                        viewModel.addCustomHabit(name, cat, icon, color)
+                    },
                     onOpenHabits = { viewModel.openSubScreen("habits") }
                 )
             }
@@ -1245,19 +1249,60 @@ private fun CrossStreamRowItem(
     }
 }
 
+private fun resolveHabitIcon(iconKey: String, name: String): androidx.compose.ui.graphics.vector.ImageVector {
+    return when {
+        iconKey.contains("book", ignoreCase = true) || name.contains("Read", ignoreCase = true) -> Icons.Default.MenuBook
+        iconKey.contains("school", ignoreCase = true) || iconKey.contains("learn", ignoreCase = true) || name.contains("Learn", ignoreCase = true) -> Icons.Default.School
+        iconKey.contains("fitness", ignoreCase = true) || name.contains("Exercise", ignoreCase = true) || name.contains("Gym", ignoreCase = true) -> Icons.Default.FitnessCenter
+        iconKey.contains("fire", ignoreCase = true) || iconKey.contains("streak", ignoreCase = true) -> Icons.Default.LocalFireDepartment
+        iconKey.contains("water", ignoreCase = true) || name.contains("Water", ignoreCase = true) -> Icons.Default.WaterDrop
+        iconKey.contains("laptop", ignoreCase = true) || iconKey.contains("code", ignoreCase = true) -> Icons.Default.Laptop
+        iconKey.contains("psychology", ignoreCase = true) || name.contains("Breath", ignoreCase = true) -> Icons.Default.Psychology
+        else -> Icons.Default.SelfImprovement
+    }
+}
+
+private fun resolveHabitColor(colorHex: String, category: String): Color {
+    return try {
+        if (colorHex.startsWith("#")) Color(android.graphics.Color.parseColor(colorHex))
+        else when (category.lowercase()) {
+            "fitness" -> Color(0xFF2E7D32)
+            "reading" -> Color(0xFF0288D1)
+            "learning" -> Color(0xFFF57C00)
+            "wellness" -> Color(0xFFE91E63)
+            "health" -> Color(0xFF00897B)
+            else -> Color(0xFF673AB7)
+        }
+    } catch (_: Exception) {
+        Color(0xFF673AB7)
+    }
+}
+
 @Composable
 private fun DailyHabitCheckInCard(
     habits: List<HabitItem>,
-    onLogMeditation: () -> Unit,
-    onLogExercise: () -> Unit,
+    onToggleHabit: (String) -> Unit,
+    onAddCustomHabit: (name: String, category: String, iconKey: String, colorHex: String) -> Unit,
     onOpenHabits: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val meditationHabit = habits.find { it.name.contains("Meditation", ignoreCase = true) || it.id == "h_meditation" }
-    val exerciseHabit = habits.find { it.name.contains("Exercise", ignoreCase = true) || it.name.contains("Walk", ignoreCase = true) || it.id == "h_exercise" }
+    var selectedCategory by remember { mutableStateOf("All") }
+    var showAddDialog by remember { mutableStateOf(false) }
 
-    val isMeditationDone = meditationHabit?.isCompletedToday == true
-    val isExerciseDone = exerciseHabit?.isCompletedToday == true
+    val categories = listOf("All", "Mindfulness", "Fitness", "Reading", "Learning", "Wellness")
+    val filteredHabits = remember(habits, selectedCategory) {
+        if (selectedCategory == "All") habits.take(4)
+        else habits.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+    }
+
+    if (showAddDialog) {
+        AddCustomHabitDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { name, category, iconKey, colorHex ->
+                onAddCustomHabit(name, category, iconKey, colorHex)
+            }
+        )
+    }
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -1268,6 +1313,7 @@ private fun DailyHabitCheckInCard(
             .testTag("daily_habit_checkin_widget")
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1301,7 +1347,7 @@ private fun DailyHabitCheckInCard(
                             )
                         )
                         Text(
-                            text = "Single-tap morning routine logging",
+                            text = "Single-tap logging • Streak tracking",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 10.sp
@@ -1312,58 +1358,387 @@ private fun DailyHabitCheckInCard(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { onOpenHabits() }
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "View All",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = Primary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp
+                    // + Custom Habit button
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(PrimaryFixed)
+                            .clickable { showAddDialog = true }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .testTag("add_custom_habit_btn"),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(13.dp)
                         )
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = Primary,
-                        modifier = Modifier.size(14.dp)
-                    )
+                        Text(
+                            text = "Custom",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { onOpenHabits() }
+                    ) {
+                        Text(
+                            text = "View All",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Primary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        )
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Category Filter Pills
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                categories.forEach { cat ->
+                    val isSelected = selectedCategory == cat
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSelected) Primary else SurfaceContainerLow)
+                            .clickable { selectedCategory = cat }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = cat,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (isSelected) Color.White else OnSurfaceVariant,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
                 }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Two Quick Tap Habit Pills
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                HabitSingleTapItem(
-                    title = "Morning Meditation",
-                    subtitle = "${meditationHabit?.streakDays ?: 19}d streak • 15m",
-                    isDone = isMeditationDone,
-                    icon = Icons.Default.SelfImprovement,
-                    activeColor = Color(0xFF673AB7),
-                    activeBg = Color(0xFFEDE7F6),
-                    testTag = "habit_checkin_meditation",
-                    onClick = onLogMeditation,
-                    modifier = Modifier.weight(1f)
-                )
+            // Habits Grid Display
+            if (filteredHabits.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceContainerLow)
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No habits in $selectedCategory yet. Tap '+ Custom' to add one!",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 12.sp
+                        )
+                    )
+                }
+            } else {
+                val chunks = filteredHabits.chunked(2)
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    chunks.forEach { pair ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            pair.forEach { habit ->
+                                val activeColor = resolveHabitColor(habit.colorHex, habit.category)
+                                val iconVector = resolveHabitIcon(habit.iconKey, habit.name)
 
-                HabitSingleTapItem(
-                    title = "Morning Exercise",
-                    subtitle = "${exerciseHabit?.streakDays ?: 14}d streak • 30m",
-                    isDone = isExerciseDone,
-                    icon = Icons.Default.FitnessCenter,
-                    activeColor = Color(0xFF2E7D32),
-                    activeBg = Color(0xFFE8F5E9),
-                    testTag = "habit_checkin_exercise",
-                    onClick = onLogExercise,
-                    modifier = Modifier.weight(1f)
-                )
+                                HabitSingleTapItem(
+                                    title = habit.name,
+                                    subtitle = "${habit.streakDays}d streak • ${habit.category}",
+                                    isDone = habit.isCompletedToday,
+                                    icon = iconVector,
+                                    activeColor = activeColor,
+                                    activeBg = activeColor.copy(alpha = 0.12f),
+                                    categoryTag = habit.category,
+                                    testTag = "habit_checkin_${habit.id}",
+                                    onClick = { onToggleHabit(habit.id) },
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            if (pair.size == 1) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
             }
         }
     }
+}
+
+@Composable
+private fun AddCustomHabitDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, category: String, iconKey: String, colorHex: String) -> Unit
+) {
+    var habitName by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Reading") }
+    var selectedIcon by remember { mutableStateOf("menu_book") }
+    var selectedColor by remember { mutableStateOf("#0288D1") }
+
+    val categories = listOf("Reading", "Learning", "Mindfulness", "Fitness", "Wellness", "Productivity")
+    val icons = listOf(
+        Pair("menu_book", Icons.Default.MenuBook),
+        Pair("school", Icons.Default.School),
+        Pair("self_improvement", Icons.Default.SelfImprovement),
+        Pair("fitness_center", Icons.Default.FitnessCenter),
+        Pair("laptop", Icons.Default.Laptop),
+        Pair("local_fire_department", Icons.Default.LocalFireDepartment),
+        Pair("water_drop", Icons.Default.WaterDrop),
+        Pair("psychology", Icons.Default.Psychology)
+    )
+    val colors = listOf(
+        Pair("#0288D1", Color(0xFF0288D1)),
+        Pair("#F57C00", Color(0xFFF57C00)),
+        Pair("#673AB7", Color(0xFF673AB7)),
+        Pair("#2E7D32", Color(0xFF2E7D32)),
+        Pair("#E91E63", Color(0xFFE91E63)),
+        Pair("#00897B", Color(0xFF00897B)),
+        Pair("#3525CD", Color(0xFF3525CD))
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE0E7FF)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "New Custom Habit",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = "e.g. Reading, Learning, Deep Work",
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 11.sp)
+                    )
+                }
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                OutlinedTextField(
+                    value = habitName,
+                    onValueChange = { habitName = it },
+                    label = { Text("Habit Name") },
+                    placeholder = { Text("e.g. Daily Book Reading") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth().testTag("custom_habit_name_input")
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Category",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        categories.take(3).forEach { cat ->
+                            val isSelected = selectedCategory == cat
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Primary else SurfaceContainerLow)
+                                    .clickable { selectedCategory = cat }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = cat,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isSelected) Color.White else OnSurfaceVariant,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        categories.drop(3).forEach { cat ->
+                            val isSelected = selectedCategory == cat
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Primary else SurfaceContainerLow)
+                                    .clickable { selectedCategory = cat }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = cat,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = if (isSelected) Color.White else OnSurfaceVariant,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Choose Icon",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        icons.take(4).forEach { (key, vector) ->
+                            val isSelected = selectedIcon == key
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceContainerLow)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = if (isSelected) Primary else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { selectedIcon = key },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = vector,
+                                    contentDescription = key,
+                                    tint = if (isSelected) Primary else OnSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        icons.drop(4).forEach { (key, vector) ->
+                            val isSelected = selectedIcon == key
+                            Box(
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) Primary.copy(alpha = 0.15f) else SurfaceContainerLow)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = if (isSelected) Primary else Color.Transparent,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { selectedIcon = key },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = vector,
+                                    contentDescription = key,
+                                    tint = if (isSelected) Primary else OnSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Accent Color",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        colors.forEach { (hex, col) ->
+                            val isSelected = selectedColor == hex
+                            Box(
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .clip(CircleShape)
+                                    .background(col)
+                                    .clickable { selectedColor = hex },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val finalName = if (habitName.isNotBlank()) habitName else "$selectedCategory Routine"
+                    onConfirm(finalName, selectedCategory, selectedIcon, selectedColor)
+                    onDismiss()
+                },
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                modifier = Modifier.testTag("save_custom_habit_btn")
+            ) {
+                Text("Create Habit", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    )
 }
 
 @Composable
@@ -1374,6 +1749,7 @@ private fun HabitSingleTapItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     activeColor: Color,
     activeBg: Color,
+    categoryTag: String? = null,
     testTag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier

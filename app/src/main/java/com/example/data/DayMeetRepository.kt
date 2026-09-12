@@ -471,12 +471,13 @@ object DayMeetRepository {
     )
 
     fun getInitialHabits(): List<HabitItem> = listOf(
-        HabitItem("h_meditation", "Morning Meditation", 19, "Daily", false, "Mindfulness"),
-        HabitItem("h_exercise", "Morning Exercise", 14, "Daily", false, "Fitness"),
-        HabitItem("h1", "Wake up early (06:30 AM)", 18, "Daily", true, "Wellness"),
-        HabitItem("h2", "Drink 2.5L Water", 12, "Daily", false, "Health"),
-        HabitItem("h3", "Read 20 pages", 7, "Daily", false, "Learning"),
-        HabitItem("h4", "Midday 4-7-8 Breathwork", 14, "Daily", true, "Mindfulness")
+        HabitItem("h_meditation", "Morning Meditation", 19, "Daily", false, "Mindfulness", "self_improvement", "#673AB7", 19),
+        HabitItem("h_exercise", "Morning Exercise", 14, "Daily", false, "Fitness", "fitness_center", "#2E7D32", 14),
+        HabitItem("h_reading", "Daily Book Reading", 12, "Daily", false, "Reading", "menu_book", "#0288D1", 12),
+        HabitItem("h_learning", "AI System Architecture", 9, "Daily", false, "Learning", "school", "#F57C00", 8),
+        HabitItem("h1", "Wake up early (06:30 AM)", 18, "Daily", true, "Wellness", "local_fire_department", "#E91E63", 18),
+        HabitItem("h2", "Drink 2.5L Water", 12, "Daily", false, "Health", "water_drop", "#00ACC1", 10),
+        HabitItem("h4", "Midday 4-7-8 Breathwork", 14, "Daily", true, "Mindfulness", "psychology", "#8E24AA", 14)
     )
 
     fun getInitialNotes(): List<NoteItem> = listOf(
