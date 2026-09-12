@@ -210,14 +210,6 @@ class DayMeetViewModel : ViewModel() {
                 }
             }
         }
-
-        // Automatic background check for production updates on app startup
-        viewModelScope.launch {
-            delay(1500)
-            if (_isAutoCheckUpdateEnabled.value) {
-                checkForAppUpdates(manual = false)
-            }
-        }
     }
 
     // Navigation

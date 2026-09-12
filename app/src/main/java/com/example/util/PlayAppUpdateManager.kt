@@ -28,6 +28,24 @@ object PlayAppUpdateManager {
     private var playUpdateManager: PlayCoreAppUpdateManager? = null
     private var installStateListener: InstallStateUpdatedListener? = null
 
+    fun isGooglePlayStoreAvailable(context: Context): Boolean {
+        return try {
+            val pm = context.packageManager
+            val intent = android.content.Intent("com.google.android.play.core.install.BIND_UPDATE_SERVICE").apply {
+                setPackage("com.android.vending")
+            }
+            val resolvedServices = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                pm.queryIntentServices(intent, android.content.pm.PackageManager.ResolveInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                pm.queryIntentServices(intent, 0)
+            }
+            resolvedServices.isNotEmpty()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun getOrCreate(context: Context): PlayCoreAppUpdateManager {
         return playUpdateManager ?: AppUpdateManagerFactory.create(context.applicationContext).also {
             playUpdateManager = it
@@ -37,12 +55,21 @@ object PlayAppUpdateManager {
     /**
      * Checks Google Play Store for production in-app updates.
      * If running in a test/sideloaded environment without Google Play access,
-     * falls back gracefully to direct APK production sync.
+     * falls back gracefully to direct APK production sync without binding errors.
      */
     suspend fun checkPlayUpdate(
         context: Context,
         onProgressUpdate: (bytes: Long, total: Long, status: Int) -> Unit = { _, _, _ -> }
     ): AppUpdateInfo = withContext(Dispatchers.IO) {
+        // If Google Play Store is not installed or PlayCore service cannot be bound,
+        // fall back directly without attempting IPC service binding
+        if (!isGooglePlayStoreAvailable(context)) {
+            val fallback = AppUpdateManager.checkForUpdates(context)
+            return@withContext fallback.copy(
+                updateChannel = UpdateChannel.DIRECT_PRODUCTION_APK
+            )
+        }
+
         val manager = getOrCreate(context)
 
         // Attach listener for download progress

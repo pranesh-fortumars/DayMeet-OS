@@ -32,15 +32,6 @@ import com.example.viewmodel.DayMeetViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Explicitly configure window pixel format to standard RGBA_8888 and default color mode
-        // to prevent HWUI / EGL surface configuration warnings (such as EGL_SWAP_BEHAVIOR_PRESERVED,
-        // 101010-2 format initialization, and Unknown dataspace 0).
-        window.setFormat(android.graphics.PixelFormat.RGBA_8888)
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            window.colorMode = android.content.pm.ActivityInfo.COLOR_MODE_DEFAULT
-        }
-
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
@@ -51,21 +42,23 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        try {
-            val playManager = com.example.util.PlayAppUpdateManager.getOrCreate(this)
-            playManager.appUpdateInfo.addOnSuccessListener { info ->
-                if (info.updateAvailability() == com.google.android.play.core.install.model.UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                    try {
-                        playManager.startUpdateFlowForResult(
-                            info,
-                            this,
-                            com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE).build(),
-                            com.example.util.PlayAppUpdateManager.PLAY_UPDATE_REQUEST_CODE
-                        )
-                    } catch (_: Exception) {}
+        if (com.example.util.PlayAppUpdateManager.isGooglePlayStoreAvailable(this)) {
+            try {
+                val playManager = com.example.util.PlayAppUpdateManager.getOrCreate(this)
+                playManager.appUpdateInfo.addOnSuccessListener { info ->
+                    if (info.updateAvailability() == com.google.android.play.core.install.model.UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                        try {
+                            playManager.startUpdateFlowForResult(
+                                info,
+                                this,
+                                com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE).build(),
+                                com.example.util.PlayAppUpdateManager.PLAY_UPDATE_REQUEST_CODE
+                            )
+                        } catch (_: Exception) {}
+                    }
                 }
-            }
-        } catch (_: Exception) {}
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onDestroy() {
@@ -91,9 +84,9 @@ fun DayMeetApp(
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
 
-    // Check for Google Play production updates on startup after initial composition
+    // Check for updates smoothly in background after initial composition and layout settles
     androidx.compose.runtime.LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(1200)
+        kotlinx.coroutines.delay(3000)
         viewModel.checkForAppUpdates(context = context, manual = false)
     }
 
