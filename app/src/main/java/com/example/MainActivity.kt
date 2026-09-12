@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.components.DayMeetBottomDock
 import com.example.ui.components.DayMeetHeader
@@ -43,14 +44,14 @@ class MainActivity : ComponentActivity() {
 fun DayMeetApp(
     viewModel: DayMeetViewModel = viewModel()
 ) {
-    val currentScreen by viewModel.currentScreen.collectAsState()
-    val subScreen by viewModel.subScreen.collectAsState()
-    val showMeetingMinutes by viewModel.showMeetingMinutes.collectAsState()
-    val showAiAssistant by viewModel.showAiAssistant.collectAsState()
-    val showCreateSheet by viewModel.showCreateSheet.collectAsState()
-    val showDailyBriefing by viewModel.showDailyBriefing.collectAsState()
-    val showSearchOverlay by viewModel.showSearchOverlay.collectAsState()
-    val toastMessage by viewModel.toastMessage.collectAsState()
+    val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
+    val subScreen by viewModel.subScreen.collectAsStateWithLifecycle()
+    val showMeetingMinutes by viewModel.showMeetingMinutes.collectAsStateWithLifecycle()
+    val showAiAssistant by viewModel.showAiAssistant.collectAsStateWithLifecycle()
+    val showCreateSheet by viewModel.showCreateSheet.collectAsStateWithLifecycle()
+    val showDailyBriefing by viewModel.showDailyBriefing.collectAsStateWithLifecycle()
+    val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
+    val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
 
     // Handle back button on sub-screens
     BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing) {
