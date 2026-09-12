@@ -129,3 +129,151 @@ data class ChatMessage(
     val timestamp: String,
     val proposal: ScheduleProposal? = null
 )
+
+// ==========================================
+// ALL-IN-ONE SUPER APP DATA MODELS
+// ==========================================
+
+data class CrossStreamItem(
+    val id: String,
+    val time: String,
+    val title: String,
+    val subtitle: String,
+    val tag: String,
+    val tagType: String, // "meeting", "priority", "expense", "focus", "wellness", "autopay", "travel"
+    val isCompleted: Boolean = false
+)
+
+data class HealthMetrics(
+    val score: Int = 88,
+    val scoreLabel: String = "Optimal",
+    val sleepDuration: String = "7h 20m",
+    val sleepQuality: String = "85% Qual",
+    val sleepDeep: String = "1h 45m",
+    val steps: Int = 7845,
+    val stepsTarget: Int = 10000,
+    val stepsDistance: String = "3.8 km",
+    val hydration: Float = 1.8f,
+    val hydrationTarget: Float = 2.5f,
+    val caloriesBurned: Int = 480,
+    val caloriesTarget: Int = 600,
+    val heartRateBpm: Int = 68,
+    val heartRateRange: String = "54 - 118",
+    val mentalState: String = "Happy",
+    val postureReminderOn: Boolean = true,
+    val vitaminLogged: Boolean = true,
+    val bedtimeDndOn: Boolean = true,
+    val wearableStatus: String = "Oura Ring Gen 3 • 84% Bat"
+)
+
+data class AutomationWorkflow(
+    val id: String,
+    val title: String,
+    val category: String, // "Productivity", "Finance", "Health", "Deadlines", "Social"
+    val statusTag: String,
+    val whenTrigger: String,
+    val ifCondition: String,
+    val thenAction: String,
+    val isEnabled: Boolean = true,
+    val statsText: String
+)
+
+data class AutomationLog(
+    val id: String,
+    val title: String,
+    val detail: String,
+    val time: String,
+    val isSuccess: Boolean = true
+)
+
+data class GoalItem(
+    val id: String,
+    val title: String,
+    val category: String, // "Financial", "Fitness", "Career", "Personal"
+    val target: String,
+    val current: String,
+    val progressPercent: Float,
+    val deadline: String
+)
+
+data class HabitItem(
+    val id: String,
+    val name: String,
+    val streakDays: Int,
+    val targetFrequency: String,
+    val isCompletedToday: Boolean,
+    val category: String
+)
+
+data class NoteItem(
+    val id: String,
+    val title: String,
+    val content: String,
+    val category: String,
+    val updatedAt: String,
+    val tags: List<String> = emptyList()
+)
+
+data class ShoppingItem(
+    val id: String,
+    val name: String,
+    val quantity: String,
+    val estimatedPrice: Double,
+    val category: String,
+    val isPurchased: Boolean = false
+)
+
+data class TravelTrip(
+    val id: String,
+    val destination: String,
+    val dates: String,
+    val flightNumber: String,
+    val checkInStatus: String,
+    val hotel: String,
+    val budget: String
+)
+
+data class ContactItem(
+    val id: String,
+    val name: String,
+    val role: String,
+    val phone: String,
+    val email: String,
+    val avatarUrl: String?,
+    val lastInteraction: String
+)
+
+data class DocumentItem(
+    val id: String,
+    val title: String,
+    val category: String,
+    val expiryDate: String?,
+    val isEncrypted: Boolean = true,
+    val size: String
+)
+
+data class SubscriptionItem(
+    val id: String,
+    val name: String,
+    val monthlyCost: Double,
+    val renewalDate: String,
+    val iconType: String
+)
+
+data class SmartReminder(
+    val id: String,
+    val title: String,
+    val triggerType: String, // "Time", "Location", "Event", "Bill", "Habit"
+    val scheduledTime: String,
+    val isCompleted: Boolean = false
+)
+
+data class ScheduledMessage(
+    val id: String,
+    val recipientName: String,
+    val platform: String, // "WhatsApp Integration", "Slack", "SMS", "Email"
+    val messageContent: String,
+    val scheduledTime: String,
+    val isSent: Boolean = false,
+    val isAutomated: Boolean = true
+)

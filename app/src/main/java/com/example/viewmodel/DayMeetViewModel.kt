@@ -26,8 +26,15 @@ class DayMeetViewModel : ViewModel() {
     private val _currentScreen = MutableStateFlow("home")
     val currentScreen: StateFlow<String> = _currentScreen.asStateFlow()
 
+    // Subscreen stack or overlays
+    private val _subScreen = MutableStateFlow<String?>(null)
+    val subScreen: StateFlow<String?> = _subScreen.asStateFlow()
+
     private val _showCreateSheet = MutableStateFlow(false)
     val showCreateSheet: StateFlow<Boolean> = _showCreateSheet.asStateFlow()
+
+    private val _quickAddInitialTab = MutableStateFlow("Task")
+    val quickAddInitialTab: StateFlow<String> = _quickAddInitialTab.asStateFlow()
 
     private val _showMeetingMinutes = MutableStateFlow(false)
     val showMeetingMinutes: StateFlow<Boolean> = _showMeetingMinutes.asStateFlow()
@@ -35,12 +42,73 @@ class DayMeetViewModel : ViewModel() {
     private val _showAiAssistant = MutableStateFlow(false)
     val showAiAssistant: StateFlow<Boolean> = _showAiAssistant.asStateFlow()
 
+    private val _showDailyBriefing = MutableStateFlow(false)
+    val showDailyBriefing: StateFlow<Boolean> = _showDailyBriefing.asStateFlow()
+
+    private val _showSearchOverlay = MutableStateFlow(false)
+    val showSearchOverlay: StateFlow<Boolean> = _showSearchOverlay.asStateFlow()
+
+    private val _globalSearchQuery = MutableStateFlow("")
+    val globalSearchQuery: StateFlow<String> = _globalSearchQuery.asStateFlow()
+
     // Home feed & filter
     private val _feedFilter = MutableStateFlow(FeedCategory.ALL)
     val feedFilter: StateFlow<FeedCategory> = _feedFilter.asStateFlow()
 
     private val _feedItems = MutableStateFlow(DayMeetRepository.getInitialFeedItems())
     val feedItems: StateFlow<List<FeedItem>> = _feedItems.asStateFlow()
+
+    // Cross-Module Stream items
+    private val _crossStreamItems = MutableStateFlow(DayMeetRepository.getInitialCrossStreamItems())
+    val crossStreamItems: StateFlow<List<CrossStreamItem>> = _crossStreamItems.asStateFlow()
+
+    // Health & Wellness
+    private val _healthMetrics = MutableStateFlow(DayMeetRepository.getInitialHealthMetrics())
+    val healthMetrics: StateFlow<HealthMetrics> = _healthMetrics.asStateFlow()
+
+    // Automations & Rules Engine
+    private val _automations = MutableStateFlow(DayMeetRepository.getInitialAutomations())
+    val automations: StateFlow<List<AutomationWorkflow>> = _automations.asStateFlow()
+
+    private val _automationLogs = MutableStateFlow(DayMeetRepository.getInitialAutomationLogs())
+    val automationLogs: StateFlow<List<AutomationLog>> = _automationLogs.asStateFlow()
+
+    // Goals & Habits
+    private val _goals = MutableStateFlow(DayMeetRepository.getInitialGoals())
+    val goals: StateFlow<List<GoalItem>> = _goals.asStateFlow()
+
+    private val _habits = MutableStateFlow(DayMeetRepository.getInitialHabits())
+    val habits: StateFlow<List<HabitItem>> = _habits.asStateFlow()
+
+    // Notes & Knowledge
+    private val _notes = MutableStateFlow(DayMeetRepository.getInitialNotes())
+    val notes: StateFlow<List<NoteItem>> = _notes.asStateFlow()
+
+    // Shopping
+    private val _shoppingItems = MutableStateFlow(DayMeetRepository.getInitialShoppingItems())
+    val shoppingItems: StateFlow<List<ShoppingItem>> = _shoppingItems.asStateFlow()
+
+    // Travel
+    private val _trip = MutableStateFlow(DayMeetRepository.getInitialTrip())
+    val trip: StateFlow<TravelTrip> = _trip.asStateFlow()
+
+    // Communication & Contacts
+    private val _contacts = MutableStateFlow(DayMeetRepository.getInitialContacts())
+    val contacts: StateFlow<List<ContactItem>> = _contacts.asStateFlow()
+
+    private val _scheduledMessages = MutableStateFlow(DayMeetRepository.getInitialScheduledMessages())
+    val scheduledMessages: StateFlow<List<ScheduledMessage>> = _scheduledMessages.asStateFlow()
+
+    // Documents & Subscriptions
+    private val _documents = MutableStateFlow(DayMeetRepository.getInitialDocuments())
+    val documents: StateFlow<List<DocumentItem>> = _documents.asStateFlow()
+
+    private val _subscriptions = MutableStateFlow(DayMeetRepository.getInitialSubscriptions())
+    val subscriptions: StateFlow<List<SubscriptionItem>> = _subscriptions.asStateFlow()
+
+    // Reminders
+    private val _reminders = MutableStateFlow(DayMeetRepository.getInitialReminders())
+    val reminders: StateFlow<List<SmartReminder>> = _reminders.asStateFlow()
 
     // Focus Session state
     private val _focusTimerRemaining = MutableStateFlow(28 * 60 + 40)
@@ -56,7 +124,7 @@ class DayMeetViewModel : ViewModel() {
     private val _selectedDay = MutableStateFlow(24)
     val selectedDay: StateFlow<Int> = _selectedDay.asStateFlow()
 
-    private val _calendarMode = MutableStateFlow("Chronological") // "Chronological" or "By Category"
+    private val _calendarMode = MutableStateFlow("Chronological")
     val calendarMode: StateFlow<String> = _calendarMode.asStateFlow()
 
     private val _calendarCategoryFilter = MutableStateFlow("All")
@@ -65,7 +133,7 @@ class DayMeetViewModel : ViewModel() {
     private val _timelineEvents = MutableStateFlow(DayMeetRepository.getInitialTimeline())
     val timelineEvents: StateFlow<List<TimelineEvent>> = _timelineEvents.asStateFlow()
 
-    // Meetings tab state
+    // Meetings state
     private val _meetingSearch = MutableStateFlow("")
     val meetingSearch: StateFlow<String> = _meetingSearch.asStateFlow()
 
@@ -119,7 +187,6 @@ class DayMeetViewModel : ViewModel() {
     val toastMessage: StateFlow<String?> = _toastMessage.asStateFlow()
 
     init {
-        // Start Focus Timer countdown
         viewModelScope.launch {
             while (true) {
                 delay(1000)
@@ -130,10 +197,21 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    // Navigation
     fun navigateTo(screen: String) {
         _currentScreen.value = screen
+        _subScreen.value = null
         _showMeetingMinutes.value = false
         _showAiAssistant.value = false
+        _showSearchOverlay.value = false
+    }
+
+    fun openSubScreen(screen: String) {
+        _subScreen.value = screen
+    }
+
+    fun closeSubScreen() {
+        _subScreen.value = null
     }
 
     fun openMeetingMinutes() {
@@ -152,7 +230,8 @@ class DayMeetViewModel : ViewModel() {
         _showAiAssistant.value = false
     }
 
-    fun openCreateTask() {
+    fun openCreateTask(initialTab: String = "Task") {
+        _quickAddInitialTab.value = initialTab
         _showCreateSheet.value = true
     }
 
@@ -160,6 +239,287 @@ class DayMeetViewModel : ViewModel() {
         _showCreateSheet.value = false
     }
 
+    fun openDailyBriefing() {
+        _showDailyBriefing.value = true
+    }
+
+    fun closeDailyBriefing() {
+        _showDailyBriefing.value = false
+    }
+
+    fun openSearch() {
+        _showSearchOverlay.value = true
+    }
+
+    fun closeSearch() {
+        _showSearchOverlay.value = false
+        _globalSearchQuery.value = ""
+    }
+
+    fun setGlobalSearchQuery(query: String) {
+        _globalSearchQuery.value = query
+    }
+
+    // Automations Actions
+    fun toggleAutomation(id: String) {
+        _automations.value = _automations.value.map { auto ->
+            if (auto.id == id) auto.copy(isEnabled = !auto.isEnabled) else auto
+        }
+        val auto = _automations.value.firstOrNull { it.id == id }
+        showToast("${auto?.title ?: "Workflow"} is now ${if (auto?.isEnabled == true) "Active" else "Paused"}")
+    }
+
+    fun testAutomation(id: String) {
+        val auto = _automations.value.firstOrNull { it.id == id }
+        showToast("Triggered test: ${auto?.title}. Log entry added!")
+        val newLog = AutomationLog(
+            id = "log_${System.currentTimeMillis()}",
+            title = auto?.title ?: "Custom Trigger",
+            detail = "Manual trigger test succeeded with zero errors.",
+            time = "Just now",
+            isSuccess = true
+        )
+        _automationLogs.value = listOf(newLog) + _automationLogs.value
+    }
+
+    // Health Actions
+    fun addWater(amount: Float = 0.25f) {
+        val current = _healthMetrics.value.hydration
+        val target = _healthMetrics.value.hydrationTarget
+        val updated = (current + amount).coerceAtMost(5.0f)
+        _healthMetrics.value = _healthMetrics.value.copy(
+            hydration = (Math.round(updated * 10) / 10.0).toFloat()
+        )
+        showToast("Logged +${(amount * 1000).toInt()}ml water! (${_healthMetrics.value.hydration}L / ${target}L)")
+    }
+
+    fun setMentalState(state: String) {
+        _healthMetrics.value = _healthMetrics.value.copy(mentalState = state)
+        showToast("Mental state updated to $state ✨")
+    }
+
+    fun togglePostureReminder() {
+        val current = _healthMetrics.value.postureReminderOn
+        _healthMetrics.value = _healthMetrics.value.copy(postureReminderOn = !current)
+        showToast("Posture reminder ${if (!current) "enabled" else "disabled"}")
+    }
+
+    fun toggleVitaminLogged() {
+        val current = _healthMetrics.value.vitaminLogged
+        _healthMetrics.value = _healthMetrics.value.copy(vitaminLogged = !current)
+        showToast("Vitamin D3 & Omega ${if (!current) "marked taken" else "unmarked"}")
+    }
+
+    fun toggleBedtimeDnd() {
+        val current = _healthMetrics.value.bedtimeDndOn
+        _healthMetrics.value = _healthMetrics.value.copy(bedtimeDndOn = !current)
+        showToast("Bedtime Guard & DND ${if (!current) "armed" else "off"}")
+    }
+
+    // Habits & Goals Actions
+    fun toggleHabit(id: String) {
+        _habits.value = _habits.value.map { h ->
+            if (h.id == id) {
+                val next = !h.isCompletedToday
+                h.copy(
+                    isCompletedToday = next,
+                    streakDays = if (next) h.streakDays + 1 else (h.streakDays - 1).coerceAtLeast(0)
+                )
+            } else h
+        }
+        val habit = _habits.value.firstOrNull { it.id == id }
+        showToast("${habit?.name} marked ${if (habit?.isCompletedToday == true) "done! 🔥" else "incomplete"}")
+    }
+
+    // Shopping Actions
+    fun toggleShoppingItem(id: String) {
+        _shoppingItems.value = _shoppingItems.value.map { s ->
+            if (s.id == id) s.copy(isPurchased = !s.isPurchased) else s
+        }
+    }
+
+    fun addShoppingItem(name: String, quantity: String, price: Double, category: String) {
+        val item = ShoppingItem(
+            id = "shop_${System.currentTimeMillis()}",
+            name = name,
+            quantity = quantity.ifBlank { "1 item" },
+            estimatedPrice = price,
+            category = category,
+            isPurchased = false
+        )
+        _shoppingItems.value = _shoppingItems.value + item
+        showToast("Added $name to Shopping List")
+    }
+
+    // Reminders Actions
+    fun toggleReminder(id: String) {
+        _reminders.value = _reminders.value.map { r ->
+            if (r.id == id) r.copy(isCompleted = !r.isCompleted) else r
+        }
+    }
+
+    // Finance Actions
+    fun payBill(id: String) {
+        val bill = _upcomingBills.value.firstOrNull { it.id == id }
+        _upcomingBills.value = _upcomingBills.value.filter { it.id != id }
+        if (bill != null) {
+            val newTx = FinanceTransaction(
+                id = "tx_${System.currentTimeMillis()}",
+                title = bill.name,
+                category = "Bills & Utilities",
+                time = "Just now",
+                amount = -bill.amount,
+                method = "Direct Pay",
+                iconType = "software",
+                tags = listOf("Paid", bill.department)
+            )
+            _transactions.value = listOf(newTx) + _transactions.value
+            showToast("Paid ₹${String.format("%.0f", bill.amount)} to ${bill.department}!")
+        }
+    }
+
+    fun logExpense(title: String, amount: Double, category: String) {
+        val newTx = FinanceTransaction(
+            id = "tx_${System.currentTimeMillis()}",
+            title = title,
+            category = category,
+            time = "Just now",
+            amount = -Math.abs(amount),
+            method = "UPI / Card",
+            iconType = "restaurant"
+        )
+        _transactions.value = listOf(newTx) + _transactions.value
+        showToast("Logged expense: ₹${String.format("%.0f", amount)} for $title")
+    }
+
+    fun logIncome(title: String, amount: Double) {
+        val newTx = FinanceTransaction(
+            id = "tx_${System.currentTimeMillis()}",
+            title = title,
+            category = "Income",
+            time = "Just now",
+            amount = Math.abs(amount),
+            method = "Direct Deposit",
+            iconType = "subway"
+        )
+        _transactions.value = listOf(newTx) + _transactions.value
+        showToast("Added income: +₹${String.format("%.0f", amount)}")
+    }
+
+    // Universal Quick Add
+    fun universalQuickAdd(
+        type: String,
+        title: String,
+        detail: String,
+        extraValue: String = ""
+    ) {
+        when (type) {
+            "Task" -> {
+                saveNewTask(title, detail, Priority.HIGH, "General", emptyList())
+            }
+            "Meeting" -> {
+                val newMeeting = MeetingItem(
+                    id = "m_${System.currentTimeMillis()}",
+                    title = title.ifBlank { "New Meeting" },
+                    time = if (extraValue.isNotBlank()) extraValue else "Today, 03:00 PM",
+                    duration = "30 mins",
+                    platform = "Google Meet",
+                    status = "Scheduled",
+                    attendees = listOf(Attendee("Alex Chen", avatarUrl = DayMeetRepository.ALEX_AVATAR)),
+                    attendeesCount = 1
+                )
+                _meetings.value = listOf(newMeeting) + _meetings.value
+                showToast("Meeting scheduled: $title")
+            }
+            "Reminder" -> {
+                val newRem = SmartReminder(
+                    id = "rem_${System.currentTimeMillis()}",
+                    title = title,
+                    triggerType = "Time-based",
+                    scheduledTime = if (extraValue.isNotBlank()) extraValue else "Today, 06:00 PM"
+                )
+                _reminders.value = listOf(newRem) + _reminders.value
+                showToast("Reminder created: $title")
+            }
+            "Expense" -> {
+                val amount = extraValue.toDoubleOrNull() ?: 150.0
+                logExpense(title.ifBlank { "Expense" }, amount, detail.ifBlank { "General" })
+            }
+            "Income" -> {
+                val amount = extraValue.toDoubleOrNull() ?: 1000.0
+                logIncome(title.ifBlank { "Payment" }, amount)
+            }
+            "Note" -> {
+                val newNote = NoteItem(
+                    id = "note_${System.currentTimeMillis()}",
+                    title = title.ifBlank { "Quick Note" },
+                    content = detail,
+                    category = "Quick Notes",
+                    updatedAt = "Just now"
+                )
+                _notes.value = listOf(newNote) + _notes.value
+                showToast("Note saved: $title")
+            }
+            "Habit" -> {
+                val newHabit = HabitItem(
+                    id = "h_${System.currentTimeMillis()}",
+                    name = title,
+                    streakDays = 0,
+                    targetFrequency = "Daily",
+                    isCompletedToday = false,
+                    category = "Personal"
+                )
+                _habits.value = _habits.value + newHabit
+                showToast("Habit added: $title")
+            }
+            "Health Entry" -> {
+                addWater(0.25f)
+            }
+            "Goal" -> {
+                val newGoal = GoalItem(
+                    id = "g_${System.currentTimeMillis()}",
+                    title = title,
+                    category = "Personal",
+                    target = extraValue.ifBlank { "100%" },
+                    current = "0%",
+                    progressPercent = 0.05f,
+                    deadline = "Next Month"
+                )
+                _goals.value = _goals.value + newGoal
+                showToast("Goal created: $title")
+            }
+            "Bill" -> {
+                val amount = extraValue.toDoubleOrNull() ?: 500.0
+                val bill = UpcomingBill(
+                    id = "b_${System.currentTimeMillis()}",
+                    name = title,
+                    scheduleDate = "Scheduled for Next Week",
+                    daysLeft = "7d left",
+                    department = detail.ifBlank { "Utility" },
+                    amount = amount
+                )
+                _upcomingBills.value = _upcomingBills.value + bill
+                showToast("Bill reminder logged: $title")
+            }
+            "Message" -> {
+                val msg = ScheduledMessage(
+                    id = "sm_${System.currentTimeMillis()}",
+                    recipientName = title.ifBlank { "Recipient" },
+                    platform = "WhatsApp Integration",
+                    messageContent = detail,
+                    scheduledTime = if (extraValue.isNotBlank()) extraValue else "Tomorrow, 09:00 AM"
+                )
+                _scheduledMessages.value = listOf(msg) + _scheduledMessages.value
+                showToast("Message scheduled for $title")
+            }
+            else -> {
+                saveNewTask(title, detail, Priority.MEDIUM, "General", emptyList())
+            }
+        }
+        _showCreateSheet.value = false
+    }
+
+    // Home feed & filter actions
     fun setFeedFilter(filter: FeedCategory) {
         _feedFilter.value = filter
     }
@@ -174,6 +534,12 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    fun toggleCrossStreamDone(id: String) {
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == id) item.copy(isCompleted = !item.isCompleted) else item
+        }
+    }
+
     fun toggleFocusTimer() {
         _isFocusRunning.value = !_isFocusRunning.value
     }
@@ -185,16 +551,7 @@ class DayMeetViewModel : ViewModel() {
     }
 
     fun logWaterIntake() {
-        _feedItems.value = _feedItems.value.map { item ->
-            if (item.id == "f6") {
-                val newProgress = ((item.habitProgress ?: 0.8f) + 0.1f).coerceAtMost(1.0f)
-                item.copy(
-                    habitProgress = newProgress,
-                    subtitle = if (newProgress >= 1f) "Goal achieved: 2.5L / 2.5L!" else "Hydration: ${(newProgress * 2.5f).let { String.format("%.1f", it) }}L of 2.5L logged"
-                )
-            } else item
-        }
-        showToast("Water intake logged! +250ml")
+        addWater(0.25f)
     }
 
     fun setSelectedDay(day: Int) {
@@ -268,13 +625,12 @@ class DayMeetViewModel : ViewModel() {
         )
         _chatMessages.value = _chatMessages.value + userMsg
 
-        // Trigger AI reply
         viewModelScope.launch {
             delay(1200)
             val aiMsg = ChatMessage(
                 id = "ai_${System.currentTimeMillis()}",
                 isUser = false,
-                text = "Got it. I've updated your schedule and cross-checked your upcoming meetings and budget constraints.",
+                text = "DayMeet Super App Intelligence: I've updated your schedule, adjusted the cross-stream timeline, and validated your ₹5,000 daily budget.",
                 timestamp = "Just now"
             )
             _chatMessages.value = _chatMessages.value + aiMsg

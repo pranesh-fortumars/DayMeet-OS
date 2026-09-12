@@ -1,7 +1,6 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -9,14 +8,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -37,33 +34,34 @@ fun DayMeetBottomDock(
             .navigationBarsPadding(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        // Floating Create Button above the dock
+        // Floating Quick Add Pill Button above the dock
         FloatingActionButton(
             onClick = onCreateClick,
-            shape = CircleShape,
+            shape = RoundedCornerShape(99.dp),
             containerColor = PrimaryContainer,
             contentColor = Color.White,
             elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 8.dp, pressedElevation = 12.dp),
             modifier = Modifier
-                .padding(bottom = 68.dp)
-                .height(48.dp)
-                .testTag("floating_create_button")
+                .padding(bottom = 66.dp)
+                .height(46.dp)
+                .testTag("floating_quick_add_button")
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier.padding(horizontal = 22.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Create Item",
-                    modifier = Modifier.size(20.dp)
+                    contentDescription = "Quick Add",
+                    modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Create",
+                    text = "Quick Add",
                     style = MaterialTheme.typography.labelLarge.copy(
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        fontSize = 14.sp
                     )
                 )
             }
@@ -73,21 +71,20 @@ fun DayMeetBottomDock(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp),
-            color = Surface.copy(alpha = 0.96f),
-            shadowElevation = 8.dp,
-            border = null
+                .height(60.dp),
+            color = Surface.copy(alpha = 0.98f),
+            shadowElevation = 8.dp
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 4.dp),
+                    .padding(horizontal = 6.dp),
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DockNavItem(
                     label = "Home",
-                    icon = Icons.Default.Dashboard,
+                    icon = Icons.Default.Home,
                     isSelected = currentScreen == "home",
                     onClick = { onTabSelected("home") },
                     testTag = "nav_home"
@@ -95,7 +92,7 @@ fun DayMeetBottomDock(
 
                 DockNavItem(
                     label = "Calendar",
-                    icon = Icons.Default.CalendarMonth,
+                    icon = Icons.Default.CalendarToday,
                     isSelected = currentScreen == "calendar",
                     onClick = { onTabSelected("calendar") },
                     testTag = "nav_calendar"
@@ -111,19 +108,19 @@ fun DayMeetBottomDock(
                 )
 
                 DockNavItem(
-                    label = "Meetings",
-                    icon = Icons.Default.VideoCameraFront,
-                    isSelected = currentScreen == "meetings",
-                    onClick = { onTabSelected("meetings") },
-                    testTag = "nav_meetings"
+                    label = "Insights",
+                    icon = Icons.Default.TrendingUp,
+                    isSelected = currentScreen == "insights",
+                    onClick = { onTabSelected("insights") },
+                    testTag = "nav_insights"
                 )
 
                 DockNavItem(
-                    label = "Finance",
-                    icon = Icons.Default.AccountBalanceWallet,
-                    isSelected = currentScreen == "finance",
-                    onClick = { onTabSelected("finance") },
-                    testTag = "nav_finance"
+                    label = "More",
+                    icon = Icons.Default.GridView,
+                    isSelected = currentScreen == "more" || currentScreen !in listOf("home", "calendar", "tasks", "insights"),
+                    onClick = { onTabSelected("more") },
+                    testTag = "nav_more"
                 )
             }
         }
@@ -163,17 +160,18 @@ private fun DockNavItem(
                 Box(
                     modifier = Modifier
                         .offset(x = 10.dp, y = (-8).dp)
+                        .size(17.dp)
                         .clip(CircleShape)
-                        .background(Primary)
-                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                        .background(Primary),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = badge,
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 12.sp
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     )
                 }
             }
@@ -184,7 +182,7 @@ private fun DockNavItem(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) Primary else OnSurfaceVariant
             )

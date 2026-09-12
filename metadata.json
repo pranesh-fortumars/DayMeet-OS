@@ -1,6 +1,6 @@
 {
   "name": "DayMeet",
-  "description": "Kinetic minimalist productivity app with daily planner, calendar, meetings, tasks, smart finance, and AI assistant.",
+  "description": "All-in-one daily life super app combining productivity, calendar, meetings, tasks, smart finance, health & bio-sync, habits, goals, rules automation, and AI copilot.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

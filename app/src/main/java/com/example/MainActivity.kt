@@ -44,30 +44,38 @@ fun DayMeetApp(
     viewModel: DayMeetViewModel = viewModel()
 ) {
     val currentScreen by viewModel.currentScreen.collectAsState()
+    val subScreen by viewModel.subScreen.collectAsState()
     val showMeetingMinutes by viewModel.showMeetingMinutes.collectAsState()
     val showAiAssistant by viewModel.showAiAssistant.collectAsState()
     val showCreateSheet by viewModel.showCreateSheet.collectAsState()
+    val showDailyBriefing by viewModel.showDailyBriefing.collectAsState()
+    val showSearchOverlay by viewModel.showSearchOverlay.collectAsState()
     val toastMessage by viewModel.toastMessage.collectAsState()
 
     // Handle back button on sub-screens
-    BackHandler(enabled = showMeetingMinutes || showAiAssistant) {
-        if (showMeetingMinutes) viewModel.closeMeetingMinutes()
+    BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing) {
+        if (showSearchOverlay) viewModel.closeSearch()
+        else if (showDailyBriefing) viewModel.closeDailyBriefing()
+        else if (showMeetingMinutes) viewModel.closeMeetingMinutes()
         else if (showAiAssistant) viewModel.closeAiAssistant()
+        else if (subScreen != null) viewModel.closeSubScreen()
     }
+
+    val isFullscreenOverlay = showMeetingMinutes || showAiAssistant || subScreen != null
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
-            if (!showMeetingMinutes && !showAiAssistant) {
+            if (!isFullscreenOverlay) {
                 DayMeetHeader(
                     onSearchClick = {
-                        viewModel.navigateTo("meetings")
+                        viewModel.openSearch()
                     },
                     onNotificationsClick = {
-                        viewModel.showToast("No new notifications")
+                        viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
                     },
                     onProfileClick = {
-                        viewModel.showToast("Alex Chen • Product Lead")
+                        viewModel.showToast("Alex Chen • Product Lead (DayMeet Pro)")
                     },
                     onAiClick = {
                         viewModel.openAiAssistant()
@@ -76,7 +84,7 @@ fun DayMeetApp(
             }
         },
         bottomBar = {
-            if (!showMeetingMinutes && !showAiAssistant) {
+            if (!isFullscreenOverlay) {
                 DayMeetBottomDock(
                     currentScreen = currentScreen,
                     onTabSelected = { screen -> viewModel.navigateTo(screen) },
@@ -88,7 +96,7 @@ fun DayMeetApp(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(top = innerPadding.calculateTopPadding())
+                .padding(top = if (!isFullscreenOverlay) innerPadding.calculateTopPadding() else 0.dp)
         ) {
             // Main tabs transition
             AnimatedContent(
@@ -102,9 +110,33 @@ fun DayMeetApp(
                     "home" -> HomeScreen(viewModel = viewModel)
                     "calendar" -> CalendarScreen(viewModel = viewModel)
                     "tasks" -> TasksScreen(viewModel = viewModel)
+                    "insights" -> HealthScreen(viewModel = viewModel)
+                    "more" -> MoreScreen(viewModel = viewModel)
                     "meetings" -> MeetingsScreen(viewModel = viewModel)
                     "finance" -> FinanceScreen(viewModel = viewModel)
                     else -> HomeScreen(viewModel = viewModel)
+                }
+            }
+
+            // Dedicated Subscreens
+            subScreen?.let { sub ->
+                when (sub) {
+                    "automations" -> {
+                        SubModuleContainer(
+                            title = "Rules & Automations",
+                            subtitle = "When → If → Then workflow engine",
+                            onBack = { viewModel.closeSubScreen() }
+                        ) {
+                            AutomationsScreen(viewModel = viewModel)
+                        }
+                    }
+                    "habits", "goals" -> HabitsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "notes" -> NotesSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "shopping" -> ShoppingSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "travel" -> TravelSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "documents" -> DocumentsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "contacts" -> ContactsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "subscriptions" -> SubscriptionsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                 }
             }
 
@@ -153,6 +185,22 @@ fun DayMeetApp(
                 CreateTaskSheet(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeCreateTask() }
+                )
+            }
+
+            // Daily Briefing Dialog
+            if (showDailyBriefing) {
+                DailyBriefingDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeDailyBriefing() }
+                )
+            }
+
+            // Global Search Dialog
+            if (showSearchOverlay) {
+                GlobalSearchDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeSearch() }
                 )
             }
         }

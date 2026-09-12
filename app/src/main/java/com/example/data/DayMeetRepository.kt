@@ -23,19 +23,19 @@ object DayMeetRepository {
         FeedItem(
             id = "f2",
             time = "10:30 AM",
-            title = "Submit Project Report",
-            subtitle = "Client Deliverable • Q4 Execution",
+            title = "Submit Q4 Token Audit",
+            subtitle = "Tasks Workspace • Final signoff required",
             category = FeedCategory.TASK,
-            statusTag = "Due in 1h",
+            statusTag = "Priority",
             isCompleted = false
         ),
         FeedItem(
             id = "f3",
             time = "11:30 AM",
-            title = "Call Client re: Contract",
-            subtitle = "Review finalized terms before legal sign-off",
+            title = "Electricity Bill Due Tomorrow",
+            subtitle = "Tata Power • ₹2,400",
             category = FeedCategory.REMINDER,
-            statusTag = "Follow-up"
+            statusTag = "Due Tomorrow"
         ),
         FeedItem(
             id = "f4",
@@ -60,10 +60,69 @@ object DayMeetRepository {
             id = "f6",
             time = "05:00 PM",
             title = "Drink 2.5L Water",
-            subtitle = "Hydration goal: 2.0L of 2.5L logged",
+            subtitle = "Hydration goal: 1.8L of 2.5L logged",
             category = FeedCategory.HABIT,
-            statusTag = "12 days 🔥",
-            habitProgress = 0.80f
+            statusTag = "18d streak 🔥",
+            habitProgress = 0.72f
+        )
+    )
+
+    fun getInitialCrossStreamItems(): List<CrossStreamItem> = listOf(
+        CrossStreamItem(
+            id = "cs1",
+            time = "09:30 AM",
+            title = "Product Strategy Review",
+            subtitle = "Google Meet • Alex, Sarah + 3 others",
+            tag = "Meeting",
+            tagType = "meeting"
+        ),
+        CrossStreamItem(
+            id = "cs2",
+            time = "10:45 AM",
+            title = "Submit Q4 Token Audit",
+            subtitle = "Tasks Workspace • Final signoff required",
+            tag = "Priority",
+            tagType = "priority"
+        ),
+        CrossStreamItem(
+            id = "cs3",
+            time = "12:30 PM",
+            title = "Artisan Bistro Lunch",
+            subtitle = "Auto-linked with Calendar 'Lunch with Dev Team'",
+            tag = "₹450 Expense",
+            tagType = "expense"
+        ),
+        CrossStreamItem(
+            id = "cs4",
+            time = "02:00 PM",
+            title = "Deep Focus Session",
+            subtitle = "Slack & Email auto-responder active",
+            tag = "90 mins",
+            tagType = "focus"
+        ),
+        CrossStreamItem(
+            id = "cs5",
+            time = "04:15 PM",
+            title = "Hydration & Garden Walk",
+            subtitle = "Target: 1,500 more steps to hit daily 10k",
+            tag = "Wellness",
+            tagType = "wellness"
+        ),
+        CrossStreamItem(
+            id = "cs6",
+            time = "06:00 PM",
+            title = "Internet Broadband Bill...",
+            subtitle = "Airtel Xstream Fiber • ₹1,179 scheduled",
+            tag = "Auto-Pay",
+            tagType = "autopay"
+        ),
+        CrossStreamItem(
+            id = "cs7",
+            time = "In 3 Days",
+            title = "Chennai Flight 6E 412",
+            subtitle = "Web check-in opens Sunday 07:30 AM • Hotel Taj Coromandel",
+            tag = "Trip Info",
+            tagType = "travel"
         )
     )
 
@@ -76,7 +135,7 @@ object DayMeetRepository {
             durationMinutes = 30,
             type = TimelineType.HABIT,
             isCompleted = true,
-            streakInfo = "10-day streak preserved"
+            streakInfo = "18-day streak preserved"
         ),
         TimelineEvent(
             id = "t2",
@@ -100,7 +159,7 @@ object DayMeetRepository {
             id = "t4",
             time = "09:30",
             period = "NOW",
-            title = "Product Strategy Meeting",
+            title = "Product Strategy Review",
             subtitle = "Quarterly roadmap alignment with Core Team",
             durationMinutes = 45,
             type = TimelineType.MEETING,
@@ -122,7 +181,7 @@ object DayMeetRepository {
             id = "t6",
             time = "12:30",
             period = "PM",
-            title = "Healthy Lunch & Walk",
+            title = "Artisan Bistro Lunch & Dev Team Sync",
             durationMinutes = 45,
             type = TimelineType.PERSONAL
         ),
@@ -154,7 +213,7 @@ object DayMeetRepository {
             id = "t9",
             time = "05:00",
             period = "PM",
-            title = "Daily Review & Wrap-up",
+            title = "Daily Review & Evening Wrap-up",
             subtitle = "Archive inbox, note blockers, celebrate wins.",
             durationMinutes = 30,
             type = TimelineType.REMINDER,
@@ -170,7 +229,7 @@ object DayMeetRepository {
             duration = "45 mins",
             platform = "Google Meet",
             organizer = "Alex Chen (You)",
-            status = "Next Up • In 25m",
+            status = "In 20m",
             agendaItems = listOf("Q4 Goals", "Mobile launch", "Resource allocation"),
             attendees = listOf(
                 Attendee("Alex Chen", "Product Lead", ALEX_AVATAR),
@@ -221,26 +280,26 @@ object DayMeetRepository {
             title = "Artisan Cafe Bistro",
             category = "Food & Dining",
             time = "12:30 PM",
-            amount = -24.50,
-            method = "Card ••4109",
+            amount = -450.00,
+            method = "UPI / Card",
             iconType = "restaurant",
-            linkedEvent = "Lunch with Design Lead (12:00 PM)"
+            linkedEvent = "Lunch with Dev Team (12:30 PM)"
         ),
         FinanceTransaction(
             id = "tx2",
-            title = "Subway Metro Card",
+            title = "Metro Smart Transit",
             category = "Commute & Transit",
             time = "08:45 AM",
-            amount = -5.00,
+            amount = -80.00,
             method = "Tap to Pay",
             iconType = "subway"
         ),
         FinanceTransaction(
             id = "tx3",
-            title = "Adobe Cloud Subscription",
-            category = "Work Software",
+            title = "Adobe Creative Cloud",
+            category = "Work Subscriptions",
             time = "Recurring Monthly",
-            amount = -22.00,
+            amount = -720.00,
             method = "Auto-Debit",
             iconType = "software",
             tags = listOf("Work", "Tax Deductible")
@@ -250,21 +309,287 @@ object DayMeetRepository {
     fun getInitialUpcomingBills(): List<UpcomingBill> = listOf(
         UpcomingBill(
             id = "b1",
-            name = "Figma Professional",
-            scheduleDate = "Scheduled for Oct 27",
-            daysLeft = "3d left",
-            department = "Workspace Team",
-            amount = 15.00,
+            name = "Electricity Bill Due Tomorrow",
+            scheduleDate = "Due Tomorrow",
+            daysLeft = "1d left",
+            department = "Tata Power",
+            amount = 2400.00,
             autoPay = false
         ),
         UpcomingBill(
             id = "b2",
-            name = "Internet Fiber Gigabit",
+            name = "Airtel Xstream Fiber",
             scheduleDate = "Scheduled for Oct 29",
             daysLeft = "5d left",
-            department = "Home Office",
-            amount = 65.00,
+            department = "Home Broadband",
+            amount = 1179.00,
             autoPay = true
+        ),
+        UpcomingBill(
+            id = "b3",
+            name = "Figma Professional Team",
+            scheduleDate = "Scheduled for Oct 27",
+            daysLeft = "3d left",
+            department = "Workspace Team",
+            amount = 1250.00,
+            autoPay = false
+        )
+    )
+
+    fun getInitialHealthMetrics(): HealthMetrics = HealthMetrics(
+        score = 88,
+        scoreLabel = "Optimal",
+        sleepDuration = "7h 20m",
+        sleepQuality = "85% Qual",
+        sleepDeep = "1h 45m",
+        steps = 7845,
+        stepsTarget = 10000,
+        stepsDistance = "3.8 km",
+        hydration = 1.8f,
+        hydrationTarget = 2.5f,
+        caloriesBurned = 480,
+        caloriesTarget = 600,
+        heartRateBpm = 68,
+        heartRateRange = "54 - 118",
+        mentalState = "Happy",
+        postureReminderOn = true,
+        vitaminLogged = true,
+        bedtimeDndOn = true,
+        wearableStatus = "Oura Ring Gen 3 • 84% Bat"
+    )
+
+    fun getInitialAutomations(): List<AutomationWorkflow> = listOf(
+        AutomationWorkflow(
+            id = "a1",
+            title = "Meeting Follow-up Orchestrator",
+            category = "Productivity",
+            statusTag = "Triggered 2h ago • 98% success",
+            whenTrigger = "Calendar meeting ends",
+            ifCondition = "Organizer is Alex & action items detected",
+            thenAction = "Auto-create tasks in workspace & draft follow-up Slack ping",
+            isEnabled = true,
+            statsText = "28 runs this month"
+        ),
+        AutomationWorkflow(
+            id = "a2",
+            title = "Daily Expense Safeguard",
+            category = "Finance",
+            statusTag = "Threshold tracking active",
+            whenTrigger = "Daily expense ledger exceeds ₹3,500",
+            ifCondition = "Category is Dining or Shopping",
+            thenAction = "Send high-priority push alert & pause non-essential auto-debits",
+            isEnabled = true,
+            statsText = "Saved ₹8,400 past 30 days"
+        ),
+        AutomationWorkflow(
+            id = "a3",
+            title = "Deep Work Health Sanctuary",
+            category = "Health",
+            statusTag = "Scheduled next at 2:00 PM",
+            whenTrigger = "Deep Work block starts",
+            ifCondition = "Scheduled on Calendar",
+            thenAction = "Activate DND, set Slack status to \"In Focus\", & queue posture check",
+            isEnabled = true,
+            statsText = "14 focus sessions protected"
+        ),
+        AutomationWorkflow(
+            id = "a4",
+            title = "Critical Bill Early Warning",
+            category = "Deadlines",
+            statusTag = "Rent due in 3 days",
+            whenTrigger = "Recurring bill is due in < 48 hours",
+            ifCondition = "Category is Rent or Electricity",
+            thenAction = "Pin sticky banner to Home Dashboard & schedule calendar payment buffer",
+            isEnabled = true,
+            statsText = "Zero overdue penalties since setup"
+        ),
+        AutomationWorkflow(
+            id = "a5",
+            title = "Network Birthday Concierge",
+            category = "Social",
+            statusTag = "2 upcoming in next 7 days",
+            whenTrigger = "Participant birthday arrives (09:00 AM)",
+            ifCondition = "Contact has WhatsApp or SMS linked",
+            thenAction = "Draft personalized warm greeting & queue for 1-tap review",
+            isEnabled = true,
+            statsText = "Review queue: 0 pending"
+        )
+    )
+
+    fun getInitialAutomationLogs(): List<AutomationLog> = listOf(
+        AutomationLog(
+            id = "l1",
+            title = "Slack DND Auto-Responder",
+            detail = "Auto-responded to 4 Slack pings during Deep Focus block.",
+            time = "09:30 AM",
+            isSuccess = true
+        ),
+        AutomationLog(
+            id = "l2",
+            title = "Ledger Instant Capture",
+            detail = "Synced Artisan Bistro bill (₹450) to Food & Dining budget.",
+            time = "08:00 AM",
+            isSuccess = true
+        ),
+        AutomationLog(
+            id = "l3",
+            title = "Morning Routine Briefing",
+            detail = "Synthesized weather, calendar, and high-priority deliverables.",
+            time = "07:15 AM",
+            isSuccess = true
+        )
+    )
+
+    fun getInitialGoals(): List<GoalItem> = listOf(
+        GoalItem(
+            id = "g1",
+            title = "Save ₹50,000 Emergency Fund",
+            category = "Financial",
+            target = "₹50,000",
+            current = "₹32,500",
+            progressPercent = 0.65f,
+            deadline = "Nov 30, 2026"
+        ),
+        GoalItem(
+            id = "g2",
+            title = "Half Marathon Preparation (21 km)",
+            category = "Fitness",
+            target = "21 km",
+            current = "14 km",
+            progressPercent = 0.66f,
+            deadline = "Dec 15, 2026"
+        ),
+        GoalItem(
+            id = "g3",
+            title = "Design System & Tokens Certification",
+            category = "Career",
+            target = "10 Modules",
+            current = "8 Modules",
+            progressPercent = 0.80f,
+            deadline = "Oct 31, 2026"
+        )
+    )
+
+    fun getInitialHabits(): List<HabitItem> = listOf(
+        HabitItem("h1", "Wake up early (06:30 AM)", 18, "Daily", true, "Wellness"),
+        HabitItem("h2", "Drink 2.5L Water", 12, "Daily", false, "Health"),
+        HabitItem("h3", "Read 20 pages", 7, "Daily", false, "Learning"),
+        HabitItem("h4", "Midday 4-7-8 Breathwork", 14, "Daily", true, "Mindfulness"),
+        HabitItem("h5", "Evening Walk (30 min)", 5, "Daily", true, "Fitness")
+    )
+
+    fun getInitialNotes(): List<NoteItem> = listOf(
+        NoteItem(
+            id = "n1",
+            title = "Mobile Token Architecture v2",
+            content = "Unified elevation shadows across light/dark surfaces. Adopt 8dp baseline grid and M3 dynamic token aliases.",
+            category = "Meeting Notes",
+            updatedAt = "Today, 11:20 AM",
+            tags = listOf("Design", "Tokens", "Figma")
+        ),
+        NoteItem(
+            id = "n2",
+            title = "Q4 Emergency Fund & SIP Allocation",
+            content = "Keep ₹50,000 in liquid debt fund. Split remaining monthly surplus 60% index mutual funds, 40% high-yield deposit.",
+            category = "Financial",
+            updatedAt = "Yesterday",
+            tags = listOf("Finance", "Savings")
+        ),
+        NoteItem(
+            id = "n3",
+            title = "Chennai Trip Packing & Key Docs",
+            content = "Pack lightweight formals, charger cables, Taj reservation QR code, and passport ID copy.",
+            category = "Travel Notes",
+            updatedAt = "Oct 22",
+            tags = listOf("Travel", "Chennai")
+        )
+    )
+
+    fun getInitialShoppingItems(): List<ShoppingItem> = listOf(
+        ShoppingItem("s1", "Organic Almond Milk 1L", "2 cartons", 180.0, "Groceries", false),
+        ShoppingItem("s2", "Greek Yogurt (Plain)", "400g tub", 120.0, "Groceries", true),
+        ShoppingItem("s3", "USB-C Braided Cable 2m", "1 unit", 499.0, "Electronics", false),
+        ShoppingItem("s4", "Ergonomic Desk Mat", "Dark Slate", 850.0, "Office", true)
+    )
+
+    fun getInitialTrip(): TravelTrip = TravelTrip(
+        id = "tr1",
+        destination = "Chennai, Tamil Nadu",
+        dates = "Oct 27 – Oct 30 (4 days)",
+        flightNumber = "IndiGo 6E 412 (Web check-in opens Sun 07:30 AM)",
+        checkInStatus = "Confirmed • Boarding Pass Ready in 3d",
+        hotel = "Taj Coromandel, Nungambakkam",
+        budget = "₹24,000 (₹18,500 booked)"
+    )
+
+    fun getInitialContacts(): List<ContactItem> = listOf(
+        ContactItem(
+            id = "co1",
+            name = "Sarah Lee",
+            role = "Engineering Manager",
+            phone = "+1 (555) 0192",
+            email = "sarah.lee@daymeet.app",
+            avatarUrl = MAYA_AVATAR,
+            lastInteraction = "Slack ping 1h ago"
+        ),
+        ContactItem(
+            id = "co2",
+            name = "David Kumar",
+            role = "VP Product",
+            phone = "+1 (555) 0143",
+            email = "david.k@daymeet.app",
+            avatarUrl = DAVID_AVATAR,
+            lastInteraction = "Strategy Meeting 09:30 AM"
+        ),
+        ContactItem(
+            id = "co3",
+            name = "Elena Gomez",
+            role = "Lead UX Designer",
+            phone = "+1 (555) 0187",
+            email = "elena.g@daymeet.app",
+            avatarUrl = ELENA_AVATAR,
+            lastInteraction = "Figma comment yesterday"
+        )
+    )
+
+    fun getInitialDocuments(): List<DocumentItem> = listOf(
+        DocumentItem("doc1", "Passport (International)", "Identity", "Expires: Aug 2028", true, "2.4 MB"),
+        DocumentItem("doc2", "Health Insurance Card", "Insurance", "Renewal: Dec 2026", true, "1.1 MB"),
+        DocumentItem("doc3", "Lease Rental Agreement", "Housing", "Expires: Mar 2027", false, "850 KB")
+    )
+
+    fun getInitialSubscriptions(): List<SubscriptionItem> = listOf(
+        SubscriptionItem("sub1", "Airtel Xstream Fiber", 1179.0, "Oct 29", "wifi"),
+        SubscriptionItem("sub2", "Netflix Ultra 4K", 649.0, "Nov 05", "movie"),
+        SubscriptionItem("sub3", "Figma Professional", 1250.0, "Oct 27", "design"),
+        SubscriptionItem("sub4", "Spotify Premium Duo", 149.0, "Nov 12", "music")
+    )
+
+    fun getInitialReminders(): List<SmartReminder> = listOf(
+        SmartReminder("rem1", "Pay Electricity Bill (Tata Power ₹2,400)", "Bill", "Tomorrow, 09:00 AM", false),
+        SmartReminder("rem2", "Review Q4 Token Audit Signoff", "Task", "Today, 10:45 AM", false),
+        SmartReminder("rem3", "Drink 250ml Water & Stretch", "Habit", "Today, 02:00 PM", false),
+        SmartReminder("rem4", "Pick up dry cleaning", "Location: Near Home", "Today, 06:30 PM", false)
+    )
+
+    fun getInitialScheduledMessages(): List<ScheduledMessage> = listOf(
+        ScheduledMessage(
+            id = "sm1",
+            recipientName = "Maya Rao",
+            platform = "WhatsApp Integration",
+            messageContent = "Happy Birthday Maya! Wishing you a brilliant and fruitful year ahead 🎉🎂",
+            scheduledTime = "Oct 26, 09:00 AM",
+            isSent = false,
+            isAutomated = true
+        ),
+        ScheduledMessage(
+            id = "sm2",
+            recipientName = "Core Engineering Squad",
+            platform = "Slack",
+            messageContent = "Hi team, quick reminder that our Weekly Engineering Sync starts at 04:15 PM today.",
+            scheduledTime = "Today, 03:45 PM",
+            isSent = false,
+            isAutomated = true
         )
     )
 
@@ -278,7 +603,7 @@ object DayMeetRepository {
         ChatMessage(
             id = "c2",
             isUser = false,
-            text = "I've optimized your schedule for peak focus. Here is what I adjusted:",
+            text = "I've optimized your schedule across Calendar, Tasks & Finance. Here is what I adjusted:",
             timestamp = "11:42 AM",
             proposal = ScheduleProposal(
                 rescheduled = ProposalItem(
@@ -296,7 +621,7 @@ object DayMeetRepository {
                 autoReminder = ProposalItem(
                     typeTag = "AUTO-REMINDER",
                     title = "Review Daily Spending",
-                    detail = "\$42.50 logged today • Approaching cap",
+                    detail = "₹3,450 logged today • Under ₹5k limit",
                     statusTag = "05:30 PM"
                 ),
                 isApplied = false
