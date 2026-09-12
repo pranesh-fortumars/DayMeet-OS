@@ -23,7 +23,6 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.model.*
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
@@ -883,13 +882,21 @@ fun ContactsSubScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            AsyncImage(
-                                model = contact.avatarUrl,
-                                contentDescription = contact.name,
+                            Box(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(CircleShape)
-                            )
+                                    .background(PrimaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = contact.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString(""),
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnPrimaryContainer
+                                    )
+                                )
+                            }
 
                             Column {
                                 Text(

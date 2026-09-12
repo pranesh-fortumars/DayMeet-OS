@@ -16,15 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.R
-import com.example.data.DayMeetRepository
 import com.example.ui.theme.*
 
 @Composable
@@ -154,15 +151,19 @@ fun DayMeetHeader(
                         .padding(start = 2.dp)
                         .size(34.dp)
                         .clip(CircleShape)
-                        .border(1.5.dp, OutlineVariant.copy(alpha = 0.5f), CircleShape)
+                        .background(PrimaryContainer)
+                        .border(1.5.dp, Primary.copy(alpha = 0.5f), CircleShape)
                         .clickable { onProfileClick() }
-                        .testTag("user_profile_avatar")
+                        .testTag("user_profile_avatar"),
+                    contentAlignment = Alignment.Center
                 ) {
-                    AsyncImage(
-                        model = DayMeetRepository.ALEX_AVATAR,
-                        contentDescription = "Alex Profile",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                    Text(
+                        text = "AC",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnPrimaryContainer,
+                            fontSize = 11.sp
+                        )
                     )
                 }
             }

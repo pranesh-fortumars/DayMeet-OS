@@ -16,14 +16,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import com.example.data.DayMeetRepository
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 
@@ -218,26 +215,11 @@ fun MeetingMinutesScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy((-6).dp)
                             ) {
-                                AvatarSmall(DayMeetRepository.ALEX_AVATAR)
-                                AvatarSmall(DayMeetRepository.MAYA_AVATAR)
-                                AvatarSmall(DayMeetRepository.DAVID_AVATAR)
-                                AvatarSmall(DayMeetRepository.ELENA_AVATAR)
-                                Box(
-                                    modifier = Modifier
-                                        .size(34.dp)
-                                        .clip(CircleShape)
-                                        .background(PrimaryFixed)
-                                        .border(2.dp, SurfaceContainerLowest, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "DK",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = OnPrimaryFixedVariant
-                                        )
-                                    )
-                                }
+                                AvatarSmall("AC", PrimaryContainer, OnPrimaryContainer)
+                                AvatarSmall("SL", SecondaryContainer, OnSecondaryContainer)
+                                AvatarSmall("MD", TertiaryContainer, OnTertiaryContainer)
+                                AvatarSmall("ER", SurfaceContainerHigh, OnSurfaceVariant)
+                                AvatarSmall("DK", PrimaryFixed, OnPrimaryFixedVariant)
                             }
 
                             Text(
@@ -537,18 +519,22 @@ fun MeetingMinutesScreen(
 }
 
 @Composable
-private fun AvatarSmall(url: String) {
+private fun AvatarSmall(initials: String, bgColor: Color, textColor: Color) {
     Box(
         modifier = Modifier
             .size(34.dp)
             .clip(CircleShape)
-            .border(2.dp, SurfaceContainerLowest, CircleShape)
+            .background(bgColor)
+            .border(2.dp, SurfaceContainerLowest, CircleShape),
+        contentAlignment = Alignment.Center
     ) {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
+        Text(
+            text = initials,
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = textColor
+            )
         )
     }
 }

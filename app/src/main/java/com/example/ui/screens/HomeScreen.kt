@@ -18,16 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
 import com.example.ui.theme.*
@@ -416,16 +412,15 @@ fun HomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         // Overlapping Avatars
-                        val context = LocalContext.current
                         val sampleAttendees = remember {
                             listOf(
-                                Triple("AC", PrimaryFixed, DayMeetRepository.ALEX_AVATAR),
-                                Triple("ML", SecondaryFixed, DayMeetRepository.MAYA_AVATAR),
-                                Triple("DK", TertiaryFixed, DayMeetRepository.DAVID_AVATAR)
+                                Triple("AC", PrimaryContainer, OnPrimaryContainer),
+                                Triple("ML", SecondaryContainer, OnSecondaryContainer),
+                                Triple("DK", TertiaryContainer, OnTertiaryContainer)
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            sampleAttendees.forEachIndexed { index, (initials, bgColor, url) ->
+                            sampleAttendees.forEachIndexed { index, (initials, bgColor, textColor) ->
                                 Box(
                                     modifier = Modifier
                                         .offset(x = (-index * 8).dp)
@@ -440,17 +435,8 @@ fun HomeScreen(
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontSize = 9.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = OnSurface
+                                            color = textColor
                                         )
-                                    )
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(context)
-                                            .data(url)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = "Attendee $initials",
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = ContentScale.Crop
                                     )
                                 }
                             }

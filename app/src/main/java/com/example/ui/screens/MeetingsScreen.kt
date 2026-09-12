@@ -18,13 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import com.example.data.DayMeetRepository
 import com.example.model.Attendee
 import com.example.model.MeetingItem
@@ -489,38 +487,23 @@ private fun MeetingCardItem(
                     horizontalArrangement = Arrangement.spacedBy((-8).dp)
                 ) {
                     meeting.attendees.forEach { att ->
-                        if (att.avatarUrl != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .border(1.5.dp, SurfaceContainerLowest, CircleShape)
-                            ) {
-                                AsyncImage(
-                                    model = att.avatarUrl,
-                                    contentDescription = att.name,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
+                        val initials = att.initials ?: att.name.split(" ").mapNotNull { it.firstOrNull()?.toString() }.take(2).joinToString("").ifEmpty { att.name.take(2).uppercase() }
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryFixed)
+                                .border(1.5.dp, SurfaceContainerLowest, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = initials,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
                                 )
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(PrimaryFixed)
-                                    .border(1.5.dp, SurfaceContainerLowest, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = att.initials ?: att.name.take(2).uppercase(),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Primary
-                                    )
-                                )
-                            }
+                            )
                         }
                     }
                     if (meeting.attendeesCount > meeting.attendees.size) {
