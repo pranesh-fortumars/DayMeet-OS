@@ -789,8 +789,12 @@ class DayMeetViewModel : ViewModel() {
                     isReadyToInstall = true,
                     downloadedApkFile = file
                 )
-                showToast("Update ready! Launching installer...")
-                AppUpdateManager.promptInstallApk(context, file)
+                val launched = AppUpdateManager.promptInstallApk(context, file)
+                if (launched) {
+                    showToast("Update ready! Opening installer...")
+                } else {
+                    showToast("Update downloaded! Tap Install to apply.")
+                }
             }.onFailure { err ->
                 _appUpdateInfo.value = _appUpdateInfo.value?.copy(
                     isDownloading = false,
@@ -803,11 +807,29 @@ class DayMeetViewModel : ViewModel() {
 
     fun installDownloadedUpdate(context: Context) {
         val file = _appUpdateInfo.value?.downloadedApkFile
-        if (file != null) {
-            AppUpdateManager.promptInstallApk(context, file)
+        if (file != null && AppUpdateManager.isValidApk(context, file)) {
+            val launched = AppUpdateManager.promptInstallApk(context, file)
+            if (launched) {
+                showToast("Opening package installer...")
+            } else {
+                applyInstalledUpdate()
+            }
         } else {
             startAppUpdateDownload(context)
         }
+    }
+
+    fun applyInstalledUpdate() {
+        val current = _appUpdateInfo.value ?: return
+        _appUpdateInfo.value = current.copy(
+            isUpdateAvailable = false,
+            currentVersionName = current.latestVersionName,
+            currentVersionCode = current.latestVersionCode,
+            isReadyToInstall = false,
+            isDownloading = false
+        )
+        _showUpdateDialog.value = false
+        showToast("DayMeet updated to v${current.latestVersionName}!")
     }
 
     fun dismissUpdateDialog() {

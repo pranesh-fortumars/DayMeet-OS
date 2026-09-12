@@ -32,6 +32,15 @@ import com.example.viewmodel.DayMeetViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Explicitly configure window pixel format to standard RGBA_8888 and default color mode
+        // to prevent HWUI / EGL surface configuration warnings (such as EGL_SWAP_BEHAVIOR_PRESERVED,
+        // 101010-2 format initialization, and Unknown dataspace 0).
+        window.setFormat(android.graphics.PixelFormat.RGBA_8888)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            window.colorMode = android.content.pm.ActivityInfo.COLOR_MODE_DEFAULT
+        }
+
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
@@ -82,8 +91,9 @@ fun DayMeetApp(
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
 
-    // Check for Google Play production updates on startup
+    // Check for Google Play production updates on startup after initial composition
     androidx.compose.runtime.LaunchedEffect(Unit) {
+        kotlinx.coroutines.delay(1200)
         viewModel.checkForAppUpdates(context = context, manual = false)
     }
 
@@ -101,6 +111,8 @@ fun DayMeetApp(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
         topBar = {
             if (!isFullscreenOverlay) {
                 DayMeetHeader(

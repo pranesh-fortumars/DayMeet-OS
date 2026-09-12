@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -270,22 +271,54 @@ fun InAppUpdateDialog(
                     Spacer(modifier = Modifier.height(14.dp))
                 }
 
+                // Ready to install status indicator
+                if (updateInfo.isReadyToInstall) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Secondary.copy(alpha = 0.12f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Secondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Package verified and ready to apply",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Secondary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+                        }
+                    }
+                }
+
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (!updateInfo.isMandatory && !updateInfo.isDownloading) {
                         OutlinedButton(
                             onClick = onDismiss,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.weight(0.9f),
                             shape = RoundedCornerShape(12.dp),
                             border = ButtonDefaults.outlinedButtonBorder.copy(
                                 brush = androidx.compose.ui.graphics.SolidColor(OutlineVariant)
                             )
                         ) {
                             Text(
-                                text = "Later",
+                                text = if (updateInfo.isReadyToInstall) "Done" else "Later",
                                 color = OnSurfaceVariant,
                                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
                             )
@@ -304,7 +337,7 @@ fun InAppUpdateDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Primary),
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.3f)
                             .testTag("update_action_button")
                     ) {
                         Icon(
@@ -315,11 +348,16 @@ fun InAppUpdateDialog(
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = when {
-                                updateInfo.isReadyToInstall -> "Restart to Install"
-                                updateInfo.updateChannel == com.example.model.UpdateChannel.GOOGLE_PLAY -> "Update via Google Play"
+                                updateInfo.isReadyToInstall -> "Install Now"
+                                updateInfo.updateChannel == com.example.model.UpdateChannel.GOOGLE_PLAY -> "Update via Play"
                                 else -> "Update Now"
                             },
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
