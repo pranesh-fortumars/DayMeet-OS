@@ -703,6 +703,7 @@ class DayMeetViewModel : ViewModel() {
 
     // Google Play In-App Production Update Functions
     fun checkForAppUpdates(context: Context? = null, manual: Boolean = false) {
+        if (!manual && !_isAutoCheckUpdateEnabled.value) return
         viewModelScope.launch {
             try {
                 val update = if (context != null) {
@@ -729,13 +730,19 @@ class DayMeetViewModel : ViewModel() {
 
                 _appUpdateInfo.value = update
                 if (update.isUpdateAvailable) {
-                    _showUpdateDialog.value = true
+                    val isDismissed = context != null && AppUpdateManager.isVersionDismissed(context, update.latestVersionCode)
+                    if (manual || !isDismissed) {
+                        _showUpdateDialog.value = true
+                    }
                     if (manual) {
                         val channelName = if (update.updateChannel == UpdateChannel.GOOGLE_PLAY) "Google Play" else "Production"
                         showToast("New $channelName update available: ${update.latestVersionName}")
                     }
-                } else if (manual) {
-                    showToast("DayMeet is up to date (v${update.currentVersionName})")
+                } else {
+                    _showUpdateDialog.value = false
+                    if (manual) {
+                        showToast("DayMeet is up to date (v${update.currentVersionName})")
+                    }
                 }
             } catch (e: Exception) {
                 if (manual) showToast("Could not check for updates")
@@ -765,7 +772,9 @@ class DayMeetViewModel : ViewModel() {
     fun completePlayUpdate(context: Context) {
         viewModelScope.launch {
             val completed = PlayAppUpdateManager.completePlayUpdate(context)
-            if (!completed) {
+            if (completed) {
+                applyInstalledUpdate(context)
+            } else {
                 installDownloadedUpdate(context)
             }
         }
@@ -806,21 +815,35 @@ class DayMeetViewModel : ViewModel() {
     }
 
     fun installDownloadedUpdate(context: Context) {
-        val file = _appUpdateInfo.value?.downloadedApkFile
+        val current = _appUpdateInfo.value
+        val file = current?.downloadedApkFile
+
+        if (current != null) {
+            AppUpdateManager.markUpdateInstalled(
+                context = context,
+                versionCode = current.latestVersionCode,
+                versionName = current.latestVersionName
+            )
+        }
+
         if (file != null && AppUpdateManager.isValidApk(context, file)) {
             val launched = AppUpdateManager.promptInstallApk(context, file)
             if (launched) {
                 showToast("Opening package installer...")
-            } else {
-                applyInstalledUpdate()
             }
-        } else {
-            startAppUpdateDownload(context)
         }
+        applyInstalledUpdate(context)
     }
 
-    fun applyInstalledUpdate() {
+    fun applyInstalledUpdate(context: Context? = null) {
         val current = _appUpdateInfo.value ?: return
+        if (context != null) {
+            AppUpdateManager.markUpdateInstalled(
+                context = context,
+                versionCode = current.latestVersionCode,
+                versionName = current.latestVersionName
+            )
+        }
         _appUpdateInfo.value = current.copy(
             isUpdateAvailable = false,
             currentVersionName = current.latestVersionName,
@@ -832,8 +855,18 @@ class DayMeetViewModel : ViewModel() {
         showToast("DayMeet updated to v${current.latestVersionName}!")
     }
 
-    fun dismissUpdateDialog() {
+    fun dismissUpdateDialog(context: Context? = null) {
         _showUpdateDialog.value = false
+        val current = _appUpdateInfo.value
+        if (context != null && current != null) {
+            AppUpdateManager.markVersionDismissed(context, current.latestVersionCode)
+        }
+    }
+
+    fun resetUpdateStateForTesting(context: Context) {
+        AppUpdateManager.resetUpdateStateForTesting(context)
+        _appUpdateInfo.value = null
+        checkForAppUpdates(context = context, manual = true)
     }
 
     fun openUpdateDialog(context: Context? = null) {

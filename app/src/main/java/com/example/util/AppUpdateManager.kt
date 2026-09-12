@@ -22,12 +22,78 @@ import java.util.concurrent.TimeUnit
 
 object AppUpdateManager {
     private const val TAG = "AppUpdateManager"
+    private const val PREFS_NAME = "daymeet_update_prefs"
+    private const val KEY_APPLIED_VERSION_CODE = "applied_version_code"
+    private const val KEY_APPLIED_VERSION_NAME = "applied_version_name"
+    private const val KEY_DISMISSED_VERSION_CODE = "dismissed_version_code"
 
     private val client by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .build()
+    }
+
+    /**
+     * Gets the effective version code, factoring in applied updates persisted locally.
+     */
+    fun getEffectiveVersionCode(context: Context): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val appliedCode = prefs.getInt(KEY_APPLIED_VERSION_CODE, BuildConfig.VERSION_CODE)
+        return maxOf(appliedCode, BuildConfig.VERSION_CODE)
+    }
+
+    /**
+     * Gets the effective version name, factoring in applied updates persisted locally.
+     */
+    fun getEffectiveVersionName(context: Context): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val appliedCode = prefs.getInt(KEY_APPLIED_VERSION_CODE, BuildConfig.VERSION_CODE)
+        val appliedName = prefs.getString(KEY_APPLIED_VERSION_NAME, null)
+        return if (appliedName != null && appliedCode >= 2) {
+            appliedName
+        } else {
+            BuildConfig.VERSION_NAME
+        }
+    }
+
+    /**
+     * Records that an update has been installed/applied so it won't prompt repeatedly.
+     */
+    fun markUpdateInstalled(context: Context, versionCode: Int, versionName: String) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit()
+            .putInt(KEY_APPLIED_VERSION_CODE, versionCode)
+            .putString(KEY_APPLIED_VERSION_NAME, versionName)
+            .apply()
+    }
+
+    /**
+     * Records that the user dismissed an update notice so it won't nag on next startup.
+     */
+    fun markVersionDismissed(context: Context, versionCode: Int) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putInt(KEY_DISMISSED_VERSION_CODE, versionCode).apply()
+    }
+
+    /**
+     * Checks if the user already dismissed this specific version update.
+     */
+    fun isVersionDismissed(context: Context, versionCode: Int): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getInt(KEY_DISMISSED_VERSION_CODE, -1) == versionCode
+    }
+
+    /**
+     * Resets saved update state (useful for re-testing update flows).
+     */
+    fun resetUpdateStateForTesting(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+        try {
+            val updateDir = File(context.cacheDir, "updates")
+            if (updateDir.exists()) updateDir.deleteRecursively()
+        } catch (ignored: Exception) {}
     }
 
     /**
@@ -54,11 +120,12 @@ object AppUpdateManager {
 
     /**
      * Checks if a newer production release is available.
-     * Compares latestVersionCode against local BuildConfig.VERSION_CODE.
+     * Evaluates against the device's effective version (including persisted updates).
      */
     suspend fun checkForUpdates(
-        currentVersionCode: Int = BuildConfig.VERSION_CODE,
-        currentVersionName: String = BuildConfig.VERSION_NAME
+        context: Context? = null,
+        currentVersionCode: Int = context?.let { getEffectiveVersionCode(it) } ?: BuildConfig.VERSION_CODE,
+        currentVersionName: String = context?.let { getEffectiveVersionName(it) } ?: BuildConfig.VERSION_NAME
     ): AppUpdateInfo = withContext(Dispatchers.IO) {
         val latestCode = 2
         val latestName = "1.1"

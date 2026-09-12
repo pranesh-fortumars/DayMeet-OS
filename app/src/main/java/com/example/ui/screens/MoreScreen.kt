@@ -571,6 +571,9 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val effectiveVersionName = updateInfo?.currentVersionName ?: com.example.util.AppUpdateManager.getEffectiveVersionName(context)
+                val effectiveVersionCode = updateInfo?.currentVersionCode ?: com.example.util.AppUpdateManager.getEffectiveVersionCode(context)
+
                 Column {
                     Text(
                         text = "Installed Version",
@@ -580,7 +583,7 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                         )
                     )
                     Text(
-                        text = "DayMeet v${updateInfo?.currentVersionName ?: "1.0"} (Build ${updateInfo?.currentVersionCode ?: 1})",
+                        text = "DayMeet v$effectiveVersionName (Build $effectiveVersionCode)",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             color = OnSurface
@@ -603,6 +606,25 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Primary
+                            )
+                        )
+                    }
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = Secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Up to Date",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Secondary,
+                                fontWeight = FontWeight.Bold
                             )
                         )
                     }

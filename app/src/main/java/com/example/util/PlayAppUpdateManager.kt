@@ -61,9 +61,12 @@ object PlayAppUpdateManager {
 
             val updateAvailability = playInfo.updateAvailability()
             val availableVersionCode = playInfo.availableVersionCode()
+            val currentCode = AppUpdateManager.getEffectiveVersionCode(context)
+            val currentName = AppUpdateManager.getEffectiveVersionName(context)
 
-            val isAvailable = updateAvailability == UpdateAvailability.UPDATE_AVAILABLE ||
-                    updateAvailability == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS
+            val isAvailable = (updateAvailability == UpdateAvailability.UPDATE_AVAILABLE ||
+                    updateAvailability == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) &&
+                    availableVersionCode > currentCode
 
             val isImmediateAllowed = playInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
             val isFlexibleAllowed = playInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
@@ -72,10 +75,10 @@ object PlayAppUpdateManager {
 
             AppUpdateInfo(
                 isUpdateAvailable = isAvailable,
-                currentVersionName = BuildConfig.VERSION_NAME,
-                currentVersionCode = BuildConfig.VERSION_CODE,
-                latestVersionName = if (isAvailable) "v$availableVersionCode" else BuildConfig.VERSION_NAME,
-                latestVersionCode = if (isAvailable) availableVersionCode else BuildConfig.VERSION_CODE,
+                currentVersionName = currentName,
+                currentVersionCode = currentCode,
+                latestVersionName = if (isAvailable) "v$availableVersionCode" else currentName,
+                latestVersionCode = if (isAvailable) availableVersionCode else currentCode,
                 releaseDate = "Latest Production Release",
                 releaseNotes = listOf(
                     "Official Google Play In-App Updates integration",
@@ -91,7 +94,7 @@ object PlayAppUpdateManager {
             )
         } catch (e: Exception) {
             Log.w(TAG, "Google Play update check unavailable: ${e.message}. Falling back to direct APK sync.")
-            val fallback = AppUpdateManager.checkForUpdates()
+            val fallback = AppUpdateManager.checkForUpdates(context)
             fallback.copy(
                 updateChannel = UpdateChannel.DIRECT_PRODUCTION_APK,
                 errorMessage = e.message

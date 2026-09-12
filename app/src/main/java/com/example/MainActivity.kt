@@ -99,7 +99,7 @@ fun DayMeetApp(
 
     // Handle back button on sub-screens
     BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
-        if (showUpdateDialog) viewModel.dismissUpdateDialog()
+        if (showUpdateDialog) viewModel.dismissUpdateDialog(context)
         else if (showSearchOverlay) viewModel.closeSearch()
         else if (showDailyBriefing) viewModel.closeDailyBriefing()
         else if (showMeetingMinutes) viewModel.closeMeetingMinutes()
@@ -270,7 +270,7 @@ fun DayMeetApp(
                             viewModel.installDownloadedUpdate(context)
                         }
                     },
-                    onDismiss = { viewModel.dismissUpdateDialog() }
+                    onDismiss = { viewModel.dismissUpdateDialog(context) }
                 )
             }
         }
