@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
 import com.example.model.HabitItem
+import com.example.model.NonRoutineTask
 import com.example.ui.theme.*
 import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
@@ -66,6 +68,7 @@ fun HomeScreen(
     val meetings by viewModel.meetings.collectAsState()
     val feedItems by viewModel.feedItems.collectAsState()
     val habits by viewModel.habits.collectAsState()
+    val nonRoutineTasks by viewModel.nonRoutineTasks.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
 
     val electricityBill = upcomingBills.firstOrNull { it.id == "b1" }
@@ -691,7 +694,13 @@ fun HomeScreen(
                 // Daily Habit Check-in Bento Widget (Single Tap Logging with Categorization & Custom Habits)
                 DailyHabitCheckInCard(
                     habits = habits,
+                    nonRoutineTasks = nonRoutineTasks,
                     onToggleHabit = { viewModel.toggleHabit(it) },
+                    onToggleNonRoutineTask = { viewModel.toggleNonRoutineTask(it) },
+                    onIncrementNonRoutineProgress = { viewModel.incrementNonRoutineTaskProgress(it) },
+                    onAddNonRoutineTask = { title, cat, mins, steps, desc ->
+                        viewModel.addNonRoutineTask(title, cat, mins, steps, desc)
+                    },
                     onAddCustomHabit = { name, cat, icon, color ->
                         viewModel.addCustomHabit(name, cat, icon, color)
                     },
@@ -980,6 +989,7 @@ private fun CrossStreamRowItem(
     var isAnimatingOut by remember { mutableStateOf(false) }
 
     val swipeOffset = remember { Animatable(0f) }
+    val collapseAnim = remember { Animatable(1f) }
     val density = LocalDensity.current
     val thresholdPx = with(density) { 85.dp.toPx() }
 
@@ -994,19 +1004,36 @@ private fun CrossStreamRowItem(
             isToggledState = true
             coroutineScope.launch {
                 if (swipedOut) {
-                    launch { swipeOffset.animateTo(1200f, tween(320)) }
+                    // 1. Accelerate card swipe fling off screen
+                    launch {
+                        swipeOffset.animateTo(1400f, tween(durationMillis = 240, easing = FastOutSlowInEasing))
+                    }
+                    delay(90)
+                    // 2. Smoothly collapse vertical height and space of the card
+                    collapseAnim.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+                    )
+                    isVisible = false
+                    onRemove()
+                } else {
+                    // Phase 1: Smooth CSS strike-through transition across title
+                    strikeProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
+                    )
+                    delay(60)
+                    // Phase 2: Slide-out horizontally & collapse vertically
+                    launch {
+                        swipeOffset.animateTo(1200f, tween(260, easing = FastOutSlowInEasing))
+                    }
+                    collapseAnim.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+                    )
+                    isVisible = false
+                    onRemove()
                 }
-                // Phase 1: Smooth CSS strike-through transition across title
-                strikeProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
-                )
-                delay(60)
-                // Phase 2: Slide-out horizontally & shrink vertically
-                isVisible = false
-                delay(340)
-                // Phase 3: Remove from list
-                onRemove()
             }
         } else {
             onToggleDone()
@@ -1018,11 +1045,11 @@ private fun CrossStreamRowItem(
         enter = fadeIn() + expandVertically(),
         exit = slideOutHorizontally(
             targetOffsetX = { fullWidth -> (fullWidth * 1.3f).toInt() },
-            animationSpec = tween(durationMillis = 320, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing)
         ) + shrinkVertically(
-            animationSpec = tween(durationMillis = 280, delayMillis = 30, easing = FastOutSlowInEasing)
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
         ) + fadeOut(
-            animationSpec = tween(durationMillis = 280)
+            animationSpec = tween(durationMillis = 240)
         )
     ) {
         val currentOffset = swipeOffset.value
@@ -1031,6 +1058,20 @@ private fun CrossStreamRowItem(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer {
+                    alpha = collapseAnim.value.coerceIn(0f, 1f)
+                }
+                .then(
+                    if (collapseAnim.value < 1f) {
+                        Modifier.layout { measurable, constraints ->
+                            val placeable = measurable.measure(constraints)
+                            val currentHeight = (placeable.height * collapseAnim.value).roundToInt()
+                            layout(placeable.width, currentHeight) {
+                                placeable.place(0, 0)
+                            }
+                        }
+                    } else Modifier
+                )
                 .testTag("cross_stream_${item.id}")
                 .testTag("swipe_to_complete_${item.id}")
         ) {
@@ -1281,13 +1322,18 @@ private fun resolveHabitColor(colorHex: String, category: String): Color {
 @Composable
 private fun DailyHabitCheckInCard(
     habits: List<HabitItem>,
+    nonRoutineTasks: List<NonRoutineTask> = emptyList(),
     onToggleHabit: (String) -> Unit,
+    onToggleNonRoutineTask: (String) -> Unit = {},
+    onIncrementNonRoutineProgress: (String) -> Unit = {},
+    onAddNonRoutineTask: (title: String, category: String, estimatedMinutes: Int, totalSteps: Int, targetDesc: String) -> Unit = { _, _, _, _, _ -> },
     onAddCustomHabit: (name: String, category: String, iconKey: String, colorHex: String) -> Unit,
     onOpenHabits: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var selectedCategory by remember { mutableStateOf("All") }
     var showAddDialog by remember { mutableStateOf(false) }
+    var showAddGoalDialog by remember { mutableStateOf(false) }
 
     val categories = listOf("All", "Mindfulness", "Fitness", "Reading", "Learning", "Wellness")
     val filteredHabits = remember(habits, selectedCategory) {
@@ -1300,6 +1346,16 @@ private fun DailyHabitCheckInCard(
             onDismiss = { showAddDialog = false },
             onConfirm = { name, category, iconKey, colorHex ->
                 onAddCustomHabit(name, category, iconKey, colorHex)
+            }
+        )
+    }
+
+    if (showAddGoalDialog) {
+        AddNonRoutineGoalDialog(
+            onDismiss = { showAddGoalDialog = false },
+            onConfirm = { title, cat, mins, steps, desc ->
+                onAddNonRoutineTask(title, cat, mins, steps, desc)
+                showAddGoalDialog = false
             }
         )
     }
@@ -1491,8 +1547,440 @@ private fun DailyHabitCheckInCard(
                     }
                 }
             }
+
+            // Divider between Routine Habits & Daily Habit Goals (Non-Routine)
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = SurfaceContainerHigh
+            )
+
+            // Section Header: Daily Habit Goals (Non-Routine Tasks)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE8F5E9)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrackChanges,
+                            contentDescription = null,
+                            tint = Color(0xFF2E7D32),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text = "Daily Habit Goals",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                        Text(
+                            text = "Non-routine targets & progress toggle",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+                }
+
+                // "+ Set Goal" Button
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE8F5E9))
+                        .clickable { showAddGoalDialog = true }
+                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                        .testTag("set_daily_goal_btn"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Color(0xFF2E7D32),
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Text(
+                        text = "+ Set Goal",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Color(0xFF2E7D32),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Non-routine Tasks List with Progress Toggles
+            if (nonRoutineTasks.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceContainerLow)
+                        .padding(12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No daily non-routine goals set yet. Tap '+ Set Goal' above!",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    nonRoutineTasks.forEach { task ->
+                        NonRoutineTaskItemCard(
+                            task = task,
+                            onToggleComplete = { onToggleNonRoutineTask(task.id) },
+                            onAdvanceStep = { onIncrementNonRoutineProgress(task.id) }
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun NonRoutineTaskItemCard(
+    task: NonRoutineTask,
+    onToggleComplete: () -> Unit,
+    onAdvanceStep: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val progressRatio = if (task.totalSteps > 0) {
+        (task.progressSteps.toFloat() / task.totalSteps.toFloat()).coerceIn(0f, 1f)
+    } else 0f
+
+    val categoryColor = when (task.category.lowercase()) {
+        "learning" -> Color(0xFF0288D1)
+        "focus deep work" -> Color(0xFF7C3AED)
+        "personal errand" -> Color(0xFFE91E63)
+        else -> Color(0xFF2E7D32)
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (task.isCompleted) SurfaceContainerHigh.copy(alpha = 0.6f) else SurfaceContainerLow)
+            .border(
+                1.dp,
+                if (task.isCompleted) Color(0xFF2E7D32).copy(alpha = 0.3f) else Color.Transparent,
+                RoundedCornerShape(12.dp)
+            )
+            .clickable { onToggleComplete() }
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .testTag("non_routine_task_${task.id}")
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Toggle Checkbox / Circular Button
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(if (task.isCompleted) Color(0xFF2E7D32) else SurfaceContainerLowest)
+                        .border(
+                            1.5.dp,
+                            if (task.isCompleted) Color(0xFF2E7D32) else Outline,
+                            CircleShape
+                        )
+                        .clickable { onToggleComplete() }
+                        .testTag("toggle_goal_${task.id}"),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (task.isCompleted) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = "Done",
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else if (task.progressSteps > 0) {
+                        Text(
+                            text = "${task.progressSteps}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp,
+                                color = Primary
+                            )
+                        )
+                    }
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = task.title,
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (task.isCompleted) OnSurfaceVariant else OnSurface,
+                            textDecoration = if (task.isCompleted) TextDecoration.LineThrough else null
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(3.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Category tag
+                        Text(
+                            text = task.category,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp,
+                                color = categoryColor,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(categoryColor.copy(alpha = 0.12f))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        )
+
+                        // Duration tag
+                        Text(
+                            text = "${task.estimatedMinutes}m target",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp,
+                                color = OnSurfaceVariant
+                            )
+                        )
+
+                        // Steps description
+                        Text(
+                            text = "• ${task.progressSteps}/${task.totalSteps} steps",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 10.sp,
+                                color = if (task.isCompleted) Color(0xFF2E7D32) else OnSurfaceVariant,
+                                fontWeight = if (task.isCompleted) FontWeight.Bold else FontWeight.Normal
+                            )
+                        )
+                    }
+
+                    if (task.totalSteps > 1) {
+                        Spacer(modifier = Modifier.height(5.dp))
+                        LinearProgressIndicator(
+                            progress = { progressRatio },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = if (task.isCompleted) Color(0xFF2E7D32) else Primary,
+                            trackColor = SurfaceContainerHigh
+                        )
+                    }
+                }
+            }
+
+            // Quick "+ Step" button if multi-step and not yet completed
+            if (!task.isCompleted && task.totalSteps > 1) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(PrimaryFixed)
+                        .clickable { onAdvanceStep() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .testTag("advance_step_${task.id}"),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "Step",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AddNonRoutineGoalDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (title: String, category: String, estimatedMinutes: Int, totalSteps: Int, targetDesc: String) -> Unit
+) {
+    var goalTitle by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf("Sprint Goal") }
+    var selectedMinutes by remember { mutableIntStateOf(45) }
+    var selectedSteps by remember { mutableIntStateOf(1) }
+
+    val categories = listOf("Sprint Goal", "Focus Deep Work", "Learning", "Personal Errand")
+    val durationOptions = listOf(15, 30, 45, 60, 90)
+    val stepOptions = listOf(1, 2, 3, 4, 5)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFE8F5E9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.TrackChanges,
+                        contentDescription = null,
+                        tint = Color(0xFF2E7D32),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Text(
+                    text = "Set Daily Habit Goal",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = "Define a non-routine task or milestone for today's focus.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                )
+
+                OutlinedTextField(
+                    value = goalTitle,
+                    onValueChange = { goalTitle = it },
+                    label = { Text("Goal / Task Title") },
+                    placeholder = { Text("e.g. Draft Q3 Strategy, Review PR") },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("input_goal_title")
+                )
+
+                // Category Selection
+                Text(
+                    text = "Category",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    categories.forEach { cat ->
+                        FilterChip(
+                            selected = selectedCategory == cat,
+                            onClick = { selectedCategory = cat },
+                            label = { Text(cat, fontSize = 11.sp) }
+                        )
+                    }
+                }
+
+                // Estimated Duration
+                Text(
+                    text = "Target Focus Duration",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    durationOptions.forEach { mins ->
+                        FilterChip(
+                            selected = selectedMinutes == mins,
+                            onClick = { selectedMinutes = mins },
+                            label = { Text("${mins}m", fontSize = 11.sp) }
+                        )
+                    }
+                }
+
+                // Total Steps
+                Text(
+                    text = "Milestone Steps ($selectedSteps step${if (selectedSteps > 1) "s" else ""})",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    stepOptions.forEach { steps ->
+                        FilterChip(
+                            selected = selectedSteps == steps,
+                            onClick = { selectedSteps = steps },
+                            label = { Text("$steps", fontSize = 11.sp) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (goalTitle.isNotBlank()) {
+                        onConfirm(
+                            goalTitle.trim(),
+                            selectedCategory,
+                            selectedMinutes,
+                            selectedSteps,
+                            "$selectedSteps Target Milestone${if (selectedSteps > 1) "s" else ""}"
+                        )
+                    }
+                },
+                enabled = goalTitle.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                modifier = Modifier.testTag("confirm_set_goal_btn")
+            ) {
+                Text("Set Goal", color = Color.White)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable

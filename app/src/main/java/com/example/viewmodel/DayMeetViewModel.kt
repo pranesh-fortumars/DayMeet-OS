@@ -85,6 +85,17 @@ class DayMeetViewModel : ViewModel() {
     private val _habits = MutableStateFlow(DayMeetRepository.getInitialHabits())
     val habits: StateFlow<List<HabitItem>> = _habits.asStateFlow()
 
+    // Daily Habit Goal Tracking (Non-Routine Tasks)
+    private val _nonRoutineTasks = MutableStateFlow(DayMeetRepository.getInitialNonRoutineTasks())
+    val nonRoutineTasks: StateFlow<List<NonRoutineTask>> = _nonRoutineTasks.asStateFlow()
+
+    // System-wide Dark Mode & Tailwind Theme Engine
+    private val _isDarkMode = MutableStateFlow(false)
+    val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
+
+    private val _themeMode = MutableStateFlow("light") // "light", "dark", "system"
+    val themeMode: StateFlow<String> = _themeMode.asStateFlow()
+
     // Confetti Animation State for habit streak records
     private val _showConfetti = MutableStateFlow(false)
     val showConfetti: StateFlow<Boolean> = _showConfetti.asStateFlow()
@@ -436,6 +447,86 @@ class DayMeetViewModel : ViewModel() {
             showToast("🏃 Morning Exercise marked done! 14d streak 🔥")
             triggerConfetti("🎉 Streak Record Maintained: 14d Exercise Streak! 🔥")
         }
+    }
+
+    // Daily Habit Goal Tracking (Non-Routine Tasks)
+    fun toggleNonRoutineTask(id: String) {
+        _nonRoutineTasks.value = _nonRoutineTasks.value.map { task ->
+            if (task.id == id) {
+                val nextState = !task.isCompleted
+                val nextSteps = if (nextState) task.totalSteps else 0
+                task.copy(isCompleted = nextState, progressSteps = nextSteps)
+            } else task
+        }
+        val t = _nonRoutineTasks.value.firstOrNull { it.id == id }
+        if (t != null) {
+            showToast("${t.title} marked ${if (t.isCompleted) "completed! ✓" else "pending"}")
+            if (t.isCompleted) {
+                triggerConfetti("🎯 Goal Accomplished: ${t.title}")
+            }
+        }
+    }
+
+    fun incrementNonRoutineTaskProgress(id: String) {
+        _nonRoutineTasks.value = _nonRoutineTasks.value.map { task ->
+            if (task.id == id) {
+                val nextStep = (task.progressSteps + 1).coerceAtMost(task.totalSteps)
+                val isNowDone = nextStep >= task.totalSteps
+                task.copy(progressSteps = nextStep, isCompleted = isNowDone)
+            } else task
+        }
+        val t = _nonRoutineTasks.value.firstOrNull { it.id == id }
+        if (t != null) {
+            showToast("Progress: ${t.progressSteps}/${t.totalSteps} for ${t.title}")
+            if (t.isCompleted) {
+                triggerConfetti("🎯 Goal Completed: ${t.title}")
+            }
+        }
+    }
+
+    fun addNonRoutineTask(
+        title: String,
+        category: String,
+        estimatedMinutes: Int,
+        totalSteps: Int,
+        targetDesc: String = "1 Target"
+    ) {
+        val newTask = NonRoutineTask(
+            id = "nrt_${System.currentTimeMillis()}",
+            title = title.ifBlank { "New Daily Goal" },
+            category = category.ifBlank { "Sprint Goal" },
+            targetDescription = targetDesc,
+            isCompleted = false,
+            progressSteps = 0,
+            totalSteps = totalSteps.coerceAtLeast(1),
+            estimatedMinutes = estimatedMinutes.coerceAtLeast(5)
+        )
+        _nonRoutineTasks.value = listOf(newTask) + _nonRoutineTasks.value
+        showToast("Daily Goal set: $title")
+    }
+
+    // System-wide Dark Mode & Tailwind Theme Configuration
+    fun toggleDarkMode() {
+        val next = !_isDarkMode.value
+        _isDarkMode.value = next
+        _themeMode.value = if (next) "dark" else "light"
+        showToast("Theme: ${if (next) "Dark Mode (Tailwind Slate-900)" else "Light Mode (DayMeet Clean)"}")
+    }
+
+    fun setDarkMode(enabled: Boolean) {
+        _isDarkMode.value = enabled
+        _themeMode.value = if (enabled) "dark" else "light"
+        showToast("Theme switched to ${if (enabled) "Dark Mode" else "Light Mode"}")
+    }
+
+    fun setThemeMode(mode: String) {
+        _themeMode.value = mode
+        when (mode) {
+            "dark" -> _isDarkMode.value = true
+            "light" -> _isDarkMode.value = false
+            else -> _isDarkMode.value = false
+        }
+        showToast("Theme appearance set to $mode")
     }
 
     fun downloadWeeklyFinanceReport(context: Context) {

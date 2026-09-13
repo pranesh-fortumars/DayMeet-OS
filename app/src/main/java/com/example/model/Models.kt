@@ -196,6 +196,17 @@ data class GoalItem(
     val deadline: String
 )
 
+data class NonRoutineTask(
+    val id: String,
+    val title: String,
+    val category: String = "Sprint Goal", // "Sprint Goal", "Focus Deep Work", "Learning", "Errand"
+    val targetDescription: String = "1 Target",
+    val isCompleted: Boolean = false,
+    val progressSteps: Int = 0,
+    val totalSteps: Int = 1,
+    val estimatedMinutes: Int = 45
+)
+
 data class HabitItem(
     val id: String,
     val name: String,

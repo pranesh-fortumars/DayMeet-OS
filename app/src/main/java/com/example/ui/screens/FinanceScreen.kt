@@ -1,5 +1,9 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,10 +21,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,12 +38,14 @@ import com.example.model.FinanceTransaction
 import com.example.model.UpcomingBill
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
+import kotlin.math.roundToInt
 
 @Composable
 fun FinanceScreen(
     viewModel: DayMeetViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val transactions by viewModel.transactions.collectAsState()
     val upcomingBills by viewModel.upcomingBills.collectAsState()
 
@@ -93,26 +103,47 @@ fun FinanceScreen(
                 }
 
                 Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(99.dp))
-                        .background(TertiaryFixed)
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.TrendingDown,
-                        contentDescription = null,
-                        tint = OnTertiaryFixed,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Text(
-                        text = "Under Budget",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = OnTertiaryFixed
+                    IconButton(
+                        onClick = { viewModel.downloadWeeklyFinanceReport(context) },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(SurfaceContainerLowest)
+                            .testTag("download_finance_report_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.FileDownload,
+                            contentDescription = "Download Report",
+                            tint = Primary,
+                            modifier = Modifier.size(18.dp)
                         )
-                    )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(TertiaryFixed)
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingDown,
+                            contentDescription = null,
+                            tint = OnTertiaryFixed,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Under Budget",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnTertiaryFixed
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -392,11 +423,12 @@ fun FinanceScreen(
             }
         }
 
-        // Weekly Spending vs Budget Ceiling (D3 / Recharts-style Interactive Bar Chart)
+        // Spending Analytics: Weekly Bar Chart & 30-Day Interactive Line Trend
         item {
-            DailySpendingWeeklyBarChart(
+            SpendingTrendsAnalyticsCard(
                 todaySpend = spentToday,
-                dailyCeiling = dailyLimit
+                dailyCeiling = dailyLimit,
+                onDownloadReport = { viewModel.downloadWeeklyFinanceReport(context) }
             )
         }
 
@@ -666,6 +698,522 @@ private fun UpcomingBillRowItem(
                             .background(PrimaryFixed)
                             .clickable { onPayEarly() }
                             .padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SpendingTrendsAnalyticsCard(
+    todaySpend: Double,
+    dailyCeiling: Double = 5000.0,
+    onDownloadReport: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var chartMode by remember { mutableStateOf("line") } // "line", "bar", "both"
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Controls Row: Segmented Switcher & Download Report Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Segmented Pills
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SurfaceContainerHigh)
+                    .padding(3.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                listOf(
+                    Pair("line", "30D Trend"),
+                    Pair("bar", "7D Weekly"),
+                    Pair("both", "Both")
+                ).forEach { (mode, label) ->
+                    val isSelected = chartMode == mode
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(9.dp))
+                            .background(if (isSelected) SurfaceContainerLowest else Color.Transparent)
+                            .clickable { chartMode = mode }
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .testTag("chart_mode_$mode"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) Primary else OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Executive Download Report Action
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(PrimaryFixed)
+                    .clickable { onDownloadReport() }
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .testTag("download_finance_report_btn_card"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "Download Report",
+                    tint = Primary,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = "Export Report",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Primary,
+                        fontSize = 11.sp
+                    )
+                )
+            }
+        }
+
+        when (chartMode) {
+            "line" -> {
+                InteractiveThirtyDaySpendingLineChart(
+                    todaySpend = todaySpend,
+                    dailyCeiling = dailyCeiling
+                )
+            }
+            "bar" -> {
+                DailySpendingWeeklyBarChart(
+                    todaySpend = todaySpend,
+                    dailyCeiling = dailyCeiling
+                )
+            }
+            "both" -> {
+                InteractiveThirtyDaySpendingLineChart(
+                    todaySpend = todaySpend,
+                    dailyCeiling = dailyCeiling
+                )
+                DailySpendingWeeklyBarChart(
+                    todaySpend = todaySpend,
+                    dailyCeiling = dailyCeiling
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InteractiveThirtyDaySpendingLineChart(
+    todaySpend: Double,
+    dailyCeiling: Double = 5000.0,
+    modifier: Modifier = Modifier
+) {
+    data class DayTrendPoint(
+        val dayIndex: Int,
+        val dateLabel: String,
+        val amount: Double
+    )
+
+    val thirtyDayData = remember(todaySpend) {
+        val historical = listOf(
+            2100.0, 1850.0, 3200.0, 4100.0, 2400.0, 1950.0, 4800.0, // Days 1-7
+            1600.0, 2250.0, 3100.0, 2750.0, 1890.0, 3900.0, 4600.0, // Days 8-14
+            2050.0, 2800.0, 3400.0, 2150.0, 1900.0, 4200.0, 5100.0, // Days 15-21
+            1750.0, 2300.0, 3050.0, 2600.0, 1950.0, 3600.0, 4400.0, // Days 22-28
+            2200.0, todaySpend                                        // Days 29-30
+        )
+        historical.mapIndexed { index, amt ->
+            val dayNum = index + 1
+            val label = when (dayNum) {
+                30 -> "Day 30 (Today)"
+                29 -> "Day 29 (Yesterday)"
+                else -> "Day $dayNum • Aug/Sep"
+            }
+            DayTrendPoint(dayNum, label, amt)
+        }
+    }
+
+    var selectedIndex by remember { mutableIntStateOf(29) } // Default Day 30
+    val selectedPoint = thirtyDayData.getOrElse(selectedIndex) { thirtyDayData.last() }
+
+    val totalSpent30Days = remember(thirtyDayData) { thirtyDayData.sumOf { it.amount } }
+    val avgDailySpend = remember(thirtyDayData) { totalSpent30Days / thirtyDayData.size }
+    val daysUnderBudget = remember(thirtyDayData) { thirtyDayData.count { it.amount <= dailyCeiling } }
+    val maxScale = remember(thirtyDayData) { maxOf(6000.0, (thirtyDayData.maxOfOrNull { it.amount } ?: 5000.0) * 1.12) }
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("finance_30day_line_chart")
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "30-Day Spending Trajectory",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                    Text(
+                        text = "Drag or tap curve to scrub daily expenditure trends",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFE8F5E9))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "${((daysUnderBudget / 30f) * 100).toInt()}% Safe Rate",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32),
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Interactive Tooltip Callout
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceContainerHigh)
+                    .padding(horizontal = 12.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(if (selectedPoint.amount > dailyCeiling) Color(0xFFD32F2F) else Primary)
+                        )
+                        Text(
+                            text = "${selectedPoint.dateLabel}: ₹${String.format("%,.0f", selectedPoint.amount)}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                    }
+
+                    val diff = dailyCeiling - selectedPoint.amount
+                    val statusText = if (diff >= 0) "✓ ₹${String.format("%,.0f", diff)} under cap" else "⚠ ₹${String.format("%,.0f", -diff)} over limit"
+                    val statusColor = if (diff >= 0) Color(0xFF2E7D32) else Color(0xFFD32F2F)
+
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Chart Canvas with Touch Scrubbing
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(160.dp)
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .pointerInput(thirtyDayData) {
+                            detectTapGestures { offset ->
+                                val frac = (offset.x / size.width).coerceIn(0f, 1f)
+                                selectedIndex = (frac * (thirtyDayData.size - 1)).roundToInt().coerceIn(0, thirtyDayData.size - 1)
+                            }
+                        }
+                        .pointerInput(thirtyDayData) {
+                            detectDragGestures { change, _ ->
+                                change.consume()
+                                val frac = (change.position.x / size.width).coerceIn(0f, 1f)
+                                selectedIndex = (frac * (thirtyDayData.size - 1)).roundToInt().coerceIn(0, thirtyDayData.size - 1)
+                            }
+                        }
+                ) {
+                    val w = size.width
+                    val h = size.height
+                    val n = thirtyDayData.size
+                    val stepX = if (n > 1) w / (n - 1) else w
+
+                    // 1. Budget Ceiling reference line (dashed red)
+                    val ceilingY = h * (1f - (dailyCeiling / maxScale).toFloat())
+                    drawLine(
+                        color = Color(0xFFE53935).copy(alpha = 0.55f),
+                        start = Offset(0f, ceilingY),
+                        end = Offset(w, ceilingY),
+                        strokeWidth = 1.2.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f), 0f)
+                    )
+
+                    // 2. Average Spend reference line (dashed green)
+                    val avgY = h * (1f - (avgDailySpend / maxScale).toFloat())
+                    drawLine(
+                        color = Color(0xFF2E7D32).copy(alpha = 0.45f),
+                        start = Offset(0f, avgY),
+                        end = Offset(w, avgY),
+                        strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f), 0f)
+                    )
+
+                    // Map points
+                    val points = thirtyDayData.mapIndexed { idx, pt ->
+                        val px = idx * stepX
+                        val py = h * (1f - (pt.amount / maxScale).toFloat().coerceIn(0.05f, 0.95f))
+                        Offset(px, py)
+                    }
+
+                    if (points.isNotEmpty()) {
+                        val strokePath = Path()
+                        val fillPath = Path()
+
+                        strokePath.moveTo(points.first().x, points.first().y)
+                        fillPath.moveTo(points.first().x, h)
+                        fillPath.lineTo(points.first().x, points.first().y)
+
+                        for (i in 0 until points.size - 1) {
+                            val p0 = points[i]
+                            val p1 = points[i + 1]
+                            val cpX1 = p0.x + (p1.x - p0.x) / 2f
+                            val cpY1 = p0.y
+                            val cpX2 = p0.x + (p1.x - p0.x) / 2f
+                            val cpY2 = p1.y
+
+                            strokePath.cubicTo(cpX1, cpY1, cpX2, cpY2, p1.x, p1.y)
+                            fillPath.cubicTo(cpX1, cpY1, cpX2, cpY2, p1.x, p1.y)
+                        }
+
+                        fillPath.lineTo(points.last().x, h)
+                        fillPath.close()
+
+                        // Draw smooth gradient fill
+                        drawPath(
+                            path = fillPath,
+                            brush = Brush.verticalGradient(
+                                colors = listOf(
+                                    Primary.copy(alpha = 0.35f),
+                                    Primary.copy(alpha = 0.02f)
+                                ),
+                                startY = 0f,
+                                endY = h
+                            )
+                        )
+
+                        // Draw line stroke
+                        drawPath(
+                            path = strokePath,
+                            color = Primary,
+                            style = Stroke(
+                                width = 2.5.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        )
+
+                        // Draw Scrubber Indicator on Selected Day
+                        val activePoint = points.getOrNull(selectedIndex) ?: points.last()
+                        // Vertical dashed indicator
+                        drawLine(
+                            color = Primary.copy(alpha = 0.5f),
+                            start = Offset(activePoint.x, 0f),
+                            end = Offset(activePoint.x, h),
+                            strokeWidth = 1.dp.toPx(),
+                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f), 0f)
+                        )
+                        // Glowing outer circle
+                        drawCircle(
+                            color = Primary.copy(alpha = 0.25f),
+                            radius = 9.dp.toPx(),
+                            center = activePoint
+                        )
+                        // Solid inner circle
+                        drawCircle(
+                            color = Primary,
+                            radius = 5.dp.toPx(),
+                            center = activePoint
+                        )
+                        // Crisp white center dot
+                        drawCircle(
+                            color = Color.White,
+                            radius = 2.dp.toPx(),
+                            center = activePoint
+                        )
+                    }
+                }
+
+                // Reference labels badges inside chart
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(end = 4.dp, top = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFFFEBEE))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Ceiling ₹5,000",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFFC62828),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFE8F5E9))
+                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Avg ₹${String.format("%,.0f", avgDailySpend)}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF2E7D32),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
+            }
+
+            // X-axis Time Labels
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "30 Days Ago",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceVariant,
+                        fontSize = 10.sp
+                    )
+                )
+                Text(
+                    text = "15 Days Ago",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = OnSurfaceVariant,
+                        fontSize = 10.sp
+                    )
+                )
+                Text(
+                    text = "Today (Day 30)",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = Primary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
+                    )
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                color = SurfaceContainerHigh
+            )
+
+            // Bottom Metrics Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "30-Day Total",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 10.sp
+                        )
+                    )
+                    Text(
+                        text = "₹${String.format("%,.0f", totalSpent30Days)}",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Daily Average",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 10.sp
+                        )
+                    )
+                    Text(
+                        text = "₹${String.format("%,.0f", avgDailySpend)}/day",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Primary
+                        )
+                    )
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "Adherence",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 10.sp
+                        )
+                    )
+                    Text(
+                        text = "$daysUnderBudget/30 Days Safe",
+                        style = MaterialTheme.typography.titleSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF2E7D32)
+                        )
                     )
                 }
             }

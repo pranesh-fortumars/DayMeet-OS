@@ -373,7 +373,127 @@ fun MoreScreen(
             }
         }
 
-        // 7. System Notifications & Device Calendar Sync
+        // 7. System Appearance & Tailwind Theme Configuration
+        item {
+            SectionHeader(title = "SYSTEM APPEARANCE & TAILWIND THEME")
+        }
+
+        item {
+            val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
+            val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("settings_theme_mode_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isDarkMode) Color(0xFF1E293B) else Color(0xFFEDE7F6)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
+                                    contentDescription = "Theme",
+                                    tint = if (isDarkMode) Color(0xFF818CF8) else Primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+
+                            Column {
+                                Text(
+                                    text = "System-Wide Dark Mode",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (isDarkMode)
+                                        "Tailwind Slate-900 canvas active • High-contrast OLED"
+                                    else
+                                        "Tailwind Light canvas active • High-clarity neutral theme",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { viewModel.toggleDarkMode() },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = Color(0xFF6366F1),
+                                uncheckedThumbColor = Color.White,
+                                uncheckedTrackColor = SurfaceContainerHigh
+                            ),
+                            modifier = Modifier.testTag("dark_mode_toggle").testTag("command_center_dark_mode_toggle")
+                        )
+                    }
+
+                    // Theme selector pills
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple("light", "☀️ Light", !isDarkMode && themeMode == "light"),
+                            Triple("dark", "🌙 Dark (Slate)", isDarkMode),
+                            Triple("system", "⚙️ Auto", themeMode == "system")
+                        ).forEach { (mode, label, isSelected) ->
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { viewModel.setThemeMode(mode) },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = if (isDarkMode) Color(0xFF334155) else PrimaryFixed,
+                                    selectedLabelColor = if (isDarkMode) Color(0xFFF8FAFC) else OnPrimaryFixedVariant,
+                                    containerColor = SurfaceContainerHigh,
+                                    labelColor = OnSurfaceVariant
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // 8. System Notifications & Device Calendar Sync
         item {
             SectionHeader(title = "SYSTEM NOTIFICATIONS & CALENDAR SYNC")
         }

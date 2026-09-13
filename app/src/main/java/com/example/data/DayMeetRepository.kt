@@ -630,4 +630,47 @@ object DayMeetRepository {
             )
         )
     )
+
+    fun getInitialNonRoutineTasks(): List<NonRoutineTask> = listOf(
+        NonRoutineTask(
+            id = "nrt_1",
+            title = "Finalize Q3 OKR Roadmap & Deck",
+            category = "Sprint Goal",
+            targetDescription = "3 Review Milestones",
+            isCompleted = false,
+            progressSteps = 2,
+            totalSteps = 3,
+            estimatedMinutes = 60
+        ),
+        NonRoutineTask(
+            id = "nrt_2",
+            title = "Kotlin Coroutines Deep Dive Chapter 4",
+            category = "Learning",
+            targetDescription = "Read & Annotate",
+            isCompleted = true,
+            progressSteps = 1,
+            totalSteps = 1,
+            estimatedMinutes = 35
+        ),
+        NonRoutineTask(
+            id = "nrt_3",
+            title = "Schedule Annual Dental & Health Checkup",
+            category = "Personal Errand",
+            targetDescription = "Confirm Appointment",
+            isCompleted = false,
+            progressSteps = 0,
+            totalSteps = 1,
+            estimatedMinutes = 15
+        ),
+        NonRoutineTask(
+            id = "nrt_4",
+            title = "Audit Cloud Resource Usage & Downgrade Idle Tiers",
+            category = "Focus Deep Work",
+            targetDescription = "4 Micro-Services",
+            isCompleted = false,
+            progressSteps = 1,
+            totalSteps = 4,
+            estimatedMinutes = 45
+        )
+    )
 }
