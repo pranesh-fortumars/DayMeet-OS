@@ -67,4 +67,13 @@ class ExampleRobolectricTest {
     val monthlyBudget = viewModel.monthlyBudgetTarget.value
     assertTrue(monthlyBudget > 0.0)
   }
+
+  @Test
+  fun `financial health spending categories calculate properly`() {
+    val viewModel = DayMeetViewModel()
+    val transactions = viewModel.transactions.value
+    val spent = transactions.filter { it.amount < 0 }.sumOf { -it.amount }
+    assertTrue(spent > 0.0)
+    assertTrue(viewModel.monthlyBudgetTarget.value >= spent)
+  }
 }

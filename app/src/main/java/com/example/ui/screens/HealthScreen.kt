@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -1852,8 +1853,8 @@ fun SpendingVelocityGaugeCard(
     val elapsedDays = 14
     val remainingDays = (totalDaysInMonth - elapsedDays).coerceAtLeast(1)
 
-    // Dynamic Top 3 Spending Categories explaining current budget usage
-    val topCategories = remember(transactions, monthlySpent, monthlyBudgetTarget) {
+    // Dynamic Categorized Spending for current month
+    val allCategories = remember(transactions, monthlySpent, monthlyBudgetTarget) {
         val foodTx = transactions.filter { it.amount < 0 && (it.category.contains("Food", ignoreCase = true) || it.category.contains("Dining", ignoreCase = true) || it.category.contains("Restaurant", ignoreCase = true)) }.sumOf { -it.amount }
         val workTx = transactions.filter { it.amount < 0 && (it.category.contains("Subscription", ignoreCase = true) || it.category.contains("Work", ignoreCase = true) || it.category.contains("Software", ignoreCase = true) || it.category.contains("Cloud", ignoreCase = true)) }.sumOf { -it.amount }
         val transitTx = transactions.filter { it.amount < 0 && (it.category.contains("Transit", ignoreCase = true) || it.category.contains("Commute", ignoreCase = true) || it.category.contains("Transport", ignoreCase = true)) }.sumOf { -it.amount }
@@ -1875,7 +1876,7 @@ fun SpendingVelocityGaugeCard(
         val foodAmount = 9000.0 + foodTx
         val workAmount = 3500.0 + workTx
         val transitAmount = 1500.0 + transitTx
-        val otherAmount = otherTx
+        val otherAmount = if (otherTx > 0) otherTx else 460.0
 
         val categories = mutableListOf(
             TopSpendingCategoryItem(
@@ -1917,26 +1918,24 @@ fun SpendingVelocityGaugeCard(
                 iconBg = Color(0xFFE8F5E9),
                 badge = "Daily Commute",
                 explanation = "Metro smart card transit, ride shares, and daily mobility expenses."
+            ),
+            TopSpendingCategoryItem(
+                id = "cat_other",
+                name = "General Discretionary",
+                amount = otherAmount,
+                icon = Icons.Default.ShoppingBag,
+                iconColor = Color(0xFF8B5CF6),
+                iconBg = Color(0xFFF5F3FF),
+                badge = "Miscellaneous",
+                explanation = "Uncategorized retail and incidental expenses."
             )
         )
 
-        if (otherAmount > 0) {
-            categories.add(
-                TopSpendingCategoryItem(
-                    id = "cat_other",
-                    name = "General Discretionary",
-                    amount = otherAmount,
-                    icon = Icons.Default.ShoppingBag,
-                    iconColor = Color(0xFF8B5CF6),
-                    iconBg = Color(0xFFF5F3FF),
-                    badge = "Miscellaneous",
-                    explanation = "Uncategorized retail and incidental expenses."
-                )
-            )
-        }
-
-        categories.sortedByDescending { it.amount }.take(3)
+        categories.sortedByDescending { it.amount }
     }
+
+    val topCategories = remember(allCategories) { allCategories.take(3) }
+    var showSpendingBreakdownModal by remember { mutableStateOf(false) }
 
     // Base velocities & metrics
     val targetDailySpend = if (totalDaysInMonth > 0) monthlyBudgetTarget / totalDaysInMonth else 1.0
@@ -2805,6 +2804,15 @@ fun SpendingVelocityGaugeCard(
             val topThreeTotal = topCategories.sumOf { it.amount }
             val sharePercent = if (monthlySpent > 0) ((topThreeTotal / monthlySpent) * 100).toInt() else 0
 
+            val chevronRotation by animateFloatAsState(
+                targetValue = if (isTopCategoriesExpanded) 180f else 0f,
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMediumLow
+                ),
+                label = "top_categories_chevron_rotation"
+            )
+
             HorizontalDivider(
                 color = SurfaceContainerHighest.copy(alpha = 0.8f),
                 thickness = 1.dp
@@ -2893,10 +2901,12 @@ fun SpendingVelocityGaugeCard(
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
-                            imageVector = if (isTopCategoriesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            imageVector = Icons.Default.ExpandMore,
                             contentDescription = if (isTopCategoriesExpanded) "Collapse top categories" else "Expand top categories",
                             tint = OnSurfaceVariant,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier
+                                .size(20.dp)
+                                .rotate(chevronRotation)
                         )
                     }
                 }
@@ -2904,8 +2914,17 @@ fun SpendingVelocityGaugeCard(
 
             AnimatedVisibility(
                 visible = isTopCategoriesExpanded,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
+                enter = expandVertically(
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                ) + fadeIn(
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                ),
+                exit = shrinkVertically(
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+                ) + fadeOut()
             ) {
                 Column(
                     modifier = Modifier
@@ -2916,7 +2935,7 @@ fun SpendingVelocityGaugeCard(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Top spending drivers for the current month explaining budget usage:",
+                        text = "Top spending drivers for the current month explaining budget usage (tap item or button for full modal breakdown):",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = OnSurfaceVariant,
                             fontSize = 11.sp,
@@ -2934,6 +2953,8 @@ fun SpendingVelocityGaugeCard(
                             color = SurfaceContainerLow,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { showSpendingBreakdownModal = true }
                                 .testTag("top_category_item_$index")
                                 .testTag("financial_health_category_item_$index")
                         ) {
@@ -3080,7 +3101,10 @@ fun SpendingVelocityGaugeCard(
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = SurfaceContainerHighest.copy(alpha = 0.4f),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { showSpendingBreakdownModal = true }
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
@@ -3098,10 +3122,436 @@ fun SpendingVelocityGaugeCard(
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     color = OnSurfaceVariant,
                                     fontSize = 9.sp
+                                ),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    // Interactive banner to open full modal view
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = Primary.copy(alpha = 0.08f),
+                        border = BorderStroke(1.dp, Primary.copy(alpha = 0.25f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .clickable { showSpendingBreakdownModal = true }
+                            .testTag("open_spending_breakdown_modal_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PieChart,
+                                    contentDescription = "Breakdown Icon",
+                                    tint = Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "View Detailed Monthly Breakdown",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary,
+                                        fontSize = 12.sp
+                                    )
+                                )
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "All Categories",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Primary.copy(alpha = 0.85f),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowForward,
+                                    contentDescription = "Open Breakdown",
+                                    tint = Primary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSpendingBreakdownModal) {
+        MonthlySpendingBreakdownModal(
+            monthlySpent = monthlySpent,
+            monthlyBudgetTarget = monthlyBudgetTarget,
+            allCategories = allCategories,
+            onDismiss = { showSpendingBreakdownModal = false },
+            onCustomizeBudget = {
+                showSpendingBreakdownModal = false
+                onCustomizeBudget()
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun MonthlySpendingBreakdownModal(
+    monthlySpent: Double,
+    monthlyBudgetTarget: Double,
+    allCategories: List<TopSpendingCategoryItem>,
+    onDismiss: () -> Unit,
+    onCustomizeBudget: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = SurfaceContainerLowest,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        modifier = Modifier.testTag("monthly_spending_breakdown_modal")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+        ) {
+            // Modal Title & Close Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PieChart,
+                            contentDescription = "Spending Breakdown Icon",
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Monthly Spending Breakdown",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                        Text(
+                            text = "Detailed Category Distribution & Limit Progress",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.testTag("close_spending_breakdown_modal_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close Spending Breakdown Modal",
+                        tint = OnSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Summary Card
+            val overallSpentRatio = if (monthlyBudgetTarget > 0) (monthlySpent / monthlyBudgetTarget).toFloat().coerceIn(0f, 1f) else 0f
+            val remainingBudget = (monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = SurfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Current Month Total Spend",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                            Row(
+                                verticalAlignment = Alignment.Bottom,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)}",
+                                    style = MaterialTheme.typography.headlineSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                )
+                                Text(
+                                    text = "/ ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)}",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        color = OnSurfaceVariant
+                                    ),
+                                    modifier = Modifier.padding(bottom = 3.dp)
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (overallSpentRatio <= 0.85f) Color(0xFFE8F5E9) else Color(0xFFFFF7ED))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                text = "${(overallSpentRatio * 100).toInt()}% of limit",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (overallSpentRatio <= 0.85f) Color(0xFF10B981) else Color(0xFFF59E0B)
                                 )
                             )
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    LinearProgressIndicator(
+                        progress = { overallSpentRatio },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(CircleShape),
+                        color = if (overallSpentRatio <= 0.85f) Color(0xFF10B981) else Color(0xFFF59E0B),
+                        trackColor = SurfaceContainerHighest
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Remaining: ₹${String.format(Locale.getDefault(), "%,.0f", remainingBudget)}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                        Text(
+                            text = "Day 14 of 31 • Mid-month pace",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            Text(
+                text = "Category Breakdown & Limit Progress",
+                style = MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = OnSurface,
+                    fontSize = 13.sp
+                )
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Scrollable Category List with Progress Bars
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .fillMaxWidth()
+                    .testTag("modal_category_breakdown_list"),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                items(allCategories.size) { index ->
+                    val cat = allCategories[index]
+                    val percentOfLimit = if (monthlyBudgetTarget > 0) ((cat.amount / monthlyBudgetTarget) * 100).toFloat() else 0f
+                    val percentOfTotalSpend = if (monthlySpent > 0) ((cat.amount / monthlySpent) * 100).toFloat() else 0f
+                    val progress = if (monthlyBudgetTarget > 0) (cat.amount / monthlyBudgetTarget).toFloat().coerceIn(0f, 1f) else 0f
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceContainerLow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("modal_category_item_$index")
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            // Row 1: Icon, Title, Badge, Amount
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(cat.iconBg),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = cat.icon,
+                                            contentDescription = cat.name,
+                                            tint = cat.iconColor,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Text(
+                                                text = cat.name,
+                                                style = MaterialTheme.typography.titleSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = OnSurface,
+                                                    fontSize = 13.sp
+                                                )
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(cat.iconBg)
+                                                    .padding(horizontal = 5.dp, vertical = 1.dp)
+                                            ) {
+                                                Text(
+                                                    text = cat.badge,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = cat.iconColor,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        fontSize = 9.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "${String.format(Locale.getDefault(), "%.1f", percentOfTotalSpend)}% of month spend",
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = OnSurfaceVariant,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "₹${String.format(Locale.getDefault(), "%,.0f", cat.amount)}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnSurface,
+                                            fontSize = 14.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = "${String.format(Locale.getDefault(), "%.1f", percentOfLimit)}% of limit",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = cat.iconColor,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Individual Progress Bar for this category
+                            LinearProgressIndicator(
+                                progress = { progress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(5.dp)
+                                    .clip(CircleShape)
+                                    .testTag("modal_category_progress_$index"),
+                                color = cat.iconColor,
+                                trackColor = SurfaceContainerHighest
+                            )
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Explanation
+                            Text(
+                                text = cat.explanation,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 10.sp,
+                                    lineHeight = 13.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onCustomizeBudget,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Adjust Target",
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Adjust Limit")
+                }
+                Button(
+                    onClick = onDismiss,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Done")
                 }
             }
         }
