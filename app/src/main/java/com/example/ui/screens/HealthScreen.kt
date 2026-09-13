@@ -2000,6 +2000,7 @@ fun SpendingVelocityGaugeCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = modifier
             .fillMaxWidth()
+            .testTag("financial_health_card")
             .testTag("spending_velocity_gauge_card")
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -2022,7 +2023,7 @@ fun SpendingVelocityGaugeCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Speed,
-                            contentDescription = "Spending Velocity Icon",
+                            contentDescription = "Financial Health Speedometer",
                             tint = status.color,
                             modifier = Modifier.size(20.dp)
                         )
@@ -2033,7 +2034,7 @@ fun SpendingVelocityGaugeCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Spending Velocity",
+                                text = "Financial Health",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = OnSurface
@@ -2056,7 +2057,7 @@ fun SpendingVelocityGaugeCard(
                             }
                         }
                         Text(
-                            text = "Monthly burn rate vs ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} limit",
+                            text = "Spending Velocity • ₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)} of ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} limit",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 11.sp
@@ -2820,6 +2821,7 @@ fun SpendingVelocityGaugeCard(
                     .clip(RoundedCornerShape(12.dp))
                     .clickable { isTopCategoriesExpanded = !isTopCategoriesExpanded }
                     .testTag("expandable_top_spending_categories_header")
+                    .testTag("financial_health_top_categories_expand_button")
             ) {
                 Row(
                     modifier = Modifier
@@ -2842,7 +2844,7 @@ fun SpendingVelocityGaugeCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PieChart,
-                                contentDescription = null,
+                                contentDescription = "Top Categories Icon",
                                 tint = Primary,
                                 modifier = Modifier.size(16.dp)
                             )
@@ -2853,7 +2855,7 @@ fun SpendingVelocityGaugeCard(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "Top Spending Drivers",
+                                    text = "Top 3 Spending Categories",
                                     style = MaterialTheme.typography.titleSmall.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = OnSurface,
@@ -2867,7 +2869,7 @@ fun SpendingVelocityGaugeCard(
                                         .padding(horizontal = 6.dp, vertical = 1.dp)
                                 ) {
                                     Text(
-                                        text = "Top 3",
+                                        text = "This Month",
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             color = Primary,
                                             fontWeight = FontWeight.Bold,
@@ -2877,7 +2879,7 @@ fun SpendingVelocityGaugeCard(
                                 }
                             }
                             Text(
-                                text = "$sharePercent% of current spend • Tap to ${if (isTopCategoriesExpanded) "collapse" else "view details"}",
+                                text = "₹${String.format(Locale.getDefault(), "%,.0f", topThreeTotal)} total ($sharePercent% of spend) • Tap to ${if (isTopCategoriesExpanded) "collapse" else "expand list"}",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = OnSurfaceVariant,
                                     fontSize = 10.sp
@@ -2909,11 +2911,12 @@ fun SpendingVelocityGaugeCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
-                        .testTag("top_spending_categories_list"),
+                        .testTag("top_spending_categories_list")
+                        .testTag("financial_health_top_categories_list"),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Why is spending pacing here? These 3 categories explain your current monthly burn rate:",
+                        text = "Top spending drivers for the current month explaining budget usage:",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = OnSurfaceVariant,
                             fontSize = 11.sp,
@@ -2932,6 +2935,7 @@ fun SpendingVelocityGaugeCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("top_category_item_$index")
+                                .testTag("financial_health_category_item_$index")
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Row(
