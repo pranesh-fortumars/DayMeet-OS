@@ -5,6 +5,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -25,6 +30,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -33,7 +39,12 @@ import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
 
 @Composable
 fun HealthScreen(
@@ -1801,56 +1812,92 @@ private fun WeeklySummaryCard(
     }
 }
 
-private data class FinancialHealthStatus(
+private data class SpendingVelocityStatus(
     val label: String,
     val color: Color,
     val bg: Color,
-    val score: String
+    val score: String,
+    val description: String
 )
 
 @Composable
-fun FinancialHealthGaugeCard(
+fun SpendingVelocityGaugeCard(
     monthlySpent: Double,
     monthlyBudgetTarget: Double,
     onCustomizeBudget: () -> Unit,
+    onQuickAdjustLimit: (Double) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val ratio = if (monthlyBudgetTarget > 0) (monthlySpent / monthlyBudgetTarget).toFloat() else 0f
-    val clampedProgress = ratio.coerceIn(0f, 1f)
-    val percentInt = (ratio * 100).toInt()
-    val remaining = (monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0)
+    val totalDaysInMonth = 31
+    val elapsedDays = 14
+    val remainingDays = (totalDaysInMonth - elapsedDays).coerceAtLeast(1)
 
+    // Base velocities & metrics
+    val targetDailySpend = if (totalDaysInMonth > 0) monthlyBudgetTarget / totalDaysInMonth else 1.0
+    val actualDailySpend = if (elapsedDays > 0) monthlySpent / elapsedDays else 0.0
+    val actualVelocityRatio = if (targetDailySpend > 0) (actualDailySpend / targetDailySpend).toFloat() else 1f
+    val safeDailyRemaining = if (remainingDays > 0) (monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0) / remainingDays else 0.0
+    val spendRatio = if (monthlyBudgetTarget > 0) (monthlySpent / monthlyBudgetTarget).toFloat() else 0f
+    val timeElapsedRatio = elapsedDays.toFloat() / totalDaysInMonth.toFloat()
+
+    // Interactive states
+    var isSimulationActive by remember { mutableStateOf(false) }
+    var simulatedDailySpend by remember(actualDailySpend) { mutableDoubleStateOf(actualDailySpend) }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0: Velocity Speedometer, 1: Runway & Limit
+
+    val currentDailySpend = if (isSimulationActive) simulatedDailySpend else actualDailySpend
+    val currentVelocityRatio = if (targetDailySpend > 0) (currentDailySpend / targetDailySpend).toFloat() else 1f
+
+    // Projections
+    val projectedTotalMonthEnd = monthlySpent + (currentDailySpend * remainingDays)
+    val projectedVariance = monthlyBudgetTarget - projectedTotalMonthEnd
+    val exhaustionDaysRemaining = if (currentDailySpend > 0) {
+        ((monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0) / currentDailySpend).roundToInt()
+    } else totalDaysInMonth
+    val exhaustionCalendarDay = (elapsedDays + exhaustionDaysRemaining).coerceAtMost(totalDaysInMonth)
+
+    // Dynamic Health Status
     val status = when {
-        ratio <= 0.70f -> FinancialHealthStatus(
-            label = "Optimal Pace",
+        currentVelocityRatio <= 0.85f -> SpendingVelocityStatus(
+            label = "Frugal Cruise",
             color = Color(0xFF10B981),
             bg = Color(0xFFE8F5E9),
-            score = "92/100 • Excellent"
+            score = "94/100 • Surplus Pace",
+            description = "Spending velocity is 15% below uniform limit. Projected month-end surplus of ₹${String.format(Locale.getDefault(), "%,.0f", projectedVariance.coerceAtLeast(0.0))}."
         )
-        ratio <= 0.90f -> FinancialHealthStatus(
+        currentVelocityRatio <= 1.05f -> SpendingVelocityStatus(
+            label = "Target Sustainable",
+            color = Color(0xFF0288D1),
+            bg = Color(0xFFE0F2FE),
+            score = "88/100 • Balanced Pace",
+            description = "Spending pace is right on track with the ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} limit. Expected month-end variance is negligible."
+        )
+        currentVelocityRatio <= 1.30f -> SpendingVelocityStatus(
             label = "Caution Pace",
             color = Color(0xFFF59E0B),
             bg = Color(0xFFFFF8E1),
-            score = "76/100 • Watchful"
+            score = "72/100 • Accelerated",
+            description = "Pacing ${(currentVelocityRatio * 100 - 100).toInt()}% above target velocity. Reduce daily expenses to ₹${String.format(Locale.getDefault(), "%,.0f", safeDailyRemaining)} to avoid deficit."
         )
-        else -> FinancialHealthStatus(
-            label = "Budget Alert",
+        else -> SpendingVelocityStatus(
+            label = "Budget Overdrive",
             color = Color(0xFFEF4444),
             bg = Color(0xFFFFEBEE),
-            score = "48/100 • Overpace"
+            score = "46/100 • Rapid Burn",
+            description = "At this burn velocity, the budget limit will be exhausted on Day $exhaustionCalendarDay (${totalDaysInMonth - exhaustionCalendarDay} days early). Projected deficit: ₹${String.format(Locale.getDefault(), "%,.0f", -projectedVariance)}."
         )
     }
 
     Card(
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = modifier
             .fillMaxWidth()
-            .testTag("financial_health_gauge_card")
+            .testTag("spending_velocity_gauge_card")
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header
+            // Card Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1858,20 +1905,20 @@ fun FinancialHealthGaugeCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE0F2FE)),
+                            .background(status.bg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Speed,
-                            contentDescription = "Financial Health Icon",
-                            tint = Color(0xFF0288D1),
-                            modifier = Modifier.size(18.dp)
+                            contentDescription = "Spending Velocity Icon",
+                            tint = status.color,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     Column {
@@ -1880,7 +1927,7 @@ fun FinancialHealthGaugeCard(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "Financial Health",
+                                text = "Spending Velocity",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = OnSurface
@@ -1890,20 +1937,20 @@ fun FinancialHealthGaugeCard(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
                                     .background(status.bg)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = status.label,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = status.color,
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 9.sp
+                                        fontSize = 10.sp
                                     )
                                 )
                             }
                         }
                         Text(
-                            text = "Monthly spending progress vs target",
+                            text = "Monthly burn rate vs ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} limit",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 11.sp
@@ -1928,7 +1975,7 @@ fun FinancialHealthGaugeCard(
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Target",
+                        text = "Limit",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = Primary
@@ -1937,113 +1984,561 @@ fun FinancialHealthGaugeCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Speedometer Arc Gauge Canvas
-            Box(
+            // Interactive Tabs: Velocity Speedometer vs Runway & Limit
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = SurfaceContainerLow,
+                contentColor = Primary,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(150.dp),
-                contentAlignment = Alignment.Center
+                    .clip(RoundedCornerShape(12.dp))
             ) {
-                val trackColor = SurfaceContainerHighest
-                val progressBrush = Brush.horizontalGradient(
-                    colors = if (ratio <= 0.70f) {
-                        listOf(Color(0xFF06B6D4), Color(0xFF10B981))
-                    } else if (ratio <= 0.90f) {
-                        listOf(Color(0xFF10B981), Color(0xFFF59E0B))
-                    } else {
-                        listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
+                Tab(
+                    selected = selectedTab == 0,
+                    onClick = { selectedTab = 0 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Text("Velocity Dial", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 )
+                Tab(
+                    selected = selectedTab == 1,
+                    onClick = { selectedTab = 1 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(imageVector = Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Text("Runway & Limit", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                )
+            }
 
-                Canvas(
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (selectedTab == 0) {
+                // ==========================================
+                // 1. INTERACTIVE SPEEDOMETER GAUGE
+                // ==========================================
+                val clampedVelocity = currentVelocityRatio.coerceIn(0f, 2.2f)
+                val targetAngle = 150f + (clampedVelocity / 2.2f) * 240f
+                val animatedAngle by animateFloatAsState(
+                    targetValue = targetAngle,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "needle_angle"
+                )
+
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .fillMaxWidth()
+                        .height(180.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    val strokeWidth = 16.dp.toPx()
-                    val arcSize = min(size.width * 0.78f, size.height * 1.5f)
-                    val left = (size.width - arcSize) / 2f
-                    val top = size.height * 0.12f
+                    val trackBg = SurfaceContainerHighest
+                    val greenColor = Color(0xFF10B981)
+                    val cyanColor = Color(0xFF06B6D4)
+                    val amberColor = Color(0xFFF59E0B)
+                    val redColor = Color(0xFFEF4444)
 
-                    // 1. Background Arc Track (240 degrees: from 150 to 390)
-                    drawArc(
-                        color = trackColor,
-                        startAngle = 150f,
-                        sweepAngle = 240f,
-                        useCenter = false,
-                        topLeft = Offset(left, top),
-                        size = Size(arcSize, arcSize),
-                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                    )
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .testTag("interactive_velocity_canvas")
+                            .pointerInput(Unit) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        val cx = size.width / 2f
+                                        val cy = size.height * 0.72f
+                                        val dx = offset.x - cx
+                                        val dy = offset.y - cy
+                                        var deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                                        if (deg < 0) deg += 360f
+                                        val fraction = when {
+                                            deg >= 150f -> (deg - 150f) / 240f
+                                            deg <= 40f -> (deg + 210f) / 240f
+                                            deg < 95f -> 1f
+                                            else -> 0f
+                                        }.coerceIn(0f, 1f)
+                                        val newVelocity = fraction * 2.2f
+                                        simulatedDailySpend = (newVelocity * targetDailySpend).coerceIn(300.0, 6000.0)
+                                        isSimulationActive = true
+                                    },
+                                    onDrag = { change, _ ->
+                                        change.consume()
+                                        val cx = size.width / 2f
+                                        val cy = size.height * 0.72f
+                                        val dx = change.position.x - cx
+                                        val dy = change.position.y - cy
+                                        var deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                                        if (deg < 0) deg += 360f
+                                        val fraction = when {
+                                            deg >= 150f -> (deg - 150f) / 240f
+                                            deg <= 40f -> (deg + 210f) / 240f
+                                            deg < 95f -> 1f
+                                            else -> 0f
+                                        }.coerceIn(0f, 1f)
+                                        val newVelocity = fraction * 2.2f
+                                        simulatedDailySpend = (newVelocity * targetDailySpend).coerceIn(300.0, 6000.0)
+                                        isSimulationActive = true
+                                    }
+                                )
+                            }
+                            .pointerInput(Unit) {
+                                detectTapGestures { offset ->
+                                    val cx = size.width / 2f
+                                    val cy = size.height * 0.72f
+                                    val dx = offset.x - cx
+                                    val dy = offset.y - cy
+                                    var deg = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                                    if (deg < 0) deg += 360f
+                                    val fraction = when {
+                                        deg >= 150f -> (deg - 150f) / 240f
+                                        deg <= 40f -> (deg + 210f) / 240f
+                                        deg < 95f -> 1f
+                                        else -> 0f
+                                    }.coerceIn(0f, 1f)
+                                    val newVelocity = fraction * 2.2f
+                                    simulatedDailySpend = (newVelocity * targetDailySpend).coerceIn(300.0, 6000.0)
+                                    isSimulationActive = true
+                                }
+                            }
+                    ) {
+                        val strokeWidth = 14.dp.toPx()
+                        val arcRadius = min(size.width * 0.42f, size.height * 0.78f)
+                        val arcSize = arcRadius * 2f
+                        val center = Offset(size.width / 2f, size.height * 0.72f)
+                        val topLeft = Offset(center.x - arcRadius, center.y - arcRadius)
 
-                    // 2. Active Spending Progress Arc
-                    val activeSweep = 240f * clampedProgress
-                    if (activeSweep > 0.5f) {
+                        // 1. Background full track
                         drawArc(
-                            brush = progressBrush,
+                            color = trackBg,
                             startAngle = 150f,
-                            sweepAngle = activeSweep,
+                            sweepAngle = 240f,
                             useCenter = false,
-                            topLeft = Offset(left, top),
+                            topLeft = topLeft,
                             size = Size(arcSize, arcSize),
                             style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                         )
-                    }
-                }
 
-                // Center Readout
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.offset(y = 14.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(99.dp))
-                            .background(status.bg)
-                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                        // 2. Multi-Zone Colored Velocity Segments
+                        // Zone 1: Safe Frugal (0.0x - 0.85x) -> 92.7 deg
+                        val z1Sweep = 240f * (0.85f / 2.2f)
+                        drawArc(
+                            color = greenColor.copy(alpha = 0.75f),
+                            startAngle = 150f,
+                            sweepAngle = z1Sweep,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+                        )
+
+                        // Zone 2: Target Sustainable (0.85x - 1.05x) -> 21.8 deg
+                        val z2Start = 150f + z1Sweep
+                        val z2Sweep = 240f * (0.20f / 2.2f)
+                        drawArc(
+                            color = cyanColor.copy(alpha = 0.85f),
+                            startAngle = z2Start,
+                            sweepAngle = z2Sweep,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+                        )
+
+                        // Zone 3: Caution Pace (1.05x - 1.30x) -> 27.2 deg
+                        val z3Start = z2Start + z2Sweep
+                        val z3Sweep = 240f * (0.25f / 2.2f)
+                        drawArc(
+                            color = amberColor.copy(alpha = 0.85f),
+                            startAngle = z3Start,
+                            sweepAngle = z3Sweep,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
+                        )
+
+                        // Zone 4: Overdrive Danger (1.30x - 2.2x) -> 98.2 deg
+                        val z4Start = z3Start + z3Sweep
+                        val z4Sweep = 240f - (z1Sweep + z2Sweep + z3Sweep)
+                        drawArc(
+                            color = redColor.copy(alpha = 0.85f),
+                            startAngle = z4Start,
+                            sweepAngle = z4Sweep,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                        )
+
+                        // 3. Ticks & Benchmark Notch for 1.0x Target Pace
+                        val targetTickAngle = 150f + (1.0f / 2.2f) * 240f
+                        val targetRad = Math.toRadians(targetTickAngle.toDouble())
+                        val tInner = center + Offset(cos(targetRad).toFloat() * (arcRadius - strokeWidth * 0.85f), sin(targetRad).toFloat() * (arcRadius - strokeWidth * 0.85f))
+                        val tOuter = center + Offset(cos(targetRad).toFloat() * (arcRadius + strokeWidth * 0.85f), sin(targetRad).toFloat() * (arcRadius + strokeWidth * 0.85f))
+                        drawLine(
+                            color = Color.White,
+                            start = tInner,
+                            end = tOuter,
+                            strokeWidth = 3.5.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+
+                        // Minor tick marks (0.0x, 0.5x, 1.5x, 2.0x)
+                        val tickMultipliers = listOf(0.0f, 0.5f, 1.5f, 2.0f)
+                        for (tm in tickMultipliers) {
+                            val ang = 150f + (tm / 2.2f) * 240f
+                            val r = Math.toRadians(ang.toDouble())
+                            val p1 = center + Offset(cos(r).toFloat() * (arcRadius - strokeWidth * 0.5f), sin(r).toFloat() * (arcRadius - strokeWidth * 0.5f))
+                            val p2 = center + Offset(cos(r).toFloat() * (arcRadius + strokeWidth * 0.5f), sin(r).toFloat() * (arcRadius + strokeWidth * 0.5f))
+                            drawLine(
+                                color = Color.White.copy(alpha = 0.8f),
+                                start = p1,
+                                end = p2,
+                                strokeWidth = 1.8.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        // 4. Sleek Tapered Speedometer Needle
+                        val needleRad = Math.toRadians(animatedAngle.toDouble())
+                        val needleLen = arcRadius * 0.82f
+                        val tip = center + Offset(cos(needleRad).toFloat() * needleLen, sin(needleRad).toFloat() * needleLen)
+                        val perpRad = needleRad + PI / 2.0
+                        val baseWidth = 5.dp.toPx()
+                        val baseL = center + Offset(cos(perpRad).toFloat() * baseWidth, sin(perpRad).toFloat() * baseWidth)
+                        val baseR = center + Offset(-cos(perpRad).toFloat() * baseWidth, -sin(perpRad).toFloat() * baseWidth)
+
+                        val needlePath = Path().apply {
+                            moveTo(baseL.x, baseL.y)
+                            lineTo(tip.x, tip.y)
+                            lineTo(baseR.x, baseR.y)
+                            close()
+                        }
+                        drawPath(needlePath, color = status.color)
+
+                        // 5. Metallic Pivot Hub
+                        drawCircle(color = Color(0xFF1E293B), radius = 10.dp.toPx(), center = center)
+                        drawCircle(color = status.color, radius = 6.dp.toPx(), center = center)
+                        drawCircle(color = Color.White, radius = 2.5.dp.toPx(), center = center)
+                    }
+
+                    // Speedometer Center Digital Readout
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.offset(y = 22.dp)
                     ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "${String.format(Locale.getDefault(), "%.2f", currentVelocityRatio)}x",
+                                style = MaterialTheme.typography.headlineMedium.copy(
+                                    fontWeight = FontWeight.Black,
+                                    color = status.color,
+                                    fontSize = 26.sp
+                                )
+                            )
+                            if (isSimulationActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Primary.copy(alpha = 0.15f))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "SIM",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Primary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
                         Text(
-                            text = "$percentInt% USED",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = status.color,
-                                fontWeight = FontWeight.Black,
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", currentDailySpend)} / day",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface,
+                                fontSize = 13.sp
+                            )
+                        )
+
+                        Text(
+                            text = "Target: ₹${String.format(Locale.getDefault(), "%,.0f", targetDailySpend)}/day (1.0x)",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
                                 fontSize = 10.sp
                             )
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)}",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            color = OnSurface,
-                            fontSize = 24.sp
+                    // Dial Legend / Instruction Pill
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = 6.dp)
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(SurfaceContainerLow)
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = if (isSimulationActive) "Drag dial to simulate • Tap Reset to restore" else "Touch & drag dial to simulate spending velocity",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 9.sp
+                            )
                         )
+                    }
+                }
+            } else {
+                // ==========================================
+                // 2. RUNWAY & LIMIT PROGRESS ARC
+                // ==========================================
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(175.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val trackColor = SurfaceContainerHighest
+                    val progressBrush = Brush.horizontalGradient(
+                        colors = if (spendRatio <= 0.70f) {
+                            listOf(Color(0xFF06B6D4), Color(0xFF10B981))
+                        } else if (spendRatio <= 0.90f) {
+                            listOf(Color(0xFF10B981), Color(0xFFF59E0B))
+                        } else {
+                            listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
+                        }
                     )
 
-                    Text(
-                        text = "of ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} target",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            color = OnSurfaceVariant,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        val strokeWidth = 16.dp.toPx()
+                        val arcSize = min(size.width * 0.78f, size.height * 1.5f)
+                        val left = (size.width - arcSize) / 2f
+                        val top = size.height * 0.12f
+
+                        // Background Arc (240 deg: from 150 to 390)
+                        drawArc(
+                            color = trackColor,
+                            startAngle = 150f,
+                            sweepAngle = 240f,
+                            useCenter = false,
+                            topLeft = Offset(left, top),
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
                         )
+
+                        // Spending Progress Arc
+                        val clampedSpend = spendRatio.coerceIn(0f, 1f)
+                        val activeSweep = 240f * clampedSpend
+                        if (activeSweep > 0.5f) {
+                            drawArc(
+                                brush = progressBrush,
+                                startAngle = 150f,
+                                sweepAngle = activeSweep,
+                                useCenter = false,
+                                topLeft = Offset(left, top),
+                                size = Size(arcSize, arcSize),
+                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                            )
+                        }
+
+                        // Time Elapsed Benchmark Marker (Day 14/31 = 45.2%)
+                        val timeAngle = 150f + 240f * timeElapsedRatio.coerceIn(0f, 1f)
+                        val timeRad = Math.toRadians(timeAngle.toDouble())
+                        val arcCenter = Offset(left + arcSize / 2f, top + arcSize / 2f)
+                        val r = arcSize / 2f
+                        val mInner = arcCenter + Offset(cos(timeRad).toFloat() * (r - strokeWidth * 0.75f), sin(timeRad).toFloat() * (r - strokeWidth * 0.75f))
+                        val mOuter = arcCenter + Offset(cos(timeRad).toFloat() * (r + strokeWidth * 0.75f), sin(timeRad).toFloat() * (r + strokeWidth * 0.75f))
+                        drawLine(
+                            color = Color(0xFF1E293B),
+                            start = mInner,
+                            end = mOuter,
+                            strokeWidth = 3.5.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
+
+                    // Center Readout
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.offset(y = 12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(99.dp))
+                                .background(status.bg)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "${(spendRatio * 100).toInt()}% USED vs ${(timeElapsedRatio * 100).toInt()}% TIME",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = status.color,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Text(
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)}",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                color = OnSurface,
+                                fontSize = 24.sp
+                            )
+                        )
+
+                        Text(
+                            text = "of ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} limit",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // ==========================================
+            // 3. INTERACTIVE SIMULATION PRESET CHIPS
+            // ==========================================
+            Text(
+                text = "Interactive What-If Simulation",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = OnSurfaceVariant,
+                    fontSize = 10.sp
+                )
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // Actual Pace Preset
+                FilterChip(
+                    selected = !isSimulationActive,
+                    onClick = {
+                        isSimulationActive = false
+                        simulatedDailySpend = actualDailySpend
+                    },
+                    label = { Text("⚡ Actual (${String.format(Locale.getDefault(), "%.1f", actualVelocityRatio)}x)", fontSize = 10.sp) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Safe Pace Preset
+                FilterChip(
+                    selected = isSimulationActive && kotlin.math.abs(simulatedDailySpend - safeDailyRemaining) < 50,
+                    onClick = {
+                        isSimulationActive = true
+                        simulatedDailySpend = safeDailyRemaining
+                    },
+                    label = { Text("🎯 Safe Target", fontSize = 10.sp) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Weekend Surge Preset (+₹3.5k)
+                FilterChip(
+                    selected = isSimulationActive && kotlin.math.abs(simulatedDailySpend - (actualDailySpend + 700)) < 50,
+                    onClick = {
+                        isSimulationActive = true
+                        simulatedDailySpend = actualDailySpend + 700.0
+                    },
+                    label = { Text("🏖️ Surge (+₹700)", fontSize = 10.sp) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Frugal Week Preset (₹800/d)
+                FilterChip(
+                    selected = isSimulationActive && kotlin.math.abs(simulatedDailySpend - 800.0) < 50,
+                    onClick = {
+                        isSimulationActive = true
+                        simulatedDailySpend = 800.0
+                    },
+                    label = { Text("🛡️ Frugal (₹800)", fontSize = 10.sp) },
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Interactive Fine-Tuning Burn Slider
+            if (isSimulationActive) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(SurfaceContainerLow)
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Simulated Daily Burn: ₹${String.format(Locale.getDefault(), "%,.0f", simulatedDailySpend)}/day",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Primary)
+                        )
+                        TextButton(
+                            onClick = {
+                                isSimulationActive = false
+                                simulatedDailySpend = actualDailySpend
+                            },
+                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)
+                        ) {
+                            Text("Reset", style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontSize = 10.sp))
+                        }
+                    }
+
+                    Slider(
+                        value = simulatedDailySpend.toFloat(),
+                        onValueChange = {
+                            simulatedDailySpend = it.toDouble()
+                            isSimulationActive = true
+                        },
+                        valueRange = 400f..4500f,
+                        steps = 40,
+                        colors = SliderDefaults.colors(thumbColor = status.color, activeTrackColor = status.color),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 3-Metric Summary Pills
+            // ==========================================
+            // 4. THREE-METRIC SUMMARY PILLS
+            // ==========================================
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Budget Target
+                // Monthly Limit Card
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = SurfaceContainerLow,
@@ -2056,7 +2551,7 @@ fun FinancialHealthGaugeCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Target Budget",
+                            text = "Monthly Limit",
                             style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
                         )
                         Text(
@@ -2077,7 +2572,7 @@ fun FinancialHealthGaugeCard(
                     }
                 }
 
-                // Remaining Buffer
+                // Projected Month-End / Remaining Buffer
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = SurfaceContainerLow,
@@ -2088,11 +2583,12 @@ fun FinancialHealthGaugeCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Remaining",
+                            text = if (isSimulationActive) "Projected Spend" else "Remaining",
                             style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
                         )
                         Text(
-                            text = "₹${String.format(Locale.getDefault(), "%,.0f", remaining)}",
+                            text = if (isSimulationActive) "₹${String.format(Locale.getDefault(), "%,.0f", projectedTotalMonthEnd)}"
+                                   else "₹${String.format(Locale.getDefault(), "%,.0f", (monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0))}",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = status.color,
@@ -2100,7 +2596,8 @@ fun FinancialHealthGaugeCard(
                             )
                         )
                         Text(
-                            text = if (remaining > 0) "Under target ✓" else "Exceeded ⚠",
+                            text = if (projectedVariance >= 0) "Surplus +₹${String.format(Locale.getDefault(), "%,.0f", projectedVariance)}"
+                                   else "Deficit -₹${String.format(Locale.getDefault(), "%,.0f", -projectedVariance)}",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = status.color,
                                 fontSize = 9.sp,
@@ -2110,8 +2607,7 @@ fun FinancialHealthGaugeCard(
                     }
                 }
 
-                // Daily Safe Allowance
-                val safeDaily = (remaining / 17.0).coerceAtLeast(0.0)
+                // Safe Daily Allowance / Runway Days
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = SurfaceContainerLow,
@@ -2122,11 +2618,11 @@ fun FinancialHealthGaugeCard(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Safe Burn Rate",
+                            text = "Safe Allowance",
                             style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
                         )
                         Text(
-                            text = "₹${String.format(Locale.getDefault(), "%,.0f", safeDaily)}",
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", safeDailyRemaining)}",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF0288D1),
@@ -2134,7 +2630,7 @@ fun FinancialHealthGaugeCard(
                             )
                         )
                         Text(
-                            text = "Per day (17d left)",
+                            text = "Per day ($remainingDays d left)",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 9.sp
@@ -2146,7 +2642,9 @@ fun FinancialHealthGaugeCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // AI Financial Health Score & Guidance Callout
+            // ==========================================
+            // 5. AI FINANCIAL HEALTH GUIDANCE CALLOUT
+            // ==========================================
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = SurfaceContainerHighest.copy(alpha = 0.5f),
@@ -2159,7 +2657,7 @@ fun FinancialHealthGaugeCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
+                            .size(26.dp)
                             .clip(CircleShape)
                             .background(status.color.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
@@ -2168,11 +2666,10 @@ fun FinancialHealthGaugeCard(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
                             tint = status.color,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                     Column {
-                        val safeDailyText = (remaining / 17.0).coerceAtLeast(0.0)
                         Text(
                             text = "Health Score: ${status.score}",
                             style = MaterialTheme.typography.labelSmall.copy(
@@ -2182,12 +2679,7 @@ fun FinancialHealthGaugeCard(
                             )
                         )
                         Text(
-                            text = if (ratio <= 0.70f)
-                                "Spending is 18% below seasonal projection. Keeping daily expenses under ₹${String.format(Locale.getDefault(), "%,.0f", safeDailyText)} will leave a surplus of ₹${String.format(Locale.getDefault(), "%,.0f", remaining)}."
-                            else if (ratio <= 0.90f)
-                                "Pacing near budget limit. Reduce non-essential discretionary expenses to maintain your month-end savings buffer."
-                            else
-                                "Current spending has consumed most of the monthly budget. Consider reviewing upcoming bill payments and recurring auto-debits.",
+                            text = status.description,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 10.sp
@@ -2198,6 +2690,21 @@ fun FinancialHealthGaugeCard(
             }
         }
     }
+}
+
+@Composable
+fun FinancialHealthGaugeCard(
+    monthlySpent: Double,
+    monthlyBudgetTarget: Double,
+    onCustomizeBudget: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    SpendingVelocityGaugeCard(
+        monthlySpent = monthlySpent,
+        monthlyBudgetTarget = monthlyBudgetTarget,
+        onCustomizeBudget = onCustomizeBudget,
+        modifier = modifier
+    )
 }
 
 @Composable
