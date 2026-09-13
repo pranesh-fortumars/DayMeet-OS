@@ -74,6 +74,9 @@ fun HomeScreen(
     val habits by viewModel.habits.collectAsState()
     val nonRoutineTasks by viewModel.nonRoutineTasks.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
+    val isSyncing by viewModel.isSyncing.collectAsState()
+    val lastSyncedTime by viewModel.lastSyncedTime.collectAsState()
+    val syncPulseKey by viewModel.syncPulseKey.collectAsState()
 
     val electricityBill = upcomingBills.firstOrNull { it.id == "b1" }
     val nextMeeting = meetings.firstOrNull()
@@ -100,6 +103,54 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // 0. Manual Dashboard Sync Refresh Banner
+        item {
+            AnimatedVisibility(
+                visible = isSyncing,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Primary.copy(alpha = 0.08f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Primary.copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp)
+                        .testTag("dashboard_sync_banner")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Primary
+                        )
+                        Column {
+                            Text(
+                                text = "Synchronizing All Widgets...",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary,
+                                    fontSize = 11.sp
+                                )
+                            )
+                            Text(
+                                text = "Refreshing live Calendar, Tasks, Finance & Bio-Sync streams",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // 1. Good Morning Greeting & Daily Conditions
         item {
             Column(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
@@ -144,7 +195,7 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Weather and date conditions
+                // Weather, date conditions, and live sync status badge
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -161,17 +212,36 @@ fun HomeScreen(
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = "72°F Sunny (10% rain)",
+                        text = "72°F Sunny",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = OnSurfaceVariant,
                             fontWeight = FontWeight.Medium
                         )
                     )
                     Text(text = "•", color = OutlineVariant)
-                    Text(
-                        text = "New York",
-                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
-                    )
+                    // Live Sync status indicator chip
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clickable { viewModel.triggerManualSync() }
+                            .testTag("dashboard_sync_status_badge")
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(if (isSyncing) AmberWarning else EmeraldSuccess)
+                        )
+                        Text(
+                            text = if (isSyncing) "Syncing..." else "Synced $lastSyncedTime",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = if (isSyncing) Primary else OnSurfaceVariant,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -752,7 +822,7 @@ fun HomeScreen(
             }
         }
 
-        // Stream Items
+        // Stream Items with animateItem for smooth entrance, exit, and re-ordering animations
         items(crossStreamItems, key = { it.id }) { streamItem ->
             CrossStreamRowItem(
                 item = streamItem,
@@ -767,7 +837,20 @@ fun HomeScreen(
                         "travel" -> viewModel.openSubScreen("travel")
                         else -> viewModel.navigateTo("tasks")
                     }
-                }
+                },
+                modifier = Modifier.animateItem(
+                    fadeInSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    fadeOutSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    placementSpec = spring(
+                        dampingRatio = Spring.DampingRatioNoBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
             )
         }
 
@@ -985,12 +1068,36 @@ private fun CrossStreamRowItem(
     item: CrossStreamItem,
     onToggleDone: () -> Unit,
     onRemove: () -> Unit,
-    onItemClick: () -> Unit
+    onItemClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
     var isToggledState by remember(item.isCompleted) { mutableStateOf(item.isCompleted) }
     var isVisible by remember { mutableStateOf(true) }
     var isAnimatingOut by remember { mutableStateOf(false) }
+
+    // Entrance animation for newly added/mounted items
+    val enterAlpha = remember { Animatable(0f) }
+    val enterScale = remember { Animatable(0.92f) }
+    val enterSlideY = remember { Animatable(-20f) }
+
+    LaunchedEffect(item.id) {
+        launch {
+            enterAlpha.animateTo(1f, tween(durationMillis = 280, easing = FastOutSlowInEasing))
+        }
+        launch {
+            enterScale.animateTo(
+                1f,
+                spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+            )
+        }
+        launch {
+            enterSlideY.animateTo(
+                0f,
+                spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessMediumLow)
+            )
+        }
+    }
 
     val swipeOffset = remember { Animatable(0f) }
     val collapseAnim = remember { Animatable(1f) }
@@ -1022,8 +1129,8 @@ private fun CrossStreamRowItem(
             coroutineScope.launch {
                 // Haptic-like visual pulse bounce animation
                 launch {
-                    hapticBounce.animateTo(1.05f, tween(60, easing = FastOutSlowInEasing))
-                    hapticBounce.animateTo(0.96f, tween(50, easing = FastOutSlowInEasing))
+                    hapticBounce.animateTo(1.08f, tween(70, easing = FastOutSlowInEasing))
+                    hapticBounce.animateTo(0.95f, tween(60, easing = FastOutSlowInEasing))
                     hapticBounce.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
                 }
 
@@ -1042,11 +1149,14 @@ private fun CrossStreamRowItem(
                     onRemove()
                 } else {
                     // Phase 1: Smooth CSS strike-through transition across title
-                    strikeProgress.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
-                    )
-                    delay(60)
+                    launch {
+                        strikeProgress.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+                        )
+                    }
+                    // Refined pause giving user crisp visual confirmation of task completion
+                    delay(280)
                     // Phase 2: Slide-out horizontally & collapse vertically
                     launch {
                         swipeOffset.animateTo(1200f, tween(260, easing = FastOutSlowInEasing))
@@ -1080,10 +1190,13 @@ private fun CrossStreamRowItem(
         val progressFraction = (currentOffset / thresholdPx).coerceIn(0f, 1f)
 
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .graphicsLayer {
-                    alpha = collapseAnim.value.coerceIn(0f, 1f)
+                    alpha = collapseAnim.value.coerceIn(0f, 1f) * enterAlpha.value
+                    scaleX = enterScale.value
+                    scaleY = enterScale.value
+                    translationY = enterSlideY.value
                 }
                 .then(
                     if (collapseAnim.value < 1f) {
