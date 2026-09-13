@@ -93,6 +93,8 @@ fun DayMeetApp(
     val showUpdateDialog by viewModel.showUpdateDialog.collectAsStateWithLifecycle()
     val showConfetti by viewModel.showConfetti.collectAsStateWithLifecycle()
     val confettiMilestone by viewModel.confettiMilestone.collectAsStateWithLifecycle()
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
+    val lastSyncedTime by viewModel.lastSyncedTime.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
 
@@ -121,6 +123,11 @@ fun DayMeetApp(
         topBar = {
             if (!isFullscreenOverlay) {
                 DayMeetHeader(
+                    isSyncing = isSyncing,
+                    lastSyncedText = lastSyncedTime,
+                    onSyncClick = {
+                        viewModel.triggerManualSync()
+                    },
                     onSearchClick = {
                         viewModel.openSearch()
                     },

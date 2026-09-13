@@ -229,6 +229,49 @@ class DayMeetViewModel : ViewModel() {
     private val _syncDeviceCalendarAlerts = MutableStateFlow(true)
     val syncDeviceCalendarAlerts: StateFlow<Boolean> = _syncDeviceCalendarAlerts.asStateFlow()
 
+    // Manual Dashboard & All Widgets Network Sync state
+    private val _isSyncing = MutableStateFlow(false)
+    val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
+
+    private val _lastSyncedTime = MutableStateFlow("Just now")
+    val lastSyncedTime: StateFlow<String> = _lastSyncedTime.asStateFlow()
+
+    private val _syncPulseKey = MutableStateFlow(0)
+    val syncPulseKey: StateFlow<Int> = _syncPulseKey.asStateFlow()
+
+    fun triggerManualSync() {
+        if (_isSyncing.value) return
+        _isSyncing.value = true
+        viewModelScope.launch {
+            // Simulate network refresh latency across Cloud Calendar, Finance, Tasks & Health
+            delay(1200)
+            _lastSyncedTime.value = "Just now"
+            _syncPulseKey.value += 1
+            _isSyncing.value = false
+            showToast("Dashboard synchronized: 6 widgets updated & current")
+        }
+    }
+
+    fun addCrossStreamItem(
+        title: String,
+        subtitle: String,
+        tag: String = "Task",
+        tagType: String = "task",
+        time: String = "Now"
+    ) {
+        val newItem = CrossStreamItem(
+            id = "cs_${System.currentTimeMillis()}",
+            time = time,
+            title = title.ifBlank { "New Task" },
+            subtitle = subtitle,
+            tag = tag,
+            tagType = tagType,
+            isCompleted = false
+        )
+        _crossStreamItems.value = listOf(newItem) + _crossStreamItems.value
+        showToast("Added to stream: $title")
+    }
+
     fun toggleSyncDeviceCalendarAlerts(enabled: Boolean? = null) {
         val next = enabled ?: !_syncDeviceCalendarAlerts.value
         _syncDeviceCalendarAlerts.value = next
@@ -1000,19 +1043,35 @@ class DayMeetViewModel : ViewModel() {
     }
 
     fun saveNewTask(title: String, notes: String, priority: Priority, space: String, subtasks: List<String>) {
+        val taskId = "task_${System.currentTimeMillis()}"
+        val taskTitle = title.ifBlank { "New Task" }
+        val taskSubtitle = if (notes.isNotBlank()) notes else "$space • Priority: ${priority.label}"
         val newTask = FeedItem(
-            id = "task_${System.currentTimeMillis()}",
+            id = taskId,
             time = "05:00 PM",
-            title = title.ifBlank { "New Task" },
-            subtitle = if (notes.isNotBlank()) notes else "$space • Priority: ${priority.label}",
+            title = taskTitle,
+            subtitle = taskSubtitle,
             category = FeedCategory.TASK,
             priority = priority,
             statusTag = priority.label,
             isCompleted = false
         )
         _feedItems.value = listOf(newTask) + _feedItems.value
+
+        // Also add to Cross-Module Stream so it appears with entrance animation
+        val newStreamItem = CrossStreamItem(
+            id = "cs_${System.currentTimeMillis()}",
+            time = "05:00 PM",
+            title = taskTitle,
+            subtitle = taskSubtitle,
+            tag = "Task",
+            tagType = "task",
+            isCompleted = false
+        )
+        _crossStreamItems.value = listOf(newStreamItem) + _crossStreamItems.value
+
         _showCreateSheet.value = false
-        showToast("Task created: $title")
+        showToast("Task created: $taskTitle")
     }
 
     fun showToast(msg: String) {
