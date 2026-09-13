@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.example.ui.components.DayMeetBottomDock
 import com.example.ui.components.DayMeetHeader
 import com.example.ui.components.InAppUpdateDialog
@@ -45,22 +48,25 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (com.example.util.PlayAppUpdateManager.isGooglePlayStoreAvailable(this)) {
-            try {
-                val playManager = com.example.util.PlayAppUpdateManager.getOrCreate(this)
-                playManager.appUpdateInfo.addOnSuccessListener { info ->
-                    if (info.updateAvailability() == com.google.android.play.core.install.model.UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
-                        try {
-                            playManager.startUpdateFlowForResult(
-                                info,
-                                this,
-                                com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE).build(),
-                                com.example.util.PlayAppUpdateManager.PLAY_UPDATE_REQUEST_CODE
-                            )
-                        } catch (_: Exception) {}
+        // Execute update check asynchronously to avoid blocking the main UI thread during activity launch
+        lifecycleScope.launch(Dispatchers.IO) {
+            if (com.example.util.PlayAppUpdateManager.isGooglePlayStoreAvailable(this@MainActivity)) {
+                try {
+                    val playManager = com.example.util.PlayAppUpdateManager.getOrCreate(this@MainActivity)
+                    playManager.appUpdateInfo.addOnSuccessListener { info ->
+                        if (info.updateAvailability() == com.google.android.play.core.install.model.UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                            try {
+                                playManager.startUpdateFlowForResult(
+                                    info,
+                                    this@MainActivity,
+                                    com.google.android.play.core.appupdate.AppUpdateOptions.newBuilder(com.google.android.play.core.install.model.AppUpdateType.IMMEDIATE).build(),
+                                    com.example.util.PlayAppUpdateManager.PLAY_UPDATE_REQUEST_CODE
+                                )
+                            } catch (_: Exception) {}
+                        }
                     }
-                }
-            } catch (_: Exception) {}
+                } catch (_: Exception) {}
+            }
         }
     }
 

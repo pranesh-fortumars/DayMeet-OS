@@ -140,7 +140,7 @@ class DayMeetViewModel : ViewModel() {
     private val _focusTimerRemaining = MutableStateFlow(28 * 60 + 40)
     val focusTimerRemaining: StateFlow<Int> = _focusTimerRemaining.asStateFlow()
 
-    private val _isFocusRunning = MutableStateFlow(true)
+    private val _isFocusRunning = MutableStateFlow(false)
     val isFocusRunning: StateFlow<Boolean> = _isFocusRunning.asStateFlow()
 
     private val _isFocusCompleted = MutableStateFlow(false)
