@@ -3,6 +3,8 @@ package com.example.ui.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -325,7 +327,7 @@ fun TasksScreen(
             }
         }
 
-        // Task Items
+        // Task Items with layout animation for smooth position transitions when auto-sorting by priority
         items(displayedTasks, key = { it.id }) { task ->
             AnimatedTaskItemRow(
                 task = task,
@@ -333,7 +335,20 @@ fun TasksScreen(
                 onRemove = { viewModel.removeFeedTask(task.id) },
                 onReschedule = { newTime -> viewModel.rescheduleTask(task.id, newTime) },
                 onSetPriority = { priority -> viewModel.updateTaskPriority(task.id, priority) },
-                onDelete = { viewModel.deleteTask(task.id) }
+                onDelete = { viewModel.deleteTask(task.id) },
+                modifier = Modifier.animateItem(
+                    fadeInSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    fadeOutSpec = spring(
+                        stiffness = Spring.StiffnessMediumLow
+                    ),
+                    placementSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = Spring.StiffnessMediumLow
+                    )
+                )
             )
         }
     }
@@ -420,7 +435,7 @@ fun AnimatedTaskItemRow(
                 containerColor = if (isWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
             ),
             elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning) 2.dp else 1.dp),
-            modifier = Modifier
+            modifier = modifier
                 .fillMaxWidth()
                 .then(
                     if (isWarning) {
