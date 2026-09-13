@@ -2800,7 +2800,7 @@ fun SpendingVelocityGaugeCard(
             // ==========================================
             // 6. EXPANDABLE TOP SPENDING CATEGORIES SECTION
             // ==========================================
-            var isTopCategoriesExpanded by remember { mutableStateOf(true) }
+            var isTopCategoriesExpanded by remember { mutableStateOf(false) }
             val topThreeTotal = topCategories.sumOf { it.amount }
             val sharePercent = if (monthlySpent > 0) ((topThreeTotal / monthlySpent) * 100).toInt() else 0
 
@@ -2930,6 +2930,8 @@ fun SpendingVelocityGaugeCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { showSpendingBreakdownModal = true }
                         .testTag("top_spending_categories_list")
                         .testTag("financial_health_top_categories_list"),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
