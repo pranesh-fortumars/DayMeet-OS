@@ -56,13 +56,24 @@ fun TasksScreen(
 
     var filterState by remember { mutableStateOf("All") } // "All", "Pending", "Completed", "High"
     var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
 
-    val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled) {
-        val base = when (filterState) {
+    val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled, searchQuery) {
+        var base = when (filterState) {
             "Pending" -> tasksOnly.filter { !it.isCompleted }
             "Completed" -> tasksOnly.filter { it.isCompleted }
             "High" -> tasksOnly.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
             else -> tasksOnly
+        }
+
+        if (searchQuery.isNotBlank()) {
+            val q = searchQuery.trim().lowercase()
+            base = base.filter { task ->
+                task.title.lowercase().contains(q) ||
+                task.subtitle.lowercase().contains(q) ||
+                task.statusTag?.lowercase()?.contains(q) == true ||
+                (task.detail?.lowercase()?.contains(q) == true)
+            }
         }
 
         if (isAutoSortByPriorityEnabled) {
@@ -131,6 +142,46 @@ fun TasksScreen(
                     Text("Add Task", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                 }
             }
+        }
+
+        // Localized Search Input
+        item {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                placeholder = { Text("Search tasks by title, category, or notes...", fontSize = 13.sp) },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = OnSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { searchQuery = "" }) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Clear search",
+                                tint = OnSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Primary,
+                    unfocusedBorderColor = SurfaceContainerHigh,
+                    focusedContainerColor = SurfaceContainerLowest,
+                    unfocusedContainerColor = SurfaceContainerLowest
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("task_search_input")
+            )
         }
 
         // Filter Pills
@@ -471,6 +522,43 @@ fun AnimatedTaskItemRow(
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
+                        // Category Badge
+                        val categoryName = remember(task.statusTag, task.subtitle) {
+                            when {
+                                task.statusTag in listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health") -> task.statusTag!!
+                                task.subtitle.contains("Work", ignoreCase = true) -> "Work"
+                                task.subtitle.contains("Personal", ignoreCase = true) -> "Personal"
+                                task.subtitle.contains("Shopping", ignoreCase = true) -> "Shopping"
+                                task.subtitle.contains("Urgent", ignoreCase = true) -> "Urgent"
+                                task.subtitle.contains("Finance", ignoreCase = true) -> "Finance"
+                                task.subtitle.contains("Health", ignoreCase = true) -> "Health"
+                                else -> task.statusTag?.takeIf { it != priorityLabel } ?: "Work"
+                            }
+                        }
+                        val (catIcon, catBg, catColor) = when (categoryName) {
+                            "Work" -> Triple("💼", Color(0xFFE8EAF6), Color(0xFF283593))
+                            "Personal" -> Triple("👤", Color(0xFFF3E5F5), Color(0xFF6A1B9A))
+                            "Shopping" -> Triple("🛒", Color(0xFFE0F2F1), Color(0xFF00695C))
+                            "Urgent" -> Triple("⚡", Color(0xFFFFEBEE), Color(0xFFC62828))
+                            "Finance" -> Triple("💰", Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                            "Health" -> Triple("🏥", Color(0xFFE1F5FE), Color(0xFF0277BD))
+                            else -> Triple("📌", Color(0xFFF5F5F5), Color(0xFF424242))
+                        }
+
+                        Text(
+                            text = "$catIcon $categoryName",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = catColor,
+                                fontSize = 10.sp
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(catBg)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("task_category_badge_${task.id}")
+                        )
+
                         // Visual Priority Badge
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

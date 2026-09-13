@@ -806,11 +806,12 @@ class DayMeetViewModel : ViewModel() {
         title: String,
         detail: String,
         extraValue: String = "",
-        priority: Priority = Priority.HIGH
+        priority: Priority = Priority.HIGH,
+        category: String = "Work"
     ) {
         when (type) {
             "Task" -> {
-                saveNewTask(title, detail, priority, "General", emptyList())
+                saveNewTask(title, detail, priority, category, emptyList())
             }
             "Meeting" -> {
                 val participants = if (detail.isNotBlank()) detail.split(",").map { it.trim() } else listOf("Alex Chen")
@@ -949,6 +950,13 @@ class DayMeetViewModel : ViewModel() {
         _isFocusRunning.value = !_isFocusRunning.value
     }
 
+    fun start25MinPomodoroSession() {
+        _focusTimerRemaining.value = 25 * 60
+        _isFocusRunning.value = true
+        _isFocusCompleted.value = false
+        showToast("🍅 25-min Deep Work Pomodoro session started!")
+    }
+
     fun completeFocusSession() {
         _isFocusCompleted.value = true
         _isFocusRunning.value = false
@@ -1045,7 +1053,8 @@ class DayMeetViewModel : ViewModel() {
     fun saveNewTask(title: String, notes: String, priority: Priority, space: String, subtasks: List<String>) {
         val taskId = "task_${System.currentTimeMillis()}"
         val taskTitle = title.ifBlank { "New Task" }
-        val taskSubtitle = if (notes.isNotBlank()) notes else "$space • Priority: ${priority.label}"
+        val categoryTag = if (space.isNotBlank()) space else "Work"
+        val taskSubtitle = if (notes.isNotBlank()) notes else "$categoryTag • Priority: ${priority.label}"
         val newTask = FeedItem(
             id = taskId,
             time = "05:00 PM",
@@ -1053,7 +1062,7 @@ class DayMeetViewModel : ViewModel() {
             subtitle = taskSubtitle,
             category = FeedCategory.TASK,
             priority = priority,
-            statusTag = priority.label,
+            statusTag = categoryTag,
             isCompleted = false
         )
         _feedItems.value = listOf(newTask) + _feedItems.value

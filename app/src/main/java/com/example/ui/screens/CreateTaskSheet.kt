@@ -37,6 +37,7 @@ fun CreateTaskSheet(
     var detail by remember { mutableStateOf("") }
     var extraValue by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf(Priority.HIGH) }
+    var selectedCategory by remember { mutableStateOf("Work") }
 
     val types = listOf("Task", "Meeting", "Expense", "Reminder", "Note", "Habit", "Goal", "Bill", "Message")
 
@@ -339,6 +340,61 @@ fun CreateTaskSheet(
                 }
             }
 
+            // Category Selector for Tasks
+            if (selectedType == "Task") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("quick_add_category_selector"),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Category",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurfaceVariant
+                        )
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "Work" to "💼",
+                            "Personal" to "👤",
+                            "Shopping" to "🛒",
+                            "Urgent" to "⚡",
+                            "Finance" to "💰",
+                            "Health" to "🏥"
+                        ).forEach { (cat, emoji) ->
+                            val isSelected = selectedCategory == cat
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { selectedCategory = cat },
+                                label = {
+                                    Text(
+                                        text = "$emoji $cat",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    )
+                                },
+                                shape = RoundedCornerShape(99.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = SurfaceContainerLow,
+                                    labelColor = OnSurfaceVariant
+                                ),
+                                modifier = Modifier.testTag("quick_add_category_${cat.lowercase()}")
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
 
             // Action Buttons
@@ -361,7 +417,8 @@ fun CreateTaskSheet(
                             title = title,
                             detail = detail,
                             extraValue = extraValue,
-                            priority = selectedPriority
+                            priority = selectedPriority,
+                            category = selectedCategory
                         )
                     },
                     shape = RoundedCornerShape(12.dp),

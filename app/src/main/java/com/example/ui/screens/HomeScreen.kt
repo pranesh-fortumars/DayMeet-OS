@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -77,6 +78,8 @@ fun HomeScreen(
     val isSyncing by viewModel.isSyncing.collectAsState()
     val lastSyncedTime by viewModel.lastSyncedTime.collectAsState()
     val syncPulseKey by viewModel.syncPulseKey.collectAsState()
+    val isFocusRunning by viewModel.isFocusRunning.collectAsState()
+    val focusTimerRemaining by viewModel.focusTimerRemaining.collectAsState()
 
     val electricityBill = upcomingBills.firstOrNull { it.id == "b1" }
     val nextMeeting = meetings.firstOrNull()
@@ -826,6 +829,10 @@ fun HomeScreen(
         items(crossStreamItems, key = { it.id }) { streamItem ->
             CrossStreamRowItem(
                 item = streamItem,
+                isFocusRunning = isFocusRunning,
+                focusTimerRemaining = focusTimerRemaining,
+                onToggleFocusTimer = { viewModel.toggleFocusTimer() },
+                onStart25MinPomodoro = { viewModel.start25MinPomodoroSession() },
                 onToggleDone = { viewModel.toggleCrossStreamDone(streamItem.id) },
                 onRemove = { viewModel.removeCrossStreamItem(streamItem.id) },
                 onItemClick = {
@@ -976,6 +983,15 @@ private fun VitalsBentoCard(
     subtext: String,
     modifier: Modifier = Modifier
 ) {
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "vitals_animated_progress"
+    )
+
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
@@ -1039,7 +1055,7 @@ private fun VitalsBentoCard(
             Spacer(modifier = Modifier.height(6.dp))
 
             LinearProgressIndicator(
-                progress = { progress.coerceIn(0f, 1f) },
+                progress = { animatedProgress },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(4.dp)
@@ -1066,6 +1082,10 @@ private fun VitalsBentoCard(
 @Composable
 private fun CrossStreamRowItem(
     item: CrossStreamItem,
+    isFocusRunning: Boolean = false,
+    focusTimerRemaining: Int = 1500,
+    onToggleFocusTimer: () -> Unit = {},
+    onStart25MinPomodoro: () -> Unit = {},
     onToggleDone: () -> Unit,
     onRemove: () -> Unit,
     onItemClick: () -> Unit,
@@ -1438,6 +1458,86 @@ private fun CrossStreamRowItem(
                             .background(tagBg)
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     )
+                }
+
+                // Integrated Pomodoro Focus Timer for Deep Work Stream Items
+                val isDeepWorkItem = item.tagType == "focus" || item.tag == "Focus" || item.title.contains("Deep Work", ignoreCase = true)
+                if (isDeepWorkItem) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val mins = focusTimerRemaining / 60
+                    val secs = focusTimerRemaining % 60
+                    val timeString = String.format("%02d:%02d", mins, secs)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PrimaryContainer.copy(alpha = 0.45f))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Pomodoro Focus:",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Text(
+                                text = timeString,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = Primary,
+                                    fontSize = 14.sp
+                                )
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                if (!isFocusRunning && focusTimerRemaining == 1500) {
+                                    onStart25MinPomodoro()
+                                } else {
+                                    onToggleFocusTimer()
+                                }
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isFocusRunning) Color(0xFFD32F2F) else Primary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier
+                                .testTag("start_deep_work_pomodoro_${item.id}")
+                                .testTag("deep_work_pomodoro_timer_button")
+                        ) {
+                            Icon(
+                                imageVector = if (isFocusRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (isFocusRunning) "Pause" else "Start 25m Focus",
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = if (isFocusRunning) "Pause" else if (focusTimerRemaining < 1500) "Resume" else "25m Focus",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
                 }
             }
         }
