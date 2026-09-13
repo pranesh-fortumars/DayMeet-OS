@@ -33,6 +33,9 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -366,6 +369,8 @@ fun AnimatedTaskItemRow(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
     var isToggledState by remember(task.isCompleted) { mutableStateOf(task.isCompleted) }
     var isVisible by remember { mutableStateOf(true) }
     var isAnimatingOut by remember { mutableStateOf(false) }
@@ -380,6 +385,12 @@ fun AnimatedTaskItemRow(
 
     fun triggerCheckboxToggle() {
         if (isAnimatingOut) return
+        // Provide tactile haptic feedback pattern on task completion
+        try {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.CONFIRM)
+        } catch (_: Exception) {}
+
         if (!isToggledState) {
             // Smooth CSS strike-through transition and slide-out animation sequence
             isAnimatingOut = true
@@ -423,10 +434,10 @@ fun AnimatedTaskItemRow(
             task.statusTag?.contains("Low", ignoreCase = true) == true -> Priority.LOW
             else -> Priority.MEDIUM
         }
-        val (priorityBg, priorityTextColor, priorityBorderColor, priorityLabel) = when (effectivePriority) {
-            Priority.URGENT, Priority.HIGH -> listOf(Color(0xFFFFEBEE), Color(0xFFC62828), Color(0xFFFFCDD2), "HIGH")
-            Priority.MEDIUM -> listOf(Color(0xFFFFF8E1), Color(0xFFE65100), Color(0xFFFFE082), "MED")
-            Priority.LOW -> listOf(Color(0xFFE3F2FD), Color(0xFF1565C0), Color(0xFFBBDEFB), "LOW")
+        val (priorityBg, priorityTextColor, priorityLeftBorderColor, priorityLabel) = when (effectivePriority) {
+            Priority.URGENT, Priority.HIGH -> listOf(Color(0xFFFFEBEE), Color(0xFFC62828), Color(0xFFE53935), "HIGH") // Red for High
+            Priority.MEDIUM -> listOf(Color(0xFFFFF8E1), Color(0xFFE65100), Color(0xFFFFA000), "MED") // Amber for Medium
+            Priority.LOW -> listOf(Color(0xFFE3F2FD), Color(0xFF1565C0), Color(0xFF1E88E5), "LOW") // Blue for Low
         }
 
         Card(
@@ -460,12 +471,12 @@ fun AnimatedTaskItemRow(
                         .fillMaxWidth()
                         .height(IntrinsicSize.Min)
                 ) {
-                // Left priority accent bar
+                // Subtle priority left-border indicator bar (Red for High, Amber for Medium, Blue for Low)
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .width(4.dp)
-                        .background(priorityTextColor as Color)
+                        .width(5.dp)
+                        .background(priorityLeftBorderColor as Color)
                 )
 
                 Row(
@@ -598,7 +609,7 @@ fun AnimatedTaskItemRow(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
                                 .background(priorityBg as Color)
-                                .border(1.dp, priorityBorderColor as Color, RoundedCornerShape(6.dp))
+                                .border(1.dp, priorityLeftBorderColor as Color, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                 .testTag("task_priority_badge_${task.id}")
                         ) {
