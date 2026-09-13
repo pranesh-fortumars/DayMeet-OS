@@ -173,6 +173,9 @@ class DayMeetViewModel : ViewModel() {
     private val _transactions = MutableStateFlow(DayMeetRepository.getInitialTransactions())
     val transactions: StateFlow<List<FinanceTransaction>> = _transactions.asStateFlow()
 
+    private val _monthlyBudgetTarget = MutableStateFlow(60000.0)
+    val monthlyBudgetTarget: StateFlow<Double> = _monthlyBudgetTarget.asStateFlow()
+
     private val _upcomingBills = MutableStateFlow(DayMeetRepository.getInitialUpcomingBills())
     val upcomingBills: StateFlow<List<UpcomingBill>> = _upcomingBills.asStateFlow()
 
@@ -746,6 +749,12 @@ class DayMeetViewModel : ViewModel() {
         )
         _transactions.value = listOf(newTx) + _transactions.value
         showToast("Added income: +₹${String.format("%.0f", amount)}")
+    }
+
+    fun updateMonthlyBudgetTarget(newTarget: Double) {
+        val target = newTarget.coerceAtLeast(1000.0)
+        _monthlyBudgetTarget.value = target
+        showToast("Monthly budget target updated to ₹${String.format("%,.0f", target)}")
     }
 
     // Universal Quick Add

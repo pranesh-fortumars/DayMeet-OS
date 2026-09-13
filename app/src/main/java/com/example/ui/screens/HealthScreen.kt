@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,6 +17,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -23,10 +27,13 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
+import java.util.Locale
+import kotlin.math.min
 
 @Composable
 fun HealthScreen(
@@ -34,6 +41,13 @@ fun HealthScreen(
     modifier: Modifier = Modifier
 ) {
     val health by viewModel.healthMetrics.collectAsState()
+    val monthlyBudgetTarget by viewModel.monthlyBudgetTarget.collectAsState()
+    val transactions by viewModel.transactions.collectAsState()
+    var showBudgetCustomizerDialog by remember { mutableStateOf(false) }
+
+    val monthlySpent = remember(transactions) {
+        35000.0 + transactions.filter { it.amount < 0 }.sumOf { -it.amount }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -530,6 +544,15 @@ fun HealthScreen(
                     }
                 }
             }
+        }
+
+        // 4b. Financial Health Gauge
+        item {
+            FinancialHealthGaugeCard(
+                monthlySpent = monthlySpent,
+                monthlyBudgetTarget = monthlyBudgetTarget,
+                onCustomizeBudget = { showBudgetCustomizerDialog = true }
+            )
         }
 
         // 5. Biometrics & Mindset
@@ -1133,6 +1156,17 @@ fun HealthScreen(
                 }
             }
         }
+    }
+
+    if (showBudgetCustomizerDialog) {
+        CustomizeMonthlyBudgetDialog(
+            currentTarget = monthlyBudgetTarget,
+            onDismiss = { showBudgetCustomizerDialog = false },
+            onSave = { newTarget ->
+                viewModel.updateMonthlyBudgetTarget(newTarget)
+                showBudgetCustomizerDialog = false
+            }
+        )
     }
 }
 
@@ -1765,4 +1799,511 @@ private fun WeeklySummaryCard(
             }
         }
     }
+}
+
+private data class FinancialHealthStatus(
+    val label: String,
+    val color: Color,
+    val bg: Color,
+    val score: String
+)
+
+@Composable
+fun FinancialHealthGaugeCard(
+    monthlySpent: Double,
+    monthlyBudgetTarget: Double,
+    onCustomizeBudget: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val ratio = if (monthlyBudgetTarget > 0) (monthlySpent / monthlyBudgetTarget).toFloat() else 0f
+    val clampedProgress = ratio.coerceIn(0f, 1f)
+    val percentInt = (ratio * 100).toInt()
+    val remaining = (monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0)
+
+    val status = when {
+        ratio <= 0.70f -> FinancialHealthStatus(
+            label = "Optimal Pace",
+            color = Color(0xFF10B981),
+            bg = Color(0xFFE8F5E9),
+            score = "92/100 • Excellent"
+        )
+        ratio <= 0.90f -> FinancialHealthStatus(
+            label = "Caution Pace",
+            color = Color(0xFFF59E0B),
+            bg = Color(0xFFFFF8E1),
+            score = "76/100 • Watchful"
+        )
+        else -> FinancialHealthStatus(
+            label = "Budget Alert",
+            color = Color(0xFFEF4444),
+            bg = Color(0xFFFFEBEE),
+            score = "48/100 • Overpace"
+        )
+    }
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("financial_health_gauge_card")
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFE0F2FE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Speed,
+                            contentDescription = "Financial Health Icon",
+                            tint = Color(0xFF0288D1),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Financial Health",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(status.bg)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = status.label,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = status.color,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Monthly spending progress vs target",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+
+                // Customize Target Button
+                OutlinedButton(
+                    onClick = onCustomizeBudget,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    border = BorderStroke(1.dp, Primary.copy(alpha = 0.4f)),
+                    modifier = Modifier.testTag("customize_budget_target_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Customize Budget",
+                        tint = Primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Target",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = Primary
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // Speedometer Arc Gauge Canvas
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                val trackColor = SurfaceContainerHighest
+                val progressBrush = Brush.horizontalGradient(
+                    colors = if (ratio <= 0.70f) {
+                        listOf(Color(0xFF06B6D4), Color(0xFF10B981))
+                    } else if (ratio <= 0.90f) {
+                        listOf(Color(0xFF10B981), Color(0xFFF59E0B))
+                    } else {
+                        listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
+                    }
+                )
+
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                ) {
+                    val strokeWidth = 16.dp.toPx()
+                    val arcSize = min(size.width * 0.78f, size.height * 1.5f)
+                    val left = (size.width - arcSize) / 2f
+                    val top = size.height * 0.12f
+
+                    // 1. Background Arc Track (240 degrees: from 150 to 390)
+                    drawArc(
+                        color = trackColor,
+                        startAngle = 150f,
+                        sweepAngle = 240f,
+                        useCenter = false,
+                        topLeft = Offset(left, top),
+                        size = Size(arcSize, arcSize),
+                        style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                    )
+
+                    // 2. Active Spending Progress Arc
+                    val activeSweep = 240f * clampedProgress
+                    if (activeSweep > 0.5f) {
+                        drawArc(
+                            brush = progressBrush,
+                            startAngle = 150f,
+                            sweepAngle = activeSweep,
+                            useCenter = false,
+                            topLeft = Offset(left, top),
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                        )
+                    }
+                }
+
+                // Center Readout
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.offset(y = 14.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(status.bg)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "$percentInt% USED",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = status.color,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    Text(
+                        text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)}",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontWeight = FontWeight.Black,
+                            color = OnSurface,
+                            fontSize = 24.sp
+                        )
+                    )
+
+                    Text(
+                        text = "of ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} target",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 3-Metric Summary Pills
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Budget Target
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onCustomizeBudget() }
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Target Budget",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                        )
+                        Text(
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary,
+                                fontSize = 13.sp
+                            )
+                        )
+                        Text(
+                            text = "Tap to edit ✎",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Primary.copy(alpha = 0.8f),
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+                }
+
+                // Remaining Buffer
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Remaining",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                        )
+                        Text(
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", remaining)}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = status.color,
+                                fontSize = 13.sp
+                            )
+                        )
+                        Text(
+                            text = if (remaining > 0) "Under target ✓" else "Exceeded ⚠",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = status.color,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                    }
+                }
+
+                // Daily Safe Allowance
+                val safeDaily = (remaining / 17.0).coerceAtLeast(0.0)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Safe Burn Rate",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                        )
+                        Text(
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", safeDaily)}",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0288D1),
+                                fontSize = 13.sp
+                            )
+                        )
+                        Text(
+                            text = "Per day (17d left)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // AI Financial Health Score & Guidance Callout
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceContainerHighest.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(status.color.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = status.color,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+                    Column {
+                        val safeDailyText = (remaining / 17.0).coerceAtLeast(0.0)
+                        Text(
+                            text = "Health Score: ${status.score}",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface,
+                                fontSize = 11.sp
+                            )
+                        )
+                        Text(
+                            text = if (ratio <= 0.70f)
+                                "Spending is 18% below seasonal projection. Keeping daily expenses under ₹${String.format(Locale.getDefault(), "%,.0f", safeDailyText)} will leave a surplus of ₹${String.format(Locale.getDefault(), "%,.0f", remaining)}."
+                            else if (ratio <= 0.90f)
+                                "Pacing near budget limit. Reduce non-essential discretionary expenses to maintain your month-end savings buffer."
+                            else
+                                "Current spending has consumed most of the monthly budget. Consider reviewing upcoming bill payments and recurring auto-debits.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CustomizeMonthlyBudgetDialog(
+    currentTarget: Double,
+    onDismiss: () -> Unit,
+    onSave: (Double) -> Unit
+) {
+    var targetText by remember { mutableStateOf(String.format(Locale.getDefault(), "%.0f", currentTarget)) }
+    val quickPresets = listOf(40000.0, 50000.0, 60000.0, 75000.0, 100000.0)
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Savings,
+                    contentDescription = null,
+                    tint = Primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Text(
+                    text = "Monthly Budget Target",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    text = "Set your desired spending ceiling for this month. The Financial Health gauge dynamically tracks and scores your burn velocity against this goal.",
+                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                )
+
+                OutlinedTextField(
+                    value = targetText,
+                    onValueChange = { targetText = it.filter { ch -> ch.isDigit() } },
+                    label = { Text("Budget Target (₹)") },
+                    prefix = { Text("₹ ", fontWeight = FontWeight.Bold) },
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("budget_target_input")
+                )
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Quick Presets",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurfaceVariant
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        quickPresets.take(3).forEach { amount ->
+                            FilterChip(
+                                selected = targetText == String.format(Locale.getDefault(), "%.0f", amount),
+                                onClick = { targetText = String.format(Locale.getDefault(), "%.0f", amount) },
+                                label = { Text("₹${(amount / 1000).toInt()}k", fontSize = 11.sp) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        quickPresets.drop(3).forEach { amount ->
+                            FilterChip(
+                                selected = targetText == String.format(Locale.getDefault(), "%.0f", amount),
+                                onClick = { targetText = String.format(Locale.getDefault(), "%.0f", amount) },
+                                label = { Text("₹${(amount / 1000).toInt()}k", fontSize = 11.sp) },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val parsed = targetText.toDoubleOrNull() ?: currentTarget
+                    onSave(parsed)
+                },
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                modifier = Modifier.testTag("save_budget_target_btn")
+            ) {
+                Text("Save Target", fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Cancel", color = OnSurfaceVariant)
+            }
+        }
+    )
 }

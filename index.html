@@ -677,6 +677,26 @@
         <button onclick="filterTasks('Completed')" id="filter-completed" class="px-3 py-1 rounded-full text-xs font-medium bg-[#EBEDFB] text-[#464555] hover:bg-[#E5E8F5]">Completed (2)</button>
       </div>
 
+      <!-- Auto-sort by Priority Toggle -->
+      <div class="bg-white dark:bg-[#1E293B] rounded-xl p-3 border border-[#E5E8F5] dark:border-slate-700 shadow-sm flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-full bg-[#EDE7F6] dark:bg-slate-800 text-[#3525CD] flex items-center justify-center">
+            <span class="material-symbols-rounded text-[18px]">low_priority</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-[#181B25] dark:text-white">Auto-sort by Priority</span>
+              <span id="auto-sort-badge" class="hidden px-1.5 py-0.5 rounded text-[9px] font-black bg-[#3525CD] text-white">ACTIVE</span>
+            </div>
+            <p id="auto-sort-desc" class="text-[10px] text-[#464555] dark:text-gray-400">Dynamically reorder tasks by priority and due date</p>
+          </div>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" id="toggle-autosort-priority" onchange="toggleAutoSortPriority(this.checked)" class="sr-only peer">
+          <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#3525CD]"></div>
+        </label>
+      </div>
+
       <!-- Task Items Container -->
       <div id="tasks-full-container" class="space-y-2.5">
         <!-- Rendered dynamically via JavaScript -->
@@ -815,6 +835,88 @@
           <div class="flex-1 flex flex-col items-center gap-1">
             <div class="w-full bg-[#3525CD]/20 rounded-t h-10"></div>
             <span class="text-[10px] text-[#464555]">9PM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- FINANCIAL HEALTH GAUGE (Monthly Budget Progress & Health Score) -->
+      <!-- ============================================================ -->
+      <div id="financial-health-gauge-card" class="bg-white dark:bg-[#1E293B] rounded-2xl p-4 border border-[#E5E8F5] dark:border-slate-700 shadow-sm space-y-3.5">
+        <!-- Card Header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-[#E0F2FE] dark:bg-sky-950/50 text-[#0288D1] flex items-center justify-center shrink-0">
+              <span class="material-symbols-rounded text-[20px]">speed</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-[#181B25] dark:text-white">Financial Health</h3>
+                <span id="fh-status-pill" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E8F5E9] text-[#2E7D32]">Optimal Pace</span>
+              </div>
+              <p class="text-xs text-[#464555] dark:text-gray-400">Monthly spending velocity vs budget target</p>
+            </div>
+          </div>
+          <button onclick="openBudgetCustomizerModal()" class="px-2.5 py-1 rounded-lg border border-[#3525CD]/40 text-[#3525CD] dark:text-indigo-400 text-xs font-bold flex items-center gap-1 hover:bg-[#F1F3FF] dark:hover:bg-slate-800 transition">
+            <span class="material-symbols-rounded text-[14px]">tune</span>
+            <span>Target</span>
+          </button>
+        </div>
+
+        <!-- Speedometer Arc Gauge -->
+        <div class="relative flex flex-col items-center justify-center pt-2">
+          <svg class="w-56 h-32 overflow-visible" viewBox="0 0 200 120">
+            <defs>
+              <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stop-color="#06B6D4" />
+                <stop offset="65%" stop-color="#10B981" />
+                <stop offset="100%" stop-color="#F59E0B" />
+              </linearGradient>
+            </defs>
+            <!-- Background Arc (240 deg sweep) -->
+            <path d="M 30 110 A 70 70 0 1 1 170 110" fill="none" stroke="#E2E8F0" stroke-width="16" stroke-linecap="round" class="dark:stroke-slate-700"/>
+            <!-- Active Progress Arc -->
+            <path id="fh-gauge-arc" d="M 30 110 A 70 70 0 1 1 170 110" fill="none" stroke="url(#gaugeGradient)" stroke-width="16" stroke-linecap="round"
+                  stroke-dasharray="293.2" stroke-dashoffset="105" class="transition-all duration-700 ease-out"/>
+          </svg>
+
+          <!-- Gauge Center Text -->
+          <div class="absolute inset-x-0 bottom-1 flex flex-col items-center justify-center text-center">
+            <span id="fh-percent-badge" class="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#E8F5E9] text-[#2E7D32]">64% USED</span>
+            <p id="fh-spent-amount" class="text-2xl font-black text-[#181B25] dark:text-white mt-0.5">₹38,450</p>
+            <p id="fh-target-label" class="text-[10px] text-[#464555] dark:text-gray-400 font-medium">of ₹60,000 monthly target</p>
+          </div>
+        </div>
+
+        <!-- 3 Metrics Row -->
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <div onclick="openBudgetCustomizerModal()" class="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E5E8F5] dark:border-slate-700 text-center cursor-pointer hover:border-[#3525CD] transition">
+            <p class="text-[10px] text-[#464555] dark:text-gray-400">Target Budget</p>
+            <p id="fh-card-target" class="text-xs font-bold text-[#3525CD] dark:text-indigo-400 mt-0.5">₹60,000</p>
+            <span class="text-[9px] text-[#3525CD]/80">Tap to edit ✎</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E5E8F5] dark:border-slate-700 text-center">
+            <p class="text-[10px] text-[#464555] dark:text-gray-400">Remaining</p>
+            <p id="fh-card-remaining" class="text-xs font-bold text-[#10B981] mt-0.5">₹21,550</p>
+            <span id="fh-card-rem-status" class="text-[9px] font-semibold text-[#10B981]">Under target ✓</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#F8FAFC] dark:bg-slate-800 border border-[#E5E8F5] dark:border-slate-700 text-center">
+            <p class="text-[10px] text-[#464555] dark:text-gray-400">Safe Burn Rate</p>
+            <p id="fh-card-daily" class="text-xs font-bold text-[#0288D1] mt-0.5">₹1,268</p>
+            <span class="text-[9px] text-[#464555] dark:text-gray-400">Per day (17d left)</span>
+          </div>
+        </div>
+
+        <!-- AI Guidance Callout -->
+        <div class="p-2.5 rounded-xl bg-[#F1F5F9] dark:bg-slate-800/80 border border-[#E2E8F0] dark:border-slate-700 flex items-start gap-2 text-xs">
+          <div class="w-6 h-6 rounded-full bg-[#10B981]/15 text-[#10B981] flex items-center justify-center shrink-0 mt-0.5">
+            <span class="material-symbols-rounded text-[14px]">auto_awesome</span>
+          </div>
+          <div>
+            <p id="fh-score-title" class="text-[11px] font-bold text-[#181B25] dark:text-white">Health Score: 92/100 • Excellent</p>
+            <p id="fh-guidance-desc" class="text-[10px] text-[#464555] dark:text-gray-400 mt-0.5 leading-tight">
+              Spending is 18% below seasonal projection. Maintaining daily expenses under ₹1,268 will leave a surplus buffer of ₹21,550 at month-end.
+            </p>
           </div>
         </div>
       </div>
@@ -1379,6 +1481,50 @@
     </div>
   </div>
 
+  <!-- 5. Monthly Budget Customizer Modal -->
+  <div id="modal-budget-target" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-[#1E293B] w-full max-w-sm rounded-3xl p-5 shadow-2xl space-y-4 border border-transparent dark:border-slate-700">
+      <div class="flex items-center justify-between border-b border-[#E5E8F5] dark:border-slate-700 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[#E0F2FE] dark:bg-sky-950/50 text-[#0288D1] flex items-center justify-center">
+            <span class="material-symbols-rounded text-[18px]">tune</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-[#181B25] dark:text-white">Monthly Budget Target</h3>
+            <p class="text-[10px] text-[#464555] dark:text-gray-400">Set spending goal for Financial Health gauge</p>
+          </div>
+        </div>
+        <button onclick="closeBudgetCustomizerModal()" class="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+          <span class="material-symbols-rounded text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Monthly Budget (₹)</label>
+          <div class="relative mt-1">
+            <span class="absolute inset-y-0 left-3 flex items-center text-xs font-bold text-gray-500">₹</span>
+            <input id="budget-target-input" type="number" step="1000" min="1000" class="w-full text-xs font-bold pl-7 pr-3 py-2 border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl focus:outline-none focus:border-[#3525CD]" placeholder="60000">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-bold text-[#464555] dark:text-gray-400">Quick Presets</label>
+          <div class="grid grid-cols-4 gap-1.5 mt-1">
+            <button type="button" onclick="setBudgetTargetPreset(40000)" class="py-1 px-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:border-[#3525CD]">₹40k</button>
+            <button type="button" onclick="setBudgetTargetPreset(50000)" class="py-1 px-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:border-[#3525CD]">₹50k</button>
+            <button type="button" onclick="setBudgetTargetPreset(60000)" class="py-1 px-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:border-[#3525CD]">₹60k</button>
+            <button type="button" onclick="setBudgetTargetPreset(75000)" class="py-1 px-1.5 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-[11px] font-semibold text-gray-700 dark:text-gray-300 hover:border-[#3525CD]">₹75k</button>
+          </div>
+        </div>
+      </div>
+
+      <button onclick="saveMonthlyBudgetTarget()" class="w-full py-2.5 bg-[#3525CD] text-white text-xs font-bold rounded-xl hover:bg-[#2B1DAE] transition">
+        Save Budget Target
+      </button>
+    </div>
+  </div>
+
   <!-- Toast Notification Bar -->
   <div id="toast" class="fixed top-4 left-1/2 -translate-x-1/2 bg-[#2C303A] text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50 flex items-center gap-2">
     <span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
@@ -1394,6 +1540,9 @@
       themeMode: localStorage.getItem('daymeet_theme_mode') || 'light',
       currentTab: 'home',
       activeCategoryFilter: 'All',
+      autoSortByPriority: false,
+      monthlyBudgetTarget: 60000.0,
+      monthlySpent: 38450.0,
       selectedQuickAddCat: 'Task',
       selectedQuickAddPriority: 'High',
       dailyBudgetCeiling: 5000.0,
@@ -1594,11 +1743,21 @@
       const container = document.getElementById('tasks-full-container');
       if (!container) return;
 
-      const filtered = state.crossStreamItems.filter(item => {
+      let filtered = state.crossStreamItems.filter(item => {
         if (state.activeCategoryFilter === 'Pending') return !item.isCompleted;
         if (state.activeCategoryFilter === 'Completed') return item.isCompleted;
         return true;
       });
+
+      if (state.autoSortByPriority) {
+        const prioOrder = { 'High': 1, 'Medium': 2, 'Low': 3 };
+        filtered = [...filtered].sort((a, b) => {
+          const pa = prioOrder[a.priority] || 2;
+          const pb = prioOrder[b.priority] || 2;
+          if (pa !== pb) return pa - pb;
+          return (a.time || '').localeCompare(b.time || '');
+        });
+      }
 
       container.innerHTML = filtered.map(item => {
         const style = getTagStyles(item.tagType);
@@ -1634,6 +1793,16 @@
           </div>
         `;
       }).join('');
+    }
+
+    function toggleAutoSortPriority(enabled) {
+      state.autoSortByPriority = enabled;
+      const badge = document.getElementById('auto-sort-badge');
+      const desc = document.getElementById('auto-sort-desc');
+      if (badge) badge.classList.toggle('hidden', !enabled);
+      if (desc) desc.innerText = enabled ? 'Dynamic: High → Medium → Low, then earliest due date' : 'Dynamically reorder tasks by priority and due date';
+      triggerToast(enabled ? 'Auto-sort by Priority active (High → Med → Low & Due date)' : 'Auto-sort by Priority disabled');
+      renderTasksTab();
     }
 
     // Toggle Stream Item (Exact animation & strike-through logic as Android)
@@ -1705,7 +1874,114 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
 
       if (tabId === 'insights') {
-        setTimeout(renderWeeklySummaryChart, 60);
+        setTimeout(() => {
+          renderWeeklySummaryChart();
+          renderFinancialHealthGauge();
+        }, 60);
+      }
+    }
+
+    // Financial Health Gauge calculation & rendering
+    function renderFinancialHealthGauge() {
+      const target = state.monthlyBudgetTarget || 60000;
+      const spent = state.monthlySpent || 38450;
+      const ratio = target > 0 ? spent / target : 0;
+      const percent = Math.round(ratio * 100);
+      const remaining = Math.max(0, target - spent);
+      const safeDaily = Math.max(0, Math.round(remaining / 17));
+
+      // Speedometer arc progress calculation (circumference: 293.2 for 240 deg arc)
+      const gaugeArc = document.getElementById('fh-gauge-arc');
+      if (gaugeArc) {
+        const clamped = Math.min(ratio, 1.0);
+        const offset = 293.2 * (1 - clamped);
+        gaugeArc.style.strokeDashoffset = offset;
+      }
+
+      const statusPill = document.getElementById('fh-status-pill');
+      const percentBadge = document.getElementById('fh-percent-badge');
+      const scoreTitle = document.getElementById('fh-score-title');
+      const guidanceDesc = document.getElementById('fh-guidance-desc');
+      const remStatus = document.getElementById('fh-card-rem-status');
+
+      let statusText = 'Optimal Pace';
+      let pillBg = 'bg-[#E8F5E9] text-[#2E7D32]';
+      let healthScore = '92/100 • Excellent';
+      let guidance = `Spending is 18% below seasonal projection. Maintaining daily expenses under ₹${safeDaily.toLocaleString()} will leave a surplus buffer of ₹${remaining.toLocaleString()} at month-end.`;
+
+      if (ratio > 0.90) {
+        statusText = 'Budget Alert';
+        pillBg = 'bg-[#FFEBEE] text-[#EF4444]';
+        healthScore = '48/100 • Overpace';
+        guidance = `Current spending has consumed ${percent}% of your monthly target. Consider reviewing non-essential discretionary expenses for the remaining 17 days.`;
+      } else if (ratio > 0.70) {
+        statusText = 'Caution Pace';
+        pillBg = 'bg-[#FFF8E1] text-[#F59E0B]';
+        healthScore = '76/100 • Watchful';
+        guidance = `Spending is pacing close to the monthly ceiling. Keep daily rate under ₹${safeDaily.toLocaleString()} to preserve your savings cushion.`;
+      }
+
+      if (statusPill) {
+        statusPill.innerText = statusText;
+        statusPill.className = `px-2 py-0.5 rounded text-[10px] font-bold ${pillBg}`;
+      }
+      if (percentBadge) {
+        percentBadge.innerText = `${percent}% USED`;
+        percentBadge.className = `px-2 py-0.5 rounded-full text-[10px] font-black ${pillBg}`;
+      }
+      if (scoreTitle) scoreTitle.innerText = `Health Score: ${healthScore}`;
+      if (guidanceDesc) guidanceDesc.innerText = guidance;
+      if (remStatus) {
+        remStatus.innerText = remaining > 0 ? 'Under target ✓' : 'Exceeded ⚠';
+        remStatus.className = remaining > 0 ? 'text-[9px] font-semibold text-[#10B981]' : 'text-[9px] font-semibold text-[#EF4444]';
+      }
+
+      const spentEl = document.getElementById('fh-spent-amount');
+      if (spentEl) spentEl.innerText = `₹${spent.toLocaleString()}`;
+
+      const targetLabel = document.getElementById('fh-target-label');
+      if (targetLabel) targetLabel.innerText = `of ₹${target.toLocaleString()} monthly target`;
+
+      const cardTarget = document.getElementById('fh-card-target');
+      if (cardTarget) cardTarget.innerText = `₹${target.toLocaleString()}`;
+
+      const cardRem = document.getElementById('fh-card-remaining');
+      if (cardRem) cardRem.innerText = `₹${remaining.toLocaleString()}`;
+
+      const cardDaily = document.getElementById('fh-card-daily');
+      if (cardDaily) cardDaily.innerText = `₹${safeDaily.toLocaleString()}`;
+    }
+
+    function openBudgetCustomizerModal() {
+      const modal = document.getElementById('modal-budget-target');
+      const input = document.getElementById('budget-target-input');
+      if (modal) modal.classList.remove('hidden');
+      if (input) {
+        input.value = state.monthlyBudgetTarget || 60000;
+        input.focus();
+      }
+    }
+
+    function closeBudgetCustomizerModal() {
+      const modal = document.getElementById('modal-budget-target');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function setBudgetTargetPreset(amount) {
+      const input = document.getElementById('budget-target-input');
+      if (input) input.value = amount;
+    }
+
+    function saveMonthlyBudgetTarget() {
+      const input = document.getElementById('budget-target-input');
+      const val = parseFloat(input ? input.value : 0);
+      if (val && val >= 1000) {
+        state.monthlyBudgetTarget = val;
+        triggerToast(`Monthly budget target set to ₹${val.toLocaleString()}`);
+        closeBudgetCustomizerModal();
+        renderFinancialHealthGauge();
+      } else {
+        triggerToast('Please enter a valid monthly target (min ₹1,000)');
       }
     }
 
@@ -2459,6 +2735,7 @@
       renderTasksTab();
       setGlobalTheme(state.themeMode, false);
       renderWeeklySummaryChart();
+      renderFinancialHealthGauge();
 
       // Listen to OS-level dark theme changes when in 'system' mode
       if (window.matchMedia) {

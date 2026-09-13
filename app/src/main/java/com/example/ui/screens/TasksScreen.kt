@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,13 +55,37 @@ fun TasksScreen(
     val completedCount = tasksOnly.count { it.isCompleted }
 
     var filterState by remember { mutableStateOf("All") } // "All", "Pending", "Completed", "High"
+    var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
 
-    val displayedTasks = remember(tasksOnly, filterState) {
-        when (filterState) {
+    val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled) {
+        val base = when (filterState) {
             "Pending" -> tasksOnly.filter { !it.isCompleted }
             "Completed" -> tasksOnly.filter { it.isCompleted }
             "High" -> tasksOnly.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
             else -> tasksOnly
+        }
+
+        if (isAutoSortByPriorityEnabled) {
+            base.sortedWith(
+                compareBy<FeedItem> { item ->
+                    when (item.priority) {
+                        Priority.URGENT -> 0
+                        Priority.HIGH -> 1
+                        Priority.MEDIUM -> 2
+                        Priority.LOW -> 3
+                        null -> when {
+                            item.statusTag?.contains("Urgent", ignoreCase = true) == true -> 0
+                            item.statusTag?.contains("High", ignoreCase = true) == true -> 1
+                            item.statusTag?.contains("Low", ignoreCase = true) == true -> 3
+                            else -> 2
+                        }
+                    }
+                }.thenBy { item ->
+                    TimeUtils.parseTime(item.time) ?: java.time.LocalTime.MAX
+                }
+            )
+        } else {
+            base
         }
     }
 
@@ -140,6 +165,107 @@ fun TasksScreen(
                             )
                         )
                     }
+                }
+            }
+        }
+
+        // Auto-sort by Priority Toggle Card
+        item {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isAutoSortByPriorityEnabled) Primary.copy(alpha = 0.08f) else SurfaceContainerLowest
+                ),
+                border = BorderStroke(
+                    1.dp,
+                    if (isAutoSortByPriorityEnabled) Primary.copy(alpha = 0.45f) else OutlineVariant.copy(alpha = 0.5f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("auto_sort_priority_container")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isAutoSortByPriorityEnabled) Primary else SurfaceContainerHighest
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LowPriority,
+                                contentDescription = "Priority sort icon",
+                                tint = if (isAutoSortByPriorityEnabled) Color.White else OnSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Auto-sort by Priority",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                )
+                                if (isAutoSortByPriorityEnabled) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Primary)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "ACTIVE",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = Color.White
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                            Text(
+                                text = if (isAutoSortByPriorityEnabled)
+                                    "Dynamic: High → Medium → Low, then earliest due date"
+                                else
+                                    "Dynamically reorder tasks by priority and due date",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isAutoSortByPriorityEnabled) Primary else OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+
+                    Switch(
+                        checked = isAutoSortByPriorityEnabled,
+                        onCheckedChange = { isAutoSortByPriorityEnabled = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Primary,
+                            uncheckedThumbColor = OnSurfaceVariant,
+                            uncheckedTrackColor = SurfaceContainerHighest
+                        ),
+                        modifier = Modifier.testTag("auto_sort_priority_toggle")
+                    )
                 }
             }
         }
