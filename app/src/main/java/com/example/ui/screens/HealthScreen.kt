@@ -1,5 +1,10 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,12 +35,14 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.model.FinanceTransaction
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 import java.util.Locale
@@ -562,6 +569,7 @@ fun HealthScreen(
             FinancialHealthGaugeCard(
                 monthlySpent = monthlySpent,
                 monthlyBudgetTarget = monthlyBudgetTarget,
+                transactions = transactions,
                 onCustomizeBudget = { showBudgetCustomizerDialog = true }
             )
         }
@@ -1820,10 +1828,22 @@ private data class SpendingVelocityStatus(
     val description: String
 )
 
+private data class TopSpendingCategoryItem(
+    val id: String,
+    val name: String,
+    val amount: Double,
+    val icon: ImageVector,
+    val iconColor: Color,
+    val iconBg: Color,
+    val badge: String,
+    val explanation: String
+)
+
 @Composable
 fun SpendingVelocityGaugeCard(
     monthlySpent: Double,
     monthlyBudgetTarget: Double,
+    transactions: List<FinanceTransaction> = emptyList(),
     onCustomizeBudget: () -> Unit,
     onQuickAdjustLimit: (Double) -> Unit = {},
     modifier: Modifier = Modifier
@@ -1831,6 +1851,92 @@ fun SpendingVelocityGaugeCard(
     val totalDaysInMonth = 31
     val elapsedDays = 14
     val remainingDays = (totalDaysInMonth - elapsedDays).coerceAtLeast(1)
+
+    // Dynamic Top 3 Spending Categories explaining current budget usage
+    val topCategories = remember(transactions, monthlySpent, monthlyBudgetTarget) {
+        val foodTx = transactions.filter { it.amount < 0 && (it.category.contains("Food", ignoreCase = true) || it.category.contains("Dining", ignoreCase = true) || it.category.contains("Restaurant", ignoreCase = true)) }.sumOf { -it.amount }
+        val workTx = transactions.filter { it.amount < 0 && (it.category.contains("Subscription", ignoreCase = true) || it.category.contains("Work", ignoreCase = true) || it.category.contains("Software", ignoreCase = true) || it.category.contains("Cloud", ignoreCase = true)) }.sumOf { -it.amount }
+        val transitTx = transactions.filter { it.amount < 0 && (it.category.contains("Transit", ignoreCase = true) || it.category.contains("Commute", ignoreCase = true) || it.category.contains("Transport", ignoreCase = true)) }.sumOf { -it.amount }
+        val otherTx = transactions.filter {
+            it.amount < 0 &&
+            !it.category.contains("Food", ignoreCase = true) &&
+            !it.category.contains("Dining", ignoreCase = true) &&
+            !it.category.contains("Restaurant", ignoreCase = true) &&
+            !it.category.contains("Subscription", ignoreCase = true) &&
+            !it.category.contains("Work", ignoreCase = true) &&
+            !it.category.contains("Software", ignoreCase = true) &&
+            !it.category.contains("Cloud", ignoreCase = true) &&
+            !it.category.contains("Transit", ignoreCase = true) &&
+            !it.category.contains("Commute", ignoreCase = true) &&
+            !it.category.contains("Transport", ignoreCase = true)
+        }.sumOf { -it.amount }
+
+        val housingAmount = 21000.0
+        val foodAmount = 9000.0 + foodTx
+        val workAmount = 3500.0 + workTx
+        val transitAmount = 1500.0 + transitTx
+        val otherAmount = otherTx
+
+        val categories = mutableListOf(
+            TopSpendingCategoryItem(
+                id = "cat_housing",
+                name = "Housing & Utilities",
+                amount = housingAmount,
+                icon = Icons.Default.Home,
+                iconColor = Color(0xFF6366F1),
+                iconBg = Color(0xFFEEF2FF),
+                badge = "Fixed Essential",
+                explanation = "Scheduled rent and utility bills. Fixed anchor of your monthly budget."
+            ),
+            TopSpendingCategoryItem(
+                id = "cat_food",
+                name = "Food & Dining",
+                amount = foodAmount,
+                icon = Icons.Default.Restaurant,
+                iconColor = Color(0xFFF59E0B),
+                iconBg = Color(0xFFFFFBEB),
+                badge = "Variable Spend",
+                explanation = "Groceries, daily lunch, and cafe visits. Primary variable driver of current velocity."
+            ),
+            TopSpendingCategoryItem(
+                id = "cat_subscriptions",
+                name = "Work Subscriptions",
+                amount = workAmount,
+                icon = Icons.Default.Devices,
+                iconColor = Color(0xFF0288D1),
+                iconBg = Color(0xFFE0F2FE),
+                badge = "Recurring Tech",
+                explanation = "Cloud infrastructure, creative tools, and workspace subscriptions auto-debited monthly."
+            ),
+            TopSpendingCategoryItem(
+                id = "cat_transit",
+                name = "Commute & Transit",
+                amount = transitAmount,
+                icon = Icons.Default.DirectionsTransit,
+                iconColor = Color(0xFF10B981),
+                iconBg = Color(0xFFE8F5E9),
+                badge = "Daily Commute",
+                explanation = "Metro smart card transit, ride shares, and daily mobility expenses."
+            )
+        )
+
+        if (otherAmount > 0) {
+            categories.add(
+                TopSpendingCategoryItem(
+                    id = "cat_other",
+                    name = "General Discretionary",
+                    amount = otherAmount,
+                    icon = Icons.Default.ShoppingBag,
+                    iconColor = Color(0xFF8B5CF6),
+                    iconBg = Color(0xFFF5F3FF),
+                    badge = "Miscellaneous",
+                    explanation = "Uncategorized retail and incidental expenses."
+                )
+            )
+        }
+
+        categories.sortedByDescending { it.amount }.take(3)
+    }
 
     // Base velocities & metrics
     val targetDailySpend = if (totalDaysInMonth > 0) monthlyBudgetTarget / totalDaysInMonth else 1.0
@@ -2688,6 +2794,312 @@ fun SpendingVelocityGaugeCard(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ==========================================
+            // 6. EXPANDABLE TOP SPENDING CATEGORIES SECTION
+            // ==========================================
+            var isTopCategoriesExpanded by remember { mutableStateOf(true) }
+            val topThreeTotal = topCategories.sumOf { it.amount }
+            val sharePercent = if (monthlySpent > 0) ((topThreeTotal / monthlySpent) * 100).toInt() else 0
+
+            HorizontalDivider(
+                color = SurfaceContainerHighest.copy(alpha = 0.8f),
+                thickness = 1.dp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Expandable Section Header
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isTopCategoriesExpanded) SurfaceContainerLow else Color.Transparent,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { isTopCategoriesExpanded = !isTopCategoriesExpanded }
+                    .testTag("expandable_top_spending_categories_header")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(Primary.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PieChart,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Top Spending Drivers",
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface,
+                                        fontSize = 13.sp
+                                    )
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Primary.copy(alpha = 0.1f))
+                                        .padding(horizontal = 6.dp, vertical = 1.dp)
+                                ) {
+                                    Text(
+                                        text = "Top 3",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Primary,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "$sharePercent% of current spend • Tap to ${if (isTopCategoriesExpanded) "collapse" else "view details"}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { isTopCategoriesExpanded = !isTopCategoriesExpanded },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isTopCategoriesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = if (isTopCategoriesExpanded) "Collapse top categories" else "Expand top categories",
+                            tint = OnSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = isTopCategoriesExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                        .testTag("top_spending_categories_list"),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Why is spending pacing here? These 3 categories explain your current monthly burn rate:",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        ),
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+
+                    topCategories.forEachIndexed { index, cat ->
+                        val percentOfLimit = if (monthlyBudgetTarget > 0) ((cat.amount / monthlyBudgetTarget) * 100).toFloat() else 0f
+                        val limitProgress = if (monthlyBudgetTarget > 0) (cat.amount / monthlyBudgetTarget).toFloat().coerceIn(0f, 1f) else 0f
+
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = SurfaceContainerLow,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("top_category_item_$index")
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        // Rank indicator
+                                        Box(
+                                            modifier = Modifier
+                                                .size(22.dp)
+                                                .clip(CircleShape)
+                                                .background(cat.iconBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "#${index + 1}",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = cat.iconColor,
+                                                    fontSize = 10.sp
+                                                )
+                                            )
+                                        }
+
+                                        // Category Icon
+                                        Box(
+                                            modifier = Modifier
+                                                .size(28.dp)
+                                                .clip(CircleShape)
+                                                .background(cat.iconBg),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = cat.icon,
+                                                contentDescription = null,
+                                                tint = cat.iconColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+
+                                        Column {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = cat.name,
+                                                    style = MaterialTheme.typography.titleSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = OnSurface,
+                                                        fontSize = 12.sp
+                                                    )
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(cat.iconBg)
+                                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                ) {
+                                                    Text(
+                                                        text = cat.badge,
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            color = cat.iconColor,
+                                                            fontWeight = FontWeight.SemiBold,
+                                                            fontSize = 8.sp
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Amount & percentage
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        Text(
+                                            text = "₹${String.format(Locale.getDefault(), "%,.0f", cat.amount)}",
+                                            style = MaterialTheme.typography.titleSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = OnSurface,
+                                                fontSize = 13.sp
+                                            )
+                                        )
+                                        Text(
+                                            text = "${String.format(Locale.getDefault(), "%.1f", percentOfLimit)}% of limit",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = cat.iconColor,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Progress Bar towards budget
+                                LinearProgressIndicator(
+                                    progress = { limitProgress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(CircleShape),
+                                    color = cat.iconColor,
+                                    trackColor = SurfaceContainerHighest
+                                )
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Explanation sentence
+                                Row(
+                                    verticalAlignment = Alignment.Top,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "•",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = cat.iconColor,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = cat.explanation,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = OnSurfaceVariant,
+                                            fontSize = 10.sp,
+                                            lineHeight = 13.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Explanatory summary footer
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = SurfaceContainerHighest.copy(alpha = 0.4f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = OnSurfaceVariant,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = "Top 3 categories total ₹${String.format(Locale.getDefault(), "%,.0f", topThreeTotal)} ($sharePercent% of ₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)} MTD spend).",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 9.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -2696,12 +3108,14 @@ fun SpendingVelocityGaugeCard(
 fun FinancialHealthGaugeCard(
     monthlySpent: Double,
     monthlyBudgetTarget: Double,
+    transactions: List<FinanceTransaction> = emptyList(),
     onCustomizeBudget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     SpendingVelocityGaugeCard(
         monthlySpent = monthlySpent,
         monthlyBudgetTarget = monthlyBudgetTarget,
+        transactions = transactions,
         onCustomizeBudget = onCustomizeBudget,
         modifier = modifier
     )

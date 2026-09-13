@@ -58,4 +58,13 @@ class ExampleRobolectricTest {
     viewModel.toggleAutoCheckUpdates()
     assertEquals(!initial, viewModel.isAutoCheckUpdateEnabled.value)
   }
+
+  @Test
+  fun `initial transactions and monthly budget target are accessible`() {
+    val viewModel = DayMeetViewModel()
+    val transactions = viewModel.transactions.value
+    assertTrue(transactions.isNotEmpty())
+    val monthlyBudget = viewModel.monthlyBudgetTarget.value
+    assertTrue(monthlyBudget > 0.0)
+  }
 }
