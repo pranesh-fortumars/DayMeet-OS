@@ -53,12 +53,13 @@ fun TasksScreen(
     val pendingCount = tasksOnly.count { !it.isCompleted }
     val completedCount = tasksOnly.count { it.isCompleted }
 
-    var filterState by remember { mutableStateOf("All") } // "All", "Pending", "Completed"
+    var filterState by remember { mutableStateOf("All") } // "All", "Pending", "Completed", "High"
 
     val displayedTasks = remember(tasksOnly, filterState) {
         when (filterState) {
             "Pending" -> tasksOnly.filter { !it.isCompleted }
             "Completed" -> tasksOnly.filter { it.isCompleted }
+            "High" -> tasksOnly.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
             else -> tasksOnly
         }
     }
@@ -109,11 +110,19 @@ fun TasksScreen(
 
         // Filter Pills
         item {
+            val highCount = remember(tasksOnly) {
+                tasksOnly.count { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf("All (${tasksOnly.size})", "Pending ($pendingCount)", "Completed ($completedCount)").forEach { tab ->
+                listOf(
+                    "All (${tasksOnly.size})",
+                    "High ($highCount)",
+                    "Pending ($pendingCount)",
+                    "Completed ($completedCount)"
+                ).forEach { tab ->
                     val rawTab = tab.substringBefore(" (")
                     val isSelected = filterState == rawTab
                     Box(
@@ -202,6 +211,17 @@ fun AnimatedTaskItemRow(
         ),
         modifier = modifier
     ) {
+        val effectivePriority = task.priority ?: when {
+            task.statusTag?.contains("High", ignoreCase = true) == true || isWarning -> Priority.HIGH
+            task.statusTag?.contains("Low", ignoreCase = true) == true -> Priority.LOW
+            else -> Priority.MEDIUM
+        }
+        val (priorityBg, priorityTextColor, priorityBorderColor, priorityLabel) = when (effectivePriority) {
+            Priority.URGENT, Priority.HIGH -> listOf(Color(0xFFFFEBEE), Color(0xFFC62828), Color(0xFFFFCDD2), "HIGH")
+            Priority.MEDIUM -> listOf(Color(0xFFFFF8E1), Color(0xFFE65100), Color(0xFFFFE082), "MED")
+            Priority.LOW -> listOf(Color(0xFFE3F2FD), Color(0xFF1565C0), Color(0xFFBBDEFB), "LOW")
+        }
+
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
@@ -227,121 +247,162 @@ fun AnimatedTaskItemRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .height(IntrinsicSize.Min)
             ) {
+                // Left priority accent bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .width(4.dp)
+                        .background(priorityTextColor as Color)
+                )
+
                 Row(
-                    modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Checkbox with spring/bounce and color transition
-                    Box(
-                        modifier = Modifier
-                            .size(28.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                if (isToggledState) EmeraldSuccess
-                                else if (isWarning) Color(0xFFFFEBEE)
-                                else SurfaceContainerHigh
-                            )
-                            .clickable { triggerCheckboxToggle() }
-                            .testTag("task_checkbox_${task.id}"),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (isToggledState) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Completed",
-                                tint = Color.White,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        } else if (isWarning) {
-                            Icon(
-                                imageVector = Icons.Default.PriorityHigh,
-                                contentDescription = "Due Soon Warning",
-                                tint = Color(0xFFE53935),
-                                modifier = Modifier.size(16.dp)
-                            )
+                        // Checkbox with spring/bounce and color transition
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(
+                                    if (isToggledState) EmeraldSuccess
+                                    else if (isWarning) Color(0xFFFFEBEE)
+                                    else SurfaceContainerHigh
+                                )
+                                .clickable { triggerCheckboxToggle() }
+                                .testTag("task_checkbox_${task.id}"),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isToggledState) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Completed",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            } else if (isWarning) {
+                                Icon(
+                                    imageVector = Icons.Default.PriorityHigh,
+                                    contentDescription = "Due Soon Warning",
+                                    tint = Color(0xFFE53935),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
-                    }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        // Title with CSS-style strike-through animation
-                        Box {
-                            val textColor = if (isToggledState) {
-                                OnSurfaceVariant.copy(alpha = 0.55f)
-                            } else {
-                                OnSurface
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            // Title with CSS-style strike-through animation
+                            Box {
+                                val textColor = if (isToggledState) {
+                                    OnSurfaceVariant.copy(alpha = 0.55f)
+                                } else {
+                                    OnSurface
+                                }
+                                Text(
+                                    text = task.title,
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        color = textColor,
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    modifier = Modifier.drawWithContent {
+                                        drawContent()
+                                        if (strikeProgress.value > 0f) {
+                                            val strokeW = 2.dp.toPx()
+                                            val y = size.height * 0.52f
+                                            drawLine(
+                                                color = OnSurfaceVariant,
+                                                start = Offset(0f, y),
+                                                end = Offset(size.width * strikeProgress.value, y),
+                                                strokeWidth = strokeW,
+                                                cap = StrokeCap.Round
+                                            )
+                                        }
+                                    }
+                                )
                             }
                             Text(
-                                text = task.title,
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    color = textColor,
-                                    fontWeight = FontWeight.SemiBold
-                                ),
-                                modifier = Modifier.drawWithContent {
-                                    drawContent()
-                                    if (strikeProgress.value > 0f) {
-                                        val strokeW = 2.dp.toPx()
-                                        val y = size.height * 0.52f
-                                        drawLine(
-                                            color = OnSurfaceVariant,
-                                            start = Offset(0f, y),
-                                            end = Offset(size.width * strikeProgress.value, y),
-                                            strokeWidth = strokeW,
-                                            cap = StrokeCap.Round
-                                        )
-                                    }
-                                }
+                                text = task.subtitle,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant
+                                )
                             )
                         }
-                        Text(
-                            text = task.subtitle,
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant
-                            )
-                        )
                     }
-                }
 
-                Column(
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    task.statusTag?.let { tag ->
-                        Text(
-                            text = tag,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isWarning) Color(0xFFD32F2F) else Primary
-                            ),
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        // Visual Priority Badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(if (isWarning) Color(0xFFFFEBEE) else PrimaryFixed)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-
-                    // Existing time display with warning indicator
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Schedule,
-                            contentDescription = "Due Time",
-                            tint = if (isWarning) Color(0xFFE53935) else OnSurfaceVariant,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = task.time,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = if (isWarning) Color(0xFFE53935) else OnSurfaceVariant,
-                                fontWeight = if (isWarning) FontWeight.Bold else FontWeight.Normal
+                                .background(priorityBg as Color)
+                                .border(1.dp, priorityBorderColor as Color, RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .testTag("task_priority_badge_${task.id}")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(priorityTextColor as Color)
                             )
-                        )
+                            Text(
+                                text = priorityLabel as String,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = priorityTextColor as Color,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+
+                        task.statusTag?.takeIf { it != priorityLabel }?.let { tag ->
+                            Text(
+                                text = tag,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isWarning) Color(0xFFD32F2F) else Primary
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isWarning) Color(0xFFFFEBEE) else PrimaryFixed)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        // Existing time display with warning indicator
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = "Due Time",
+                                tint = if (isWarning) Color(0xFFE53935) else OnSurfaceVariant,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = task.time,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (isWarning) Color(0xFFE53935) else OnSurfaceVariant,
+                                    fontWeight = if (isWarning) FontWeight.Bold else FontWeight.Normal
+                                )
+                            )
+                        }
                     }
                 }
             }

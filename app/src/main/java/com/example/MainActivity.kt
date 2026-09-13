@@ -79,6 +79,7 @@ fun DayMeetApp(
     val showMeetingMinutes by viewModel.showMeetingMinutes.collectAsStateWithLifecycle()
     val showAiAssistant by viewModel.showAiAssistant.collectAsStateWithLifecycle()
     val showCreateSheet by viewModel.showCreateSheet.collectAsStateWithLifecycle()
+    val showQuickMeetingDialog by viewModel.showQuickMeetingDialog.collectAsStateWithLifecycle()
     val showDailyBriefing by viewModel.showDailyBriefing.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
@@ -231,6 +232,14 @@ fun DayMeetApp(
                 CreateTaskSheet(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeCreateTask() }
+                )
+            }
+
+            // Quick Schedule Meeting Dialog (From Quick Capture Hub)
+            if (showQuickMeetingDialog) {
+                QuickScheduleMeetingDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeQuickScheduleMeeting() }
                 )
             }
 

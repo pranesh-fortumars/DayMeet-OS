@@ -38,6 +38,9 @@ class DayMeetViewModel : ViewModel() {
     private val _showCreateSheet = MutableStateFlow(false)
     val showCreateSheet: StateFlow<Boolean> = _showCreateSheet.asStateFlow()
 
+    private val _showQuickMeetingDialog = MutableStateFlow(false)
+    val showQuickMeetingDialog: StateFlow<Boolean> = _showQuickMeetingDialog.asStateFlow()
+
     private val _quickAddInitialTab = MutableStateFlow("Task")
     val quickAddInitialTab: StateFlow<String> = _quickAddInitialTab.asStateFlow()
 
@@ -283,6 +286,62 @@ class DayMeetViewModel : ViewModel() {
 
     fun closeCreateTask() {
         _showCreateSheet.value = false
+    }
+
+    fun openQuickScheduleMeeting() {
+        _showQuickMeetingDialog.value = true
+    }
+
+    fun closeQuickScheduleMeeting() {
+        _showQuickMeetingDialog.value = false
+    }
+
+    fun scheduleMeetingFromHub(
+        title: String,
+        participants: List<String>,
+        time: String,
+        platform: String = "Google Meet",
+        duration: String = "30 mins"
+    ) {
+        val attendeesList = if (participants.isEmpty()) {
+            listOf(Attendee("Alex Chen (You)", avatarUrl = DayMeetRepository.ALEX_AVATAR))
+        } else {
+            participants.map { name ->
+                Attendee(
+                    name = name.trim(),
+                    role = "Participant",
+                    avatarUrl = if (name.contains("Alex", ignoreCase = true)) DayMeetRepository.ALEX_AVATAR else null,
+                    initials = name.trim().take(2).uppercase()
+                )
+            }
+        }
+        val newMeeting = MeetingItem(
+            id = "m_${System.currentTimeMillis()}",
+            title = title.ifBlank { "Quick Meeting" },
+            time = time.ifBlank { "Today, 03:00 PM" },
+            duration = duration,
+            platform = platform,
+            status = "Scheduled",
+            attendees = attendeesList,
+            attendeesCount = attendeesList.size
+        )
+        _meetings.value = listOf(newMeeting) + _meetings.value
+
+        // Also add to Cross-Module Stream
+        val newStreamItem = CrossStreamItem(
+            id = "cs_${System.currentTimeMillis()}",
+            time = if (time.contains(",")) time.substringAfter(",").trim() else time,
+            title = title.ifBlank { "Quick Meeting" },
+            subtitle = "${attendeesList.size} attendees • $platform",
+            tag = "Meeting",
+            tagType = "meeting",
+            isCompleted = false
+        )
+        _crossStreamItems.value = listOf(newStreamItem) + _crossStreamItems.value
+
+        _showQuickMeetingDialog.value = false
+        val participantsDesc = if (participants.isNotEmpty()) " with ${participants.joinToString(", ")}" else ""
+        showToast("Meeting scheduled: ${title.ifBlank { "Quick Meeting" }}$participantsDesc at $time 📅")
     }
 
     fun openDailyBriefing() {
@@ -643,18 +702,36 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
-    fun logExpense(title: String, amount: Double, category: String) {
+    fun checkAndLogExpense(title: String, amount: Double, category: String = "General"): Boolean {
+        val currentSpent = _transactions.value.filter { it.amount < 0 }.sumOf { -it.amount }
+        val dailyCeiling = 5000.0
+        val safeAmount = Math.abs(amount)
+        val projectedSpent = currentSpent + safeAmount
+        val isCeilingExceeded = projectedSpent > dailyCeiling
+
         val newTx = FinanceTransaction(
             id = "tx_${System.currentTimeMillis()}",
-            title = title,
-            category = category,
+            title = title.ifBlank { "Expense" },
+            category = category.ifBlank { "General" },
             time = "Just now",
-            amount = -Math.abs(amount),
+            amount = -safeAmount,
             method = "UPI / Card",
             iconType = "restaurant"
         )
         _transactions.value = listOf(newTx) + _transactions.value
-        showToast("Logged expense: ₹${String.format("%.0f", amount)} for $title")
+
+        if (isCeilingExceeded) {
+            val overBy = projectedSpent - dailyCeiling
+            showToast("⚠️ Budget Alert: Expense of ₹${String.format("%.0f", safeAmount)} exceeds ₹5,000 daily budget! (Projected: ₹${String.format("%.0f", projectedSpent)}, Over by ₹${String.format("%.0f", overBy)})")
+        } else {
+            val remaining = dailyCeiling - projectedSpent
+            showToast("Logged expense: ₹${String.format("%.0f", safeAmount)} for $title (₹${String.format("%.0f", remaining)} buffer left)")
+        }
+        return isCeilingExceeded
+    }
+
+    fun logExpense(title: String, amount: Double, category: String = "General") {
+        checkAndLogExpense(title, amount, category)
     }
 
     fun logIncome(title: String, amount: Double) {
@@ -676,25 +753,20 @@ class DayMeetViewModel : ViewModel() {
         type: String,
         title: String,
         detail: String,
-        extraValue: String = ""
+        extraValue: String = "",
+        priority: Priority = Priority.HIGH
     ) {
         when (type) {
             "Task" -> {
-                saveNewTask(title, detail, Priority.HIGH, "General", emptyList())
+                saveNewTask(title, detail, priority, "General", emptyList())
             }
             "Meeting" -> {
-                val newMeeting = MeetingItem(
-                    id = "m_${System.currentTimeMillis()}",
-                    title = title.ifBlank { "New Meeting" },
-                    time = if (extraValue.isNotBlank()) extraValue else "Today, 03:00 PM",
-                    duration = "30 mins",
-                    platform = "Google Meet",
-                    status = "Scheduled",
-                    attendees = listOf(Attendee("Alex Chen", avatarUrl = DayMeetRepository.ALEX_AVATAR)),
-                    attendeesCount = 1
+                val participants = if (detail.isNotBlank()) detail.split(",").map { it.trim() } else listOf("Alex Chen")
+                scheduleMeetingFromHub(
+                    title = title.ifBlank { "Quick Meeting" },
+                    participants = participants,
+                    time = if (extraValue.isNotBlank()) extraValue else "Today, 03:00 PM"
                 )
-                _meetings.value = listOf(newMeeting) + _meetings.value
-                showToast("Meeting scheduled: $title")
             }
             "Reminder" -> {
                 val newRem = SmartReminder(
@@ -708,7 +780,7 @@ class DayMeetViewModel : ViewModel() {
             }
             "Expense" -> {
                 val amount = extraValue.toDoubleOrNull() ?: 150.0
-                logExpense(title.ifBlank { "Expense" }, amount, detail.ifBlank { "General" })
+                checkAndLogExpense(title.ifBlank { "Expense" }, amount, detail.ifBlank { "General" })
             }
             "Income" -> {
                 val amount = extraValue.toDoubleOrNull() ?: 1000.0

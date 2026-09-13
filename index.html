@@ -517,7 +517,7 @@
           <span class="text-[11px] text-[#464555]">Tap to create</span>
         </div>
         <div class="grid grid-cols-6 gap-2 text-center">
-          <div onclick="openQuickAddWith('Meeting')" class="cursor-pointer group">
+          <div onclick="openQuickScheduleMeetingModal()" class="cursor-pointer group">
             <div class="w-11 h-11 mx-auto rounded-full bg-[#EDE7F6] text-[#673AB7] flex items-center justify-center group-hover:scale-105 transition">
               <span class="material-symbols-rounded text-[20px]">calendar_today</span>
             </div>
@@ -1235,26 +1235,120 @@
 
   <!-- 3. Universal Quick Add Modal -->
   <div id="modal-quickadd" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-[#E5E8F5] pb-3">
-        <h3 class="font-bold text-[#181B25] text-base">Universal Quick Add</h3>
-        <button onclick="closeQuickAddModal()" class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-gray-200">✕</button>
+    <div class="bg-white dark:bg-[#1E293B] w-full max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl space-y-4 border border-transparent dark:border-slate-700">
+      <div class="flex items-center justify-between border-b border-[#E5E8F5] dark:border-slate-700 pb-3">
+        <h3 class="font-bold text-[#181B25] dark:text-[#F8FAFC] text-base">Universal Quick Add</h3>
+        <button onclick="closeQuickAddModal()" class="w-7 h-7 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200">✕</button>
       </div>
 
       <!-- Quick Add Category Pills -->
       <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
         <button onclick="selectQuickAddCategory('Task')" id="qa-tab-Task" class="px-3.5 py-1.5 rounded-full bg-[#3525CD] text-white font-bold">Task</button>
-        <button onclick="selectQuickAddCategory('Meeting')" id="qa-tab-Meeting" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Meeting</button>
-        <button onclick="selectQuickAddCategory('Expense')" id="qa-tab-Expense" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Expense</button>
-        <button onclick="selectQuickAddCategory('Note')" id="qa-tab-Note" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Note</button>
-        <button onclick="selectQuickAddCategory('Habit')" id="qa-tab-Habit" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium">Habit</button>
+        <button onclick="selectQuickAddCategory('Meeting')" id="qa-tab-Meeting" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] dark:bg-slate-800 text-[#464555] dark:text-gray-300 font-medium">Meeting</button>
+        <button onclick="selectQuickAddCategory('Expense')" id="qa-tab-Expense" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] dark:bg-slate-800 text-[#464555] dark:text-gray-300 font-medium">Expense</button>
+        <button onclick="selectQuickAddCategory('Note')" id="qa-tab-Note" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] dark:bg-slate-800 text-[#464555] dark:text-gray-300 font-medium">Note</button>
+        <button onclick="selectQuickAddCategory('Habit')" id="qa-tab-Habit" class="px-3.5 py-1.5 rounded-full bg-[#EBEDFB] dark:bg-slate-800 text-[#464555] dark:text-gray-300 font-medium">Habit</button>
       </div>
 
-      <input id="qa-title" type="text" placeholder="Title / Description (e.g. Call vendor, pay WiFi bill)" class="w-full text-xs border border-gray-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#3525CD]">
-      <input id="qa-time" type="text" placeholder="Time / Due (e.g. 03:30 PM, Tomorrow)" class="w-full text-xs border border-gray-300 rounded-xl px-3.5 py-2 focus:outline-none focus:border-[#3525CD]">
+      <input id="qa-title" type="text" placeholder="Title / Description (e.g. Call vendor, pay WiFi bill)" class="w-full text-xs border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#3525CD]">
+      
+      <!-- Priority Selector (High, Medium, Low) -->
+      <div id="qa-priority-group" class="space-y-1.5">
+        <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Priority Level</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="selectQuickAddPriority('High')" id="qa-prio-High" class="py-2 px-2 rounded-xl text-xs font-bold border-2 border-red-500 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 flex items-center justify-center gap-1.5 transition">
+            <span class="w-2 h-2 rounded-full bg-red-600"></span> High
+          </button>
+          <button type="button" onclick="selectQuickAddPriority('Medium')" id="qa-prio-Medium" class="py-2 px-2 rounded-xl text-xs font-medium border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1.5 transition">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Medium
+          </button>
+          <button type="button" onclick="selectQuickAddPriority('Low')" id="qa-prio-Low" class="py-2 px-2 rounded-xl text-xs font-medium border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1.5 transition">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Low
+          </button>
+        </div>
+      </div>
+
+      <input id="qa-time" type="text" placeholder="Time / Due (e.g. 03:30 PM, Tomorrow)" class="w-full text-xs border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-3.5 py-2 focus:outline-none focus:border-[#3525CD]">
 
       <button onclick="submitQuickAdd()" class="w-full py-2.5 bg-[#3525CD] text-white text-xs font-bold rounded-xl hover:bg-[#2B1DAE] transition">
         Save to DayMeet Workspace
+      </button>
+    </div>
+  </div>
+
+  <!-- 3b. Quick Schedule Meeting Modal (Direct from Quick Capture Hub) -->
+  <div id="modal-quick-meeting" class="hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-[#1E293B] w-full max-w-md rounded-3xl p-6 shadow-2xl space-y-4 border border-transparent dark:border-slate-700 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-[#E5E8F5] dark:border-slate-700 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 flex items-center justify-center">
+            <span class="material-symbols-rounded text-[20px]">video_camera_front</span>
+          </div>
+          <div>
+            <h3 class="font-bold text-[#181B25] dark:text-[#F8FAFC] text-sm">Schedule Meeting</h3>
+            <p class="text-[11px] text-[#464555] dark:text-gray-400">Quick Capture Hub Sync</p>
+          </div>
+        </div>
+        <button onclick="closeQuickScheduleMeetingModal()" class="w-7 h-7 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-200">✕</button>
+      </div>
+
+      <!-- Title Input -->
+      <div class="space-y-1">
+        <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Meeting Title</label>
+        <input id="qm-title" type="text" value="Product Strategy Review" placeholder="Meeting Title" class="w-full text-xs border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-[#3525CD]">
+        <div class="flex gap-1.5 overflow-x-auto pt-1 no-scrollbar text-[10px]">
+          <button type="button" onclick="document.getElementById('qm-title').value = '1-on-1 Catchup'" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">1-on-1</button>
+          <button type="button" onclick="document.getElementById('qm-title').value = 'Sprint Standup'" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">Standup</button>
+          <button type="button" onclick="document.getElementById('qm-title').value = 'Design Critique'" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">Design</button>
+        </div>
+      </div>
+
+      <!-- Participants -->
+      <div class="space-y-1">
+        <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Participants</label>
+        <div class="flex flex-wrap gap-1.5" id="qm-participants-pills">
+          <span onclick="toggleMeetingParticipant(this, 'Alex Chen')" class="cursor-pointer px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 flex items-center gap-1">✓ Alex Chen</span>
+          <span onclick="toggleMeetingParticipant(this, 'Sarah Lin')" class="cursor-pointer px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 flex items-center gap-1">✓ Sarah Lin</span>
+          <span onclick="toggleMeetingParticipant(this, 'Marcus Brody')" class="cursor-pointer px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-300 flex items-center gap-1">+ Marcus Brody</span>
+          <span onclick="toggleMeetingParticipant(this, 'Elena Rostova')" class="cursor-pointer px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-300 flex items-center gap-1">+ Elena Rostova</span>
+        </div>
+      </div>
+
+      <!-- Scheduled Time -->
+      <div class="space-y-1">
+        <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Date & Time</label>
+        <input id="qm-time" type="text" value="Today, 03:00 PM" placeholder="Today, 03:00 PM" class="w-full text-xs border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-3.5 py-2 focus:outline-none focus:border-[#3525CD]">
+        <div class="flex gap-1.5 overflow-x-auto pt-1 no-scrollbar text-[10px]">
+          <button type="button" onclick="document.getElementById('qm-time').value = 'Today, 03:00 PM'" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">03:00 PM</button>
+          <button type="button" onclick="document.getElementById('qm-time').value = 'Today, 05:00 PM'" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">05:00 PM</button>
+          <button type="button" onclick="document.getElementById('qm-time').value = 'Tomorrow, 10:00 AM'" class="px-2 py-0.5 rounded-md bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300">Tomorrow 10 AM</button>
+        </div>
+      </div>
+
+      <!-- Duration & Platform -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Duration</label>
+          <select id="qm-duration" class="w-full text-xs border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-2.5 py-2 focus:outline-none">
+            <option value="30 mins">30 mins</option>
+            <option value="15 mins">15 mins</option>
+            <option value="45 mins">45 mins</option>
+            <option value="60 mins">60 mins</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] font-bold text-[#464555] dark:text-gray-300">Platform</label>
+          <select id="qm-platform" class="w-full text-xs border border-gray-300 dark:border-slate-700 dark:bg-slate-800 dark:text-white rounded-xl px-2.5 py-2 focus:outline-none">
+            <option value="Google Meet">Google Meet</option>
+            <option value="Zoom">Zoom</option>
+            <option value="Teams">Teams</option>
+            <option value="In-person">In-person</option>
+          </select>
+        </div>
+      </div>
+
+      <button onclick="submitQuickMeeting()" class="w-full py-2.5 bg-[#3525CD] text-white text-xs font-bold rounded-xl hover:bg-[#2B1DAE] transition flex items-center justify-center gap-1.5">
+        <span class="material-symbols-rounded text-[18px]">calendar_month</span> Schedule Meeting
       </button>
     </div>
   </div>
@@ -1301,6 +1395,9 @@
       currentTab: 'home',
       activeCategoryFilter: 'All',
       selectedQuickAddCat: 'Task',
+      selectedQuickAddPriority: 'High',
+      dailyBudgetCeiling: 5000.0,
+      todaySpending: 3450.0,
       meditationLogged: false,
       exerciseLogged: false,
       meditationStreak: 19,
@@ -1319,12 +1416,12 @@
         { day: 'Sun', fullDay: 'Sunday', tasks: 7, habits: 4, spending: 4100 }
       ],
       crossStreamItems: [
-        { id: 'cs1', time: '09:30 AM', title: 'Product Strategy Review', subtitle: '4 attendees • Google Meet', tag: 'Meeting', tagType: 'meeting', isCompleted: false },
-        { id: 'cs2', time: '12:00 PM', title: 'Finalize Mobile Design Tokens', subtitle: 'Due at release freeze • 3 subtasks', tag: 'Priority', tagType: 'priority', isCompleted: false },
-        { id: 'cs3', time: '01:30 PM', title: 'Tata Power Electricity Bill', subtitle: '₹2,400 due tomorrow • 1-tap UPI', tag: 'Autopay', tagType: 'autopay', isCompleted: false },
-        { id: 'cs4', time: '02:00 PM', title: '90m Deep Work Sanctuary', subtitle: 'Calendar focus block • Slack DND', tag: 'Focus', tagType: 'focus', isCompleted: false },
-        { id: 'cs5', time: '04:30 PM', title: 'Review Chennai Trip Packing Checklist', subtitle: 'Flight 6E 412 in 3 days', tag: 'Travel', tagType: 'travel', isCompleted: true },
-        { id: 'cs6', time: '06:00 PM', title: 'Hydration Target Check (2.5L)', subtitle: '1.8L logged • 700ml remaining', tag: 'Wellness', tagType: 'wellness', isCompleted: true }
+        { id: 'cs1', time: '09:30 AM', title: 'Product Strategy Review', subtitle: '4 attendees • Google Meet', tag: 'Meeting', tagType: 'meeting', priority: 'Medium', isCompleted: false },
+        { id: 'cs2', time: '12:00 PM', title: 'Finalize Mobile Design Tokens', subtitle: 'Due at release freeze • 3 subtasks', tag: 'Priority', tagType: 'priority', priority: 'High', isCompleted: false },
+        { id: 'cs3', time: '01:30 PM', title: 'Tata Power Electricity Bill', subtitle: '₹2,400 due tomorrow • 1-tap UPI', tag: 'Autopay', tagType: 'autopay', priority: 'High', isCompleted: false },
+        { id: 'cs4', time: '02:00 PM', title: '90m Deep Work Sanctuary', subtitle: 'Calendar focus block • Slack DND', tag: 'Focus', tagType: 'focus', priority: 'Medium', isCompleted: false },
+        { id: 'cs5', time: '04:30 PM', title: 'Review Chennai Trip Packing Checklist', subtitle: 'Flight 6E 412 in 3 days', tag: 'Travel', tagType: 'travel', priority: 'Low', isCompleted: true },
+        { id: 'cs6', time: '06:00 PM', title: 'Hydration Target Check (2.5L)', subtitle: '1.8L logged • 700ml remaining', tag: 'Wellness', tagType: 'wellness', priority: 'Low', isCompleted: true }
       ]
     };
 
@@ -1401,6 +1498,30 @@
       updateMetrics();
     }
 
+    // Sensory haptic feedback & audio click/tone synthesizer
+    function playHapticSound() {
+      if (navigator.vibrate) {
+        try { navigator.vibrate([25, 35, 25]); } catch(e) {}
+      }
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(640, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.08);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.13);
+        }
+      } catch(e) {}
+    }
+
     // Touch & Pointer Swipe-to-Complete Gesture Implementation
     function initSwipeGestures() {
       const rows = document.querySelectorAll('[data-item-id]');
@@ -1408,11 +1529,13 @@
         let startX = 0;
         let currentX = 0;
         let isDragging = false;
+        let hasTriggeredThresholdHaptic = false;
         const itemId = row.getAttribute('data-item-id');
 
         function onStart(e) {
           startX = e.clientX || (e.touches && e.touches[0].clientX);
           isDragging = true;
+          hasTriggeredThresholdHaptic = false;
           row.style.transition = 'none';
         }
 
@@ -1422,16 +1545,24 @@
           if (x > 0) {
             currentX = x;
             row.style.transform = `translateX(${Math.min(currentX, 160)}px)`;
+            // Trigger physical tick sound when passing completion threshold
+            if (currentX > 75 && !hasTriggeredThresholdHaptic) {
+              hasTriggeredThresholdHaptic = true;
+              playHapticSound();
+            } else if (currentX <= 75 && hasTriggeredThresholdHaptic) {
+              hasTriggeredThresholdHaptic = false;
+            }
           }
         }
 
         function onEnd() {
           if (!isDragging) return;
           isDragging = false;
-          row.style.transition = 'transform 0.25s ease-out';
+          row.style.transition = 'transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)';
           if (currentX > 75) {
-            // Swipe threshold met: complete item
-            row.style.transform = 'translateX(100%)';
+            // Swipe threshold met: complete item with haptic bounce
+            playHapticSound();
+            row.style.transform = 'translateX(100%) scale(1.03)';
             setTimeout(() => {
               const item = state.crossStreamItems.find(i => i.id === itemId);
               if (item && !item.isCompleted) {
@@ -1458,7 +1589,7 @@
       });
     }
 
-    // Render Tasks Tab List
+    // Render Tasks Tab List with Priority Indicators
     function renderTasksTab() {
       const container = document.getElementById('tasks-full-container');
       if (!container) return;
@@ -1471,15 +1602,32 @@
 
       container.innerHTML = filtered.map(item => {
         const style = getTagStyles(item.tagType);
+        const prio = item.priority || (item.tagType === 'priority' ? 'High' : 'Medium');
+        let prioBadge = '';
+        let leftBorder = 'border-l-4 border-l-slate-300';
+        if (prio === 'High') {
+          prioBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300">HIGH</span>';
+          leftBorder = 'border-l-4 border-l-red-500';
+        } else if (prio === 'Medium') {
+          prioBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300">MED</span>';
+          leftBorder = 'border-l-4 border-l-amber-500';
+        } else {
+          prioBadge = '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">LOW</span>';
+          leftBorder = 'border-l-4 border-l-blue-500';
+        }
+
         return `
-          <div class="bg-white rounded-xl p-3.5 border border-[#E5E8F5] shadow-sm flex items-center justify-between gap-3">
+          <div class="bg-white dark:bg-[#1E293B] rounded-xl p-3.5 border border-[#E5E8F5] dark:border-slate-700 shadow-sm flex items-center justify-between gap-3 ${leftBorder}">
             <div class="flex items-center gap-3 flex-1 min-w-0">
-              <button onclick="toggleStreamItem('${item.id}')" class="w-6 h-6 rounded-md border flex items-center justify-center ${item.isCompleted ? 'bg-[#10B981] border-[#10B981] text-white' : 'bg-[#E5E8F5] border-[#C7C4D8] text-transparent'}">
+              <button onclick="toggleStreamItem('${item.id}')" class="w-6 h-6 rounded-md border flex items-center justify-center ${item.isCompleted ? 'bg-[#10B981] border-[#10B981] text-white' : 'bg-[#E5E8F5] dark:bg-slate-800 border-[#C7C4D8] dark:border-slate-600 text-transparent'}">
                 <span class="material-symbols-rounded text-[16px]">${item.isCompleted ? 'check' : ''}</span>
               </button>
               <div class="flex-1 min-w-0">
-                <p class="text-xs font-bold ${item.isCompleted ? 'strike-line' : 'text-[#181B25]'}">${item.title}</p>
-                <p class="text-[10px] text-[#464555]">${item.subtitle} • Due ${item.time}</p>
+                <div class="flex items-center gap-1.5">
+                  <p class="text-xs font-bold ${item.isCompleted ? 'strike-line' : 'text-[#181B25] dark:text-white'}">${item.title}</p>
+                  ${prioBadge}
+                </div>
+                <p class="text-[10px] text-[#464555] dark:text-gray-400">${item.subtitle} • Due ${item.time}</p>
               </div>
             </div>
             <span class="px-2 py-0.5 rounded text-[10px] font-bold" style="background-color: ${style.bg}; color: ${style.text}">${item.tag}</span>
@@ -1494,6 +1642,7 @@
       if (!item) return;
 
       item.isCompleted = !item.isCompleted;
+      playHapticSound();
       
       triggerToast(item.isCompleted ? `Completed: ${item.title} ✓` : `Marked incomplete: ${item.title}`);
       renderCrossStream();
@@ -1601,7 +1750,24 @@
         if (c === cat) {
           btn.className = 'px-3.5 py-1.5 rounded-full bg-[#3525CD] text-white font-bold';
         } else {
-          btn.className = 'px-3.5 py-1.5 rounded-full bg-[#EBEDFB] text-[#464555] font-medium';
+          btn.className = 'px-3.5 py-1.5 rounded-full bg-[#EBEDFB] dark:bg-slate-800 text-[#464555] dark:text-gray-300 font-medium';
+        }
+      });
+    }
+    function selectQuickAddPriority(prio) {
+      state.selectedQuickAddPriority = prio;
+      const prios = [
+        { id: 'High', border: 'border-red-500', bg: 'bg-red-50 dark:bg-red-950/40', text: 'text-red-700 dark:text-red-300' },
+        { id: 'Medium', border: 'border-amber-500', bg: 'bg-amber-50 dark:bg-amber-950/40', text: 'text-amber-700 dark:text-amber-300' },
+        { id: 'Low', border: 'border-blue-500', bg: 'bg-blue-50 dark:bg-blue-950/40', text: 'text-blue-700 dark:text-blue-300' }
+      ];
+      prios.forEach(p => {
+        const btn = document.getElementById(`qa-prio-${p.id}`);
+        if (!btn) return;
+        if (p.id === prio) {
+          btn.className = `py-2 px-2 rounded-xl text-xs font-bold border-2 ${p.border} ${p.bg} ${p.text} flex items-center justify-center gap-1.5 transition`;
+        } else {
+          btn.className = 'py-2 px-2 rounded-xl text-xs font-medium border border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 text-gray-700 dark:text-gray-300 flex items-center justify-center gap-1.5 transition';
         }
       });
     }
@@ -1620,6 +1786,18 @@
       }
       const time = timeInput.value.trim() || '03:00 PM';
       const cat = state.selectedQuickAddCat;
+      const prio = state.selectedQuickAddPriority || 'High';
+
+      // Daily Budget Ceiling Alert Check
+      if (cat === 'Expense') {
+        const match = title.match(/(\d[\d,]*)/);
+        const amount = match ? parseFloat(match[1].replace(/,/g, '')) : 650;
+        const projected = state.todaySpending + amount;
+        if (projected > state.dailyBudgetCeiling) {
+          triggerToast(`⚠️ Budget Alert: Projected spend ₹${projected.toLocaleString()} exceeds daily ceiling of ₹${state.dailyBudgetCeiling.toLocaleString()}!`);
+        }
+        state.todaySpending = projected;
+      }
 
       const tagMap = {
         'Task': { tag: 'Task', type: 'priority' },
@@ -1638,6 +1816,7 @@
         subtitle: `Created via Quick Add • ${cat}`,
         tag: mapped.tag,
         tagType: mapped.type,
+        priority: prio,
         isCompleted: false
       });
 
@@ -1646,7 +1825,56 @@
       closeQuickAddModal();
       renderCrossStream();
       renderTasksTab();
-      triggerToast(`Created new ${cat}: "${title}" synced across modules!`);
+      triggerToast(`Created new ${prio}-priority ${cat}: "${title}" synced across modules!`);
+    }
+
+    // Quick Schedule Meeting Modal Functions
+    function openQuickScheduleMeetingModal() {
+      document.getElementById('modal-quick-meeting').classList.remove('hidden');
+    }
+    function closeQuickScheduleMeetingModal() {
+      document.getElementById('modal-quick-meeting').classList.add('hidden');
+    }
+    function toggleMeetingParticipant(el, name) {
+      if (el.innerText.startsWith('✓')) {
+        el.innerText = `+ ${name}`;
+        el.className = 'cursor-pointer px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 dark:bg-slate-800 dark:text-gray-300 flex items-center gap-1';
+      } else {
+        el.innerText = `✓ ${name}`;
+        el.className = 'cursor-pointer px-2.5 py-1 rounded-lg text-xs font-semibold bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300 flex items-center gap-1';
+      }
+    }
+    function submitQuickMeeting() {
+      const title = document.getElementById('qm-title').value.trim() || 'Team Strategy Sync';
+      const time = document.getElementById('qm-time').value.trim() || 'Today, 03:00 PM';
+      const duration = document.getElementById('qm-duration').value;
+      const platform = document.getElementById('qm-platform').value;
+
+      // Extract participants
+      const pills = document.querySelectorAll('#qm-participants-pills span');
+      const participants = [];
+      pills.forEach(p => {
+        if (p.innerText.startsWith('✓')) {
+          participants.push(p.innerText.replace('✓ ', ''));
+        }
+      });
+      const participantText = participants.length > 0 ? participants.join(', ') : 'Alex Chen, Sarah Lin';
+
+      state.crossStreamItems.unshift({
+        id: 'cs_' + Date.now(),
+        time: time,
+        title: title,
+        subtitle: `${platform} • ${participantText} (${duration})`,
+        tag: 'Meeting',
+        tagType: 'meeting',
+        priority: 'High',
+        isCompleted: false
+      });
+
+      closeQuickScheduleMeetingModal();
+      renderCrossStream();
+      renderTasksTab();
+      triggerToast(`📅 Meeting scheduled: "${title}" with ${participants.length || 2} participants!`);
     }
 
     // Copilot / AI Assistant Modal

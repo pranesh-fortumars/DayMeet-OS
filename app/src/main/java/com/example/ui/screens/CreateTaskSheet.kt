@@ -36,6 +36,7 @@ fun CreateTaskSheet(
     var title by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
     var extraValue by remember { mutableStateOf("") }
+    var selectedPriority by remember { mutableStateOf(Priority.HIGH) }
 
     val types = listOf("Task", "Meeting", "Expense", "Reminder", "Note", "Habit", "Goal", "Bill", "Message")
 
@@ -280,6 +281,64 @@ fun CreateTaskSheet(
                 )
             }
 
+            // Priority Selector for Tasks
+            if (selectedType == "Task") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Priority Level",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurfaceVariant
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple(Priority.HIGH, "High", Color(0xFFD32F2F)),
+                            Triple(Priority.MEDIUM, "Medium", Color(0xFFF57C00)),
+                            Triple(Priority.LOW, "Low", Color(0xFF1976D2))
+                        ).forEach { (p, label, accentColor) ->
+                            val isSelected = selectedPriority == p
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) accentColor.copy(alpha = 0.15f) else SurfaceContainerLow,
+                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, accentColor) else null,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { selectedPriority = p }
+                                    .testTag("priority_selector_${label.lowercase()}")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(accentColor)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSelected) accentColor else OnSurfaceVariant
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
 
             // Action Buttons
@@ -301,7 +360,8 @@ fun CreateTaskSheet(
                             type = selectedType,
                             title = title,
                             detail = detail,
-                            extraValue = extraValue
+                            extraValue = extraValue,
+                            priority = selectedPriority
                         )
                     },
                     shape = RoundedCornerShape(12.dp),

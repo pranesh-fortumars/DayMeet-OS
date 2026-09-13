@@ -39,7 +39,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import android.view.SoundEffectConstants
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -805,7 +809,7 @@ fun HomeScreen(
                             icon = Icons.Default.CalendarToday,
                             bgColor = Color(0xFFEDE7F6),
                             tintColor = Color(0xFF673AB7),
-                            onClick = { viewModel.openCreateTask("Meeting") }
+                            onClick = { viewModel.openQuickScheduleMeeting() }
                         )
                         QuickCaptureIconItem(
                             label = "Task",
@@ -990,8 +994,12 @@ private fun CrossStreamRowItem(
 
     val swipeOffset = remember { Animatable(0f) }
     val collapseAnim = remember { Animatable(1f) }
+    val hapticBounce = remember { Animatable(1f) }
     val density = LocalDensity.current
     val thresholdPx = with(density) { 85.dp.toPx() }
+    val haptic = LocalHapticFeedback.current
+    val view = LocalView.current
+    var hasPassedThresholdHaptic by remember { mutableStateOf(false) }
 
     val strikeProgress = remember { Animatable(if (item.isCompleted) 1f else 0f) }
     val isDueSoon = remember(item.time) { TimeUtils.isDueWithinNextTwoHours(item.time) }
@@ -1002,7 +1010,23 @@ private fun CrossStreamRowItem(
         if (!isToggledState) {
             isAnimatingOut = true
             isToggledState = true
+
+            // Trigger physical haptic feedback & sound effect
+            try {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            } catch (_: Exception) {}
+            try {
+                view.playSoundEffect(SoundEffectConstants.CLICK)
+            } catch (_: Exception) {}
+
             coroutineScope.launch {
+                // Haptic-like visual pulse bounce animation
+                launch {
+                    hapticBounce.animateTo(1.05f, tween(60, easing = FastOutSlowInEasing))
+                    hapticBounce.animateTo(0.96f, tween(50, easing = FastOutSlowInEasing))
+                    hapticBounce.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                }
+
                 if (swipedOut) {
                     // 1. Accelerate card swipe fling off screen
                     launch {
@@ -1121,6 +1145,10 @@ private fun CrossStreamRowItem(
                 modifier = Modifier
                     .fillMaxWidth()
                     .offset { IntOffset(swipeOffset.value.roundToInt(), 0) }
+                    .graphicsLayer {
+                        scaleX = hapticBounce.value
+                        scaleY = hapticBounce.value
+                    }
                     .then(
                         if (isWarning) Modifier.border(1.5.dp, Color(0xFFE53935), RoundedCornerShape(14.dp)) else Modifier
                     )
@@ -1128,6 +1156,7 @@ private fun CrossStreamRowItem(
                         if (isAnimatingOut) return@pointerInput
                         detectHorizontalDragGestures(
                             onDragEnd = {
+                                hasPassedThresholdHaptic = false
                                 if (swipeOffset.value >= thresholdPx) {
                                     triggerToggle(swipedOut = true)
                                 } else {
@@ -1137,6 +1166,7 @@ private fun CrossStreamRowItem(
                                 }
                             },
                             onDragCancel = {
+                                hasPassedThresholdHaptic = false
                                 coroutineScope.launch {
                                     swipeOffset.animateTo(0f, spring())
                                 }
@@ -1145,6 +1175,17 @@ private fun CrossStreamRowItem(
                                 if (dragAmount > 0 || swipeOffset.value > 0) {
                                     change.consume()
                                     val nextVal = (swipeOffset.value + dragAmount).coerceAtLeast(0f)
+                                    // Trigger sensory tick when passing swipe threshold
+                                    if (nextVal >= thresholdPx && !hasPassedThresholdHaptic) {
+                                        hasPassedThresholdHaptic = true
+                                        try {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            view.playSoundEffect(SoundEffectConstants.CLICK)
+                                        } catch (_: Exception) {}
+                                    } else if (nextVal < thresholdPx && hasPassedThresholdHaptic) {
+                                        hasPassedThresholdHaptic = false
+                                    }
+
                                     coroutineScope.launch {
                                         swipeOffset.snapTo(nextVal)
                                     }
