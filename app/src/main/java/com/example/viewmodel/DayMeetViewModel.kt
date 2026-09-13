@@ -807,11 +807,12 @@ class DayMeetViewModel : ViewModel() {
         detail: String,
         extraValue: String = "",
         priority: Priority = Priority.HIGH,
-        category: String = "Work"
+        category: String = "Work",
+        reminderTime: String? = null
     ) {
         when (type) {
             "Task" -> {
-                saveNewTask(title, detail, priority, category, emptyList())
+                saveNewTask(title, detail, priority, category, emptyList(), reminderTime)
             }
             "Meeting" -> {
                 val participants = if (detail.isNotBlank()) detail.split(",").map { it.trim() } else listOf("Alex Chen")
@@ -1086,7 +1087,14 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
-    fun saveNewTask(title: String, notes: String, priority: Priority, space: String, subtasks: List<String>) {
+    fun saveNewTask(
+        title: String,
+        notes: String,
+        priority: Priority,
+        space: String,
+        subtasks: List<String>,
+        reminderTime: String? = null
+    ) {
         val taskId = "task_${System.currentTimeMillis()}"
         val taskTitle = title.ifBlank { "New Task" }
         val categoryTag = if (space.isNotBlank()) space else "Work"
@@ -1099,7 +1107,8 @@ class DayMeetViewModel : ViewModel() {
             category = FeedCategory.TASK,
             priority = priority,
             statusTag = categoryTag,
-            isCompleted = false
+            isCompleted = false,
+            reminderTime = reminderTime
         )
         _feedItems.value = listOf(newTask) + _feedItems.value
 

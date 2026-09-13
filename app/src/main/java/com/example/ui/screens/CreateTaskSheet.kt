@@ -38,6 +38,7 @@ fun CreateTaskSheet(
     var extraValue by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf(Priority.HIGH) }
     var selectedCategory by remember { mutableStateOf("Work") }
+    var selectedReminderTime by remember { mutableStateOf<String?>("Today 05:00 PM") }
 
     val types = listOf("Task", "Meeting", "Expense", "Reminder", "Note", "Habit", "Goal", "Bill", "Message")
 
@@ -395,6 +396,69 @@ fun CreateTaskSheet(
                 }
             }
 
+            // Set Reminder Section
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("quick_add_reminder_selector"),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.NotificationsActive,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Set Reminder",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurfaceVariant
+                        )
+                    )
+                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(
+                        "None" to null,
+                        "In 15 Mins" to "In 15 Mins",
+                        "In 1 Hour" to "In 1 Hour",
+                        "Today 05:00 PM" to "Today 05:00 PM",
+                        "Tomorrow 09:00 AM" to "Tomorrow 09:00 AM"
+                    ).forEach { (label, preset) ->
+                        val isSelected = selectedReminderTime == preset
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedReminderTime = preset },
+                            label = {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    )
+                                )
+                            },
+                            shape = RoundedCornerShape(99.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Primary,
+                                selectedLabelColor = Color.White,
+                                containerColor = SurfaceContainerLow,
+                                labelColor = OnSurfaceVariant
+                            ),
+                            modifier = Modifier.testTag("quick_add_reminder_${label.lowercase().replace(' ', '_')}")
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
 
             // Action Buttons
@@ -418,7 +482,8 @@ fun CreateTaskSheet(
                             detail = detail,
                             extraValue = extraValue,
                             priority = selectedPriority,
-                            category = selectedCategory
+                            category = selectedCategory,
+                            reminderTime = selectedReminderTime
                         )
                     },
                     shape = RoundedCornerShape(12.dp),

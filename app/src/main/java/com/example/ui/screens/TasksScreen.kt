@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -60,6 +61,32 @@ fun TasksScreen(
     }
     val pendingCount = tasksOnly.count { !it.isCompleted }
     val completedCount = tasksOnly.count { it.isCompleted }
+
+    val weeklyGoalTasks = remember(tasksOnly) {
+        tasksOnly.filter { item ->
+            item.statusTag?.contains("Weekly", ignoreCase = true) == true ||
+            item.statusTag?.contains("Goal", ignoreCase = true) == true ||
+            item.title.contains("Weekly", ignoreCase = true) ||
+            item.subtitle.contains("Weekly", ignoreCase = true)
+        }
+    }
+    val totalWeeklyGoals = weeklyGoalTasks.size.coerceAtLeast(1)
+    val completedWeeklyGoals = weeklyGoalTasks.count { it.isCompleted }
+    val targetGoalProgress = (completedWeeklyGoals.toFloat() / totalWeeklyGoals.toFloat()).coerceIn(0f, 1f)
+
+    val animatedGoalProgress by animateFloatAsState(
+        targetValue = targetGoalProgress,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioLowBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "WeeklyGoalProgressAnimation"
+    )
+
+    val streakDays = remember(completedCount) {
+        if (completedCount >= 3) 6 else 5
+    }
+    var showStreakDialog by remember { mutableStateOf(false) }
 
     var filterState by remember { mutableStateOf("All") } // "All", "Pending", "Completed", "High"
     var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
@@ -124,13 +151,43 @@ fun TasksScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = "Tasks & Backlog",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            color = OnSurface,
-                            fontSize = 24.sp
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Tasks & Backlog",
+                            style = MaterialTheme.typography.headlineLarge.copy(
+                                color = OnSurface,
+                                fontSize = 24.sp
+                            )
                         )
-                    )
+                        // Task Completion Streak Counter Badge
+                        Surface(
+                            shape = RoundedCornerShape(99.dp),
+                            color = Color(0xFFFFF3E0),
+                            border = BorderStroke(1.dp, Color(0xFFFFB74D)),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(99.dp))
+                                .clickable { showStreakDialog = true }
+                                .testTag("task_completion_streak_badge")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text("🔥", fontSize = 12.sp)
+                                Text(
+                                    text = "${streakDays}d Streak",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFE65100)
+                                    )
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = "$pendingCount open • $completedCount completed today",
                         style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
@@ -147,6 +204,79 @@ fun TasksScreen(
                     Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("Add Task", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                }
+            }
+        }
+
+        // Weekly Goal Tracking Bar
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                border = BorderStroke(1.dp, SurfaceContainerHigh),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("weekly_goal_tracking_bar")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE8F5E9)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("🎯", fontSize = 14.sp)
+                            }
+                            Text(
+                                text = "Weekly Goals Progress",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                        }
+                        Text(
+                            text = "$completedWeeklyGoals / $totalWeeklyGoals Goals (${(animatedGoalProgress * 100).toInt()}%)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        )
+                    }
+
+                    // Smooth Filling Progress Bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp)
+                            .clip(CircleShape)
+                            .background(SurfaceContainerHigh)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .fillMaxWidth(animatedGoalProgress)
+                                .clip(CircleShape)
+                                .background(
+                                    if (animatedGoalProgress >= 1f) Color(0xFF2E7D32) else Primary
+                                )
+                        )
+                    }
                 }
             }
         }
@@ -355,6 +485,27 @@ fun TasksScreen(
             )
         }
     }
+
+    if (showStreakDialog) {
+        AlertDialog(
+            onDismissRequest = { showStreakDialog = false },
+            confirmButton = {
+                TextButton(onClick = { showStreakDialog = false }) {
+                    Text("Awesome!", fontWeight = FontWeight.Bold)
+                }
+            },
+            icon = {
+                Text("🔥", fontSize = 36.sp)
+            },
+            title = {
+                Text("$streakDays-Day Completion Streak!", fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text("You've completed at least 3 tasks every day for $streakDays consecutive days! Keep up the momentum to build great habits.")
+            },
+            containerColor = SurfaceContainerLowest
+        )
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -558,6 +709,32 @@ fun AnimatedTaskItemRow(
                                     color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant
                                 )
                             )
+                            if (!task.reminderTime.isNullOrBlank()) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Primary.copy(alpha = 0.08f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .testTag("task_reminder_badge_${task.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsActive,
+                                        contentDescription = "Reminder",
+                                        tint = Primary,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = task.reminderTime,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Primary,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                            }
                         }
                     }
 

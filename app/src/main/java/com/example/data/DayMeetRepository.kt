@@ -26,8 +26,9 @@ object DayMeetRepository {
             title = "Submit Q4 Token Audit",
             subtitle = "Tasks Workspace • Final signoff required",
             category = FeedCategory.TASK,
-            statusTag = "Priority",
-            isCompleted = false
+            statusTag = "Weekly Goal",
+            isCompleted = false,
+            reminderTime = "Today 10:15 AM"
         ),
         FeedItem(
             id = "f3",
@@ -43,8 +44,29 @@ object DayMeetRepository {
             title = "Review Sprint Backlog",
             subtitle = "Figma component sync & tokens review",
             category = FeedCategory.TASK,
-            statusTag = "Design Team",
-            isCompleted = false
+            statusTag = "Weekly Goal",
+            isCompleted = true,
+            reminderTime = "Today 01:00 PM"
+        ),
+        FeedItem(
+            id = "f4_2",
+            time = "02:30 PM",
+            title = "Complete UI Security Review",
+            subtitle = "Design token sanitation & audit",
+            category = FeedCategory.TASK,
+            statusTag = "Weekly Goal",
+            isCompleted = false,
+            priority = Priority.HIGH,
+            reminderTime = "Today 02:15 PM"
+        ),
+        FeedItem(
+            id = "f4_3",
+            time = "04:00 PM",
+            title = "Publish Weekly Release Notes",
+            subtitle = "Documentation and release announcement",
+            category = FeedCategory.TASK,
+            statusTag = "Weekly Goal",
+            isCompleted = true
         ),
         FeedItem(
             id = "f5",
