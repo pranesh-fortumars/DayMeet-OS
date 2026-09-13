@@ -264,7 +264,9 @@ fun TasksScreen(
                             uncheckedThumbColor = OnSurfaceVariant,
                             uncheckedTrackColor = SurfaceContainerHighest
                         ),
-                        modifier = Modifier.testTag("auto_sort_priority_toggle")
+                        modifier = Modifier
+                            .testTag("task_sort_priority_toggle")
+                            .testTag("auto_sort_priority_toggle")
                     )
                 }
             }
