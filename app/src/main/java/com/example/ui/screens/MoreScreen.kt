@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,8 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,6 +77,11 @@ fun MoreScreen(
                     style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                 )
             }
+        }
+
+        // Global Theme Switcher Card (Command Center Theme Branding)
+        item {
+            CommandCenterThemeSwitcherCard(viewModel = viewModel)
         }
 
         // 2. Intelligence & Core Super-App Engines
@@ -902,6 +907,194 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                     Text(
                         text = if (updateInfo?.isUpdateAvailable == true) "Update Now" else "Update Details",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CommandCenterThemeSwitcherCard(
+    viewModel: DayMeetViewModel,
+    modifier: Modifier = Modifier
+) {
+    var activeMode by remember { mutableStateOf(if (isAppInDarkMode) "dark" else "light") }
+    var isDark by remember { mutableStateOf(isAppInDarkMode) }
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("command_center_theme_switcher")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(PrimaryFixed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Global System Theme",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Text(
+                                text = if (isDark) "Dark Mode" else "Light Mode",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(PrimaryFixed)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Text(
+                            text = "Synchronizes deep Slate-900 OLED dark branding across all 33 modules",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+
+                Switch(
+                    checked = isDark,
+                    onCheckedChange = { checked ->
+                        isDark = checked
+                        isAppInDarkMode = checked
+                        activeMode = if (checked) "dark" else "light"
+                        viewModel.showToast(if (checked) "🌙 Dark Mode (Slate-900 OLED) activated across modules" else "☀️ Light Mode activated")
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Primary,
+                        uncheckedThumbColor = Color.White,
+                        uncheckedTrackColor = SurfaceContainerHigh
+                    ),
+                    modifier = Modifier.testTag("command_center_theme_toggle")
+                )
+            }
+
+            // 3 Mode Selection Pills
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                listOf(
+                    Triple("light", "Light", Icons.Default.LightMode),
+                    Triple("dark", "Dark Slate", Icons.Default.DarkMode),
+                    Triple("system", "Auto (OS)", Icons.Default.BrightnessAuto)
+                ).forEach { (modeId, label, icon) ->
+                    val isSelected = activeMode == modeId
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) SurfaceContainerLow else SurfaceContainerLowest,
+                        border = BorderStroke(
+                            width = if (isSelected) 2.dp else 1.dp,
+                            color = if (isSelected) Primary else SurfaceContainerHigh
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable {
+                                activeMode = modeId
+                                val newDark = when (modeId) {
+                                    "dark" -> true
+                                    "light" -> false
+                                    else -> isAppInDarkMode
+                                }
+                                isDark = newDark
+                                isAppInDarkMode = newDark
+                                viewModel.showToast("Theme switched to $label")
+                            }
+                            .testTag("theme_mode_btn_$modeId")
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = if (isSelected) Primary else OnSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Primary else OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Info note
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = SurfaceContainerLow,
+                border = BorderStroke(1.dp, SurfaceContainerHigh),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Adaptive contrast system: Slate-900 background, Slate-800 elevated surfaces, and high-legibility typography.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
                     )
                 }
             }

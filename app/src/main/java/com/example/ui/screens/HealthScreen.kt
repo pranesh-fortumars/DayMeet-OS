@@ -17,6 +17,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.testTag
@@ -181,6 +183,11 @@ fun HealthScreen(
                     )
                 }
             }
+        }
+
+        // Weekly Summary Card (7-Day Trend of Tasks, Habits & Spending)
+        item {
+            WeeklySummaryCard(viewModel = viewModel)
         }
 
         // 2. Big Circular Health Score Card
@@ -1265,6 +1272,497 @@ private fun BioAutomationRow(
                 onCheckedChange = onCheckedChange,
                 colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Primary)
             )
+        }
+    }
+}
+
+private data class WeeklySummaryDayData(
+    val day: String,
+    val fullDay: String,
+    val tasks: Int,
+    val habits: Int,
+    val spending: Int
+)
+
+@Composable
+private fun WeeklySummaryCard(
+    viewModel: DayMeetViewModel,
+    modifier: Modifier = Modifier
+) {
+    val weeklyData = remember {
+        listOf(
+            WeeklySummaryDayData("Mon", "Monday", 6, 4, 2100),
+            WeeklySummaryDayData("Tue", "Tuesday", 8, 5, 1850),
+            WeeklySummaryDayData("Wed", "Wednesday", 7, 5, 3200),
+            WeeklySummaryDayData("Thu", "Thursday (Today)", 11, 5, 3450),
+            WeeklySummaryDayData("Fri", "Friday", 9, 4, 2400),
+            WeeklySummaryDayData("Sat", "Saturday", 5, 5, 1950),
+            WeeklySummaryDayData("Sun", "Sunday", 7, 4, 4100)
+        )
+    }
+
+    var selectedIndex by remember { mutableStateOf(3) }
+    var selectedStream by remember { mutableStateOf("all") } // all, tasks, habits, spending
+
+    val selectedDay = weeklyData.getOrNull(selectedIndex) ?: weeklyData[3]
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("weekly_summary_card")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(PrimaryFixed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Insights,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Weekly Summary",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Text(
+                                text = "7-Day Correlation",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Primary,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(PrimaryFixed)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        Text(
+                            text = "Tasks completed, habits maintained & spending trend",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Stream Filter Chips Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    "all" to "All Streams",
+                    "tasks" to "Tasks",
+                    "habits" to "Habits",
+                    "spending" to "Spending"
+                ).forEach { (id, label) ->
+                    val isSelected = selectedStream == id
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) Primary else SurfaceContainerHigh,
+                        modifier = Modifier
+                            .clickable { selectedStream = id }
+                            .testTag("weekly_summary_stream_$id")
+                    ) {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isSelected) OnPrimary else OnSurfaceVariant,
+                                fontSize = 11.sp
+                            ),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            // Active Day Tooltip Box
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = SurfaceContainerLow,
+                border = androidx.compose.foundation.BorderStroke(1.dp, SurfaceContainerHigh),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${selectedDay.fullDay} Focus & Balance",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                        Text(
+                            text = "Day ${selectedIndex + 1} of 7",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Primary))
+                            Text(
+                                text = "${selectedDay.tasks} Tasks Done",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF10B981)))
+                            Text(
+                                text = "${selectedDay.habits}/5 Habits",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF10B981),
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF0288D1)))
+                            Text(
+                                text = "₹${selectedDay.spending.toString().reversed().chunked(3).joinToString(",").reversed()}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0288D1),
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Interactive Multi-Series Canvas Visualization
+            val primaryColor = Primary
+            val habitsColor = Color(0xFF10B981)
+            val spendingColor = Color(0xFF0288D1)
+            val gridColor = SurfaceContainerHigh
+            val highlightColor = SurfaceContainerHighest
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(170.dp)
+            ) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp, vertical = 8.dp)
+                ) {
+                    val w = size.width
+                    val h = size.height
+                    val paddingBottom = 22.dp.toPx()
+                    val chartH = h - paddingBottom
+                    val colWidth = w / 7f
+
+                    // 1. Grid Lines
+                    val dashedEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f)
+                    drawLine(
+                        color = gridColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                        end = androidx.compose.ui.geometry.Offset(w, 0f),
+                        pathEffect = dashedEffect
+                    )
+                    drawLine(
+                        color = gridColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, chartH * 0.5f),
+                        end = androidx.compose.ui.geometry.Offset(w, chartH * 0.5f),
+                        pathEffect = dashedEffect
+                    )
+                    drawLine(
+                        color = gridColor,
+                        start = androidx.compose.ui.geometry.Offset(0f, chartH),
+                        end = androidx.compose.ui.geometry.Offset(w, chartH)
+                    )
+
+                    // 2. Selected Column Indicator
+                    val selectedCenterX = selectedIndex * colWidth + colWidth / 2f
+                    drawRect(
+                        color = highlightColor.copy(alpha = 0.45f),
+                        topLeft = androidx.compose.ui.geometry.Offset(selectedIndex * colWidth + 4.dp.toPx(), 0f),
+                        size = androidx.compose.ui.geometry.Size(colWidth - 8.dp.toPx(), chartH)
+                    )
+
+                    // 3. Draw Tasks (Bars)
+                    if (selectedStream == "all" || selectedStream == "tasks") {
+                        val barW = 16.dp.toPx().coerceAtMost(colWidth * 0.45f)
+                        weeklyData.forEachIndexed { i, item ->
+                            val cx = i * colWidth + colWidth / 2f
+                            val barH = (item.tasks / 14f) * (chartH - 8.dp.toPx())
+                            val isSel = i == selectedIndex
+                            drawRoundRect(
+                                color = if (isSel) primaryColor else primaryColor.copy(alpha = 0.65f),
+                                topLeft = androidx.compose.ui.geometry.Offset(cx - barW / 2f, chartH - barH),
+                                size = androidx.compose.ui.geometry.Size(barW, barH),
+                                cornerRadius = androidx.compose.ui.geometry.CornerRadius(4.dp.toPx(), 4.dp.toPx())
+                            )
+                        }
+                    }
+
+                    // 4. Draw Spending (Dashed Line with circular points)
+                    if (selectedStream == "all" || selectedStream == "spending") {
+                        val spendPath = Path()
+                        val spendPoints = weeklyData.mapIndexed { i, item ->
+                            val cx = i * colWidth + colWidth / 2f
+                            val cy = chartH - ((item.spending / 5000f).coerceIn(0f, 1f) * (chartH - 12.dp.toPx()))
+                            androidx.compose.ui.geometry.Offset(cx, cy)
+                        }
+                        spendPath.moveTo(spendPoints[0].x, spendPoints[0].y)
+                        for (j in 1 until spendPoints.size) {
+                            spendPath.lineTo(spendPoints[j].x, spendPoints[j].y)
+                        }
+                        drawPath(
+                            path = spendPath,
+                            color = spendingColor,
+                            style = Stroke(
+                                width = 2.dp.toPx(),
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 8f), 0f)
+                            )
+                        )
+                        spendPoints.forEachIndexed { i, pt ->
+                            drawCircle(
+                                color = spendingColor,
+                                radius = if (i == selectedIndex) 5.dp.toPx() else 3.5.dp.toPx(),
+                                center = pt
+                            )
+                            drawCircle(
+                                color = Color.White,
+                                radius = if (i == selectedIndex) 2.5.dp.toPx() else 1.5.dp.toPx(),
+                                center = pt
+                            )
+                        }
+                    }
+
+                    // 5. Draw Habits (Solid Line with circular points)
+                    if (selectedStream == "all" || selectedStream == "habits") {
+                        val habitPath = Path()
+                        val habitPoints = weeklyData.mapIndexed { i, item ->
+                            val cx = i * colWidth + colWidth / 2f
+                            val cy = chartH - ((item.habits / 6f).coerceIn(0f, 1f) * (chartH - 10.dp.toPx()))
+                            androidx.compose.ui.geometry.Offset(cx, cy)
+                        }
+                        habitPath.moveTo(habitPoints[0].x, habitPoints[0].y)
+                        for (j in 1 until habitPoints.size) {
+                            val prev = habitPoints[j - 1]
+                            val curr = habitPoints[j]
+                            val midX = (prev.x + curr.x) / 2f
+                            habitPath.cubicTo(midX, prev.y, midX, curr.y, curr.x, curr.y)
+                        }
+                        drawPath(
+                            path = habitPath,
+                            color = habitsColor,
+                            style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                        habitPoints.forEachIndexed { i, pt ->
+                            drawCircle(
+                                color = habitsColor,
+                                radius = if (i == selectedIndex) 5.5.dp.toPx() else 4.dp.toPx(),
+                                center = pt
+                            )
+                            drawCircle(
+                                color = Color.White,
+                                radius = if (i == selectedIndex) 2.5.dp.toPx() else 1.5.dp.toPx(),
+                                center = pt
+                            )
+                        }
+                    }
+                }
+
+                // Interactive click areas overlay for each day
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 8.dp)
+                ) {
+                    weeklyData.forEachIndexed { idx, d ->
+                        val isSel = idx == selectedIndex
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable {
+                                    selectedIndex = idx
+                                    viewModel.showToast("${d.fullDay}: ${d.tasks} tasks, ${d.habits}/5 habits, ₹${d.spending}")
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Bottom
+                        ) {
+                            Text(
+                                text = d.day,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = if (isSel) Primary else OnSurfaceVariant,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 3 Bottom Metric Badges
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Tasks Velocity",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 9.sp)
+                        )
+                        Text(
+                            text = "53 Done",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        )
+                        Text(
+                            text = "88% goal",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF10B981),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Habits Kept",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 9.sp)
+                        )
+                        Text(
+                            text = "32 / 35",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF10B981)
+                            )
+                        )
+                        Text(
+                            text = "91% streak",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF10B981),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Spending",
+                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 9.sp)
+                        )
+                        Text(
+                            text = "₹19,050",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0288D1)
+                            )
+                        )
+                        Text(
+                            text = "₹15.9k buffer",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = Color(0xFF10B981),
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+                }
+            }
         }
     }
 }

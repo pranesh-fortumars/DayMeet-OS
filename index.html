@@ -6,12 +6,19 @@
   <title>DayMeet — Digital Command Center</title>
   <meta name="description" content="DayMeet: Personal digital command center for Productivity, Meetings, Tasks, Finance, Health, Habits, Goals, and Automations.">
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React 18 & Recharts (UMD for interactive Weekly Summary visualizations) -->
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prop-types@15.8.1/prop-types.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/recharts/umd/Recharts.min.js"></script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -49,6 +56,7 @@
       background-color: #FAF9FF;
       color: #181B25;
       -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.25s ease, color 0.25s ease;
     }
     .material-symbols-rounded {
       font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
@@ -69,12 +77,119 @@
       color: #777587 !important;
       opacity: 0.6;
     }
+
+    /* ============================================================ */
+    /* GLOBAL DARK THEME PALETTE (Adhering to Dark Theme Branding)  */
+    /* ============================================================ */
+    html.dark {
+      color-scheme: dark;
+    }
+    html.dark body {
+      background-color: #0F172A !important; /* Tailwind Slate-900 */
+      color: #F8FAFC !important; /* Slate-50 */
+    }
+    html.dark header {
+      background-color: rgba(15, 23, 42, 0.95) !important;
+      border-color: #334155 !important; /* Slate-700 */
+    }
+    html.dark footer, html.dark #bottom-dock {
+      background-color: rgba(30, 41, 59, 0.95) !important; /* Slate-800 */
+      border-color: #334155 !important;
+    }
+    /* Surface and Card Overrides */
+    html.dark .bg-white {
+      background-color: #1E293B !important; /* Slate-800 */
+    }
+    html.dark .bg-\[\#FAF9FF\], html.dark .bg-\[\#FAF9FF\]\/95 {
+      background-color: #0F172A !important;
+    }
+    html.dark .bg-\[\#F1F3FF\], html.dark .bg-\[\#EBEDFB\], html.dark .bg-\[\#E5E8F5\], html.dark .bg-\[\#F4F3FB\] {
+      background-color: #334155 !important; /* Slate-700 */
+    }
+    /* Borders */
+    html.dark .border-\[\#E5E8F5\], html.dark .border-\[\#C7C4D8\], html.dark .border-\[\#D7D9E7\] {
+      border-color: #334155 !important;
+    }
+    /* Text colors */
+    html.dark .text-\[\#181B25\] {
+      color: #F8FAFC !important;
+    }
+    html.dark .text-\[\#464555\] {
+      color: #94A3B8 !important; /* Slate-400 */
+    }
+    html.dark .text-\[\#777587\] {
+      color: #64748B !important; /* Slate-500 */
+    }
+    /* Inputs, Selects, Textareas */
+    html.dark input, html.dark select, html.dark textarea {
+      background-color: #0F172A !important;
+      border-color: #334155 !important;
+      color: #F8FAFC !important;
+    }
+    html.dark input::placeholder, html.dark textarea::placeholder {
+      color: #64748B !important;
+    }
+    /* Modals & Dialogs */
+    html.dark #modal-container, html.dark #copilot-sheet, html.dark #search-modal {
+      background-color: #1E293B !important;
+      border-color: #334155 !important;
+    }
+    html.dark #toast {
+      background-color: #1E293B !important;
+      border-color: #334155 !important;
+      color: #F8FAFC !important;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+    }
+    /* Specific Badge & Accent Containers in Dark Mode */
+    html.dark .bg-\[\#EDE7F6\] {
+      background-color: rgba(129, 140, 248, 0.18) !important;
+    }
+    html.dark .text-\[\#673AB7\], html.dark .text-\[\#3525CD\] {
+      color: #818CF8 !important; /* Indigo-400 */
+    }
+    html.dark .bg-\[\#E8F5E9\], html.dark .bg-\[\#E8F5E9\]\/50 {
+      background-color: rgba(52, 211, 153, 0.18) !important;
+    }
+    html.dark .text-\[\#2E7D32\], html.dark .text-\[\#005338\] {
+      color: #34D399 !important; /* Emerald-400 */
+    }
+    html.dark .bg-\[\#E0F2FE\] {
+      background-color: rgba(56, 189, 248, 0.18) !important;
+    }
+    html.dark .text-\[\#0288D1\], html.dark .text-\[\#006591\] {
+      color: #38BDF8 !important; /* Sky-400 */
+    }
+    html.dark .bg-\[\#FFF3E0\] {
+      background-color: rgba(245, 158, 11, 0.18) !important;
+    }
+    html.dark .text-\[\#F57C00\], html.dark .text-\[\#D97706\] {
+      color: #FBBF24 !important; /* Amber-400 */
+    }
+    html.dark .bg-\[\#E8EAF6\] {
+      background-color: rgba(99, 102, 241, 0.18) !important;
+    }
+    html.dark .bg-\[\#ECEFF1\] {
+      background-color: #334155 !important;
+    }
+    html.dark .text-\[\#455A64\] {
+      color: #CBD5E1 !important;
+    }
+    html.dark .bg-\[\#E2DFFF\] {
+      background-color: rgba(129, 140, 248, 0.25) !important;
+      color: #C7D2FE !important;
+    }
+    html.dark .hover\:bg-\[\#EBEDFB\]:hover {
+      background-color: #334155 !important;
+    }
+    html.dark .hover\:border-\[\#3525CD\]:hover {
+      border-color: #818CF8 !important;
+    }
   </style>
 </head>
-<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-indigo-100 selection:text-indigo-900">
+<body class="min-h-screen flex flex-col justify-between antialiased selection:bg-indigo-500/30 selection:text-indigo-200">
 
   <!-- TOP APP BAR / HEADER (Matching DayMeetHeader.kt) -->
-  <header class="sticky top-0 z-40 bg-[#FAF9FF]/95 backdrop-blur-md border-b border-[#E5E8F5]">
+  <header class="sticky top-0 z-40 bg-[#FAF9FF]/95 backdrop-blur-md border-b border-[#E5E8F5] transition-colors">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 h-[60px] flex items-center justify-between">
       <!-- Brand Logo & Title -->
       <div onclick="openAiAssistant()" class="flex items-center gap-2.5 cursor-pointer select-none">
@@ -87,8 +202,12 @@
         </div>
       </div>
 
-      <!-- Action Icons (Search, Notifications, Profile, Copilot) -->
+      <!-- Action Icons (Theme Toggle, Search, Notifications, Copilot, Profile) -->
       <div class="flex items-center gap-1">
+        <button onclick="toggleGlobalTheme()" id="header-theme-toggle" title="Toggle Global Dark / Light Theme" class="w-9 h-9 rounded-full flex items-center justify-center text-[#464555] hover:bg-[#EBEDFB] transition">
+          <span id="header-theme-icon" class="material-symbols-rounded text-[20px]">dark_mode</span>
+        </button>
+
         <button onclick="openSearchModal()" title="Search Across All Modules" class="w-9 h-9 rounded-full flex items-center justify-center text-[#464555] hover:bg-[#EBEDFB] transition">
           <span class="material-symbols-rounded text-[20px]">search</span>
         </button>
@@ -570,13 +689,78 @@
     <div id="screen-insights" class="hidden space-y-4">
       <div class="flex items-center justify-between pt-1">
         <div>
-          <h2 class="text-xl font-black text-[#181B25]">Bio-Sync & Health</h2>
-          <p class="text-xs text-[#464555]">Wearable biometrics & daily vitality index</p>
+          <h2 class="text-xl font-black text-[#181B25]">Insights & Analytics</h2>
+          <p class="text-xs text-[#464555]">Cross-stream trends, biometrics & weekly correlation</p>
         </div>
         <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#E8F5E9] text-[#2E7D32] flex items-center gap-1">
           <span class="w-2 h-2 rounded-full bg-[#2E7D32] animate-pulse"></span>
           Oura Ring Active
         </span>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- WEEKLY SUMMARY: 7-Day Trend of Tasks, Habits & Spending using Recharts -->
+      <!-- ============================================================ -->
+      <div id="weekly-summary-card" class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm space-y-3.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="flex items-center gap-2.5">
+            <div class="w-9 h-9 rounded-xl bg-[#EDE7F6] text-[#3525CD] flex items-center justify-center shrink-0">
+              <span class="material-symbols-rounded text-[20px]">insights</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-[#181B25]">Weekly Summary</h3>
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E2DFFF] text-[#3525CD]">7-Day Correlation</span>
+              </div>
+              <p class="text-xs text-[#464555]">Tasks completed, habits maintained, and total spending visualized via Recharts</p>
+            </div>
+          </div>
+
+          <!-- Stream View Filter Pills -->
+          <div class="flex items-center gap-1 bg-[#F1F3FF] p-1 rounded-xl self-start sm:self-auto border border-[#E5E8F5]">
+            <button onclick="setWeeklySummaryStream('all')" id="ws-pill-all" class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition bg-[#3525CD] text-white">All Streams</button>
+            <button onclick="setWeeklySummaryStream('tasks')" id="ws-pill-tasks" class="px-2.5 py-1 rounded-lg text-[11px] font-medium transition text-[#464555] hover:text-[#181B25]">Tasks</button>
+            <button onclick="setWeeklySummaryStream('habits')" id="ws-pill-habits" class="px-2.5 py-1 rounded-lg text-[11px] font-medium transition text-[#464555] hover:text-[#181B25]">Habits</button>
+            <button onclick="setWeeklySummaryStream('spending')" id="ws-pill-spending" class="px-2.5 py-1 rounded-lg text-[11px] font-medium transition text-[#464555] hover:text-[#181B25]">Spending</button>
+          </div>
+        </div>
+
+        <!-- Interactive Scrubber & Tooltip Callout -->
+        <div id="weekly-summary-tooltip-box" class="p-3 rounded-xl bg-[#F4F3FB] border border-[#E5E8F5] flex flex-wrap items-center justify-between gap-2 text-xs transition">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#3525CD]"></span>
+            <span id="ws-tooltip-day" class="font-bold text-[#181B25]">Thu (Today): Peak Output & Optimal Health</span>
+          </div>
+          <div class="flex items-center gap-3 text-[11px]">
+            <span class="font-semibold text-[#3525CD]" id="ws-tooltip-tasks">✓ 11 Tasks</span>
+            <span class="font-semibold text-[#10B981]" id="ws-tooltip-habits">🔥 5/5 Habits</span>
+            <span class="font-semibold text-[#0288D1]" id="ws-tooltip-spend">₹ ₹3,450 Spend</span>
+          </div>
+        </div>
+
+        <!-- Recharts Container (Mounted via React Recharts or dynamic SVG fallback) -->
+        <div id="weekly-summary-recharts-root" class="w-full min-h-[220px] relative">
+          <!-- Dynamically populated -->
+        </div>
+
+        <!-- 3-Column Metrics Summary Grid -->
+        <div class="grid grid-cols-3 gap-2.5 pt-2 border-t border-[#E5E8F5]">
+          <div class="p-2.5 rounded-xl bg-[#F1F3FF] text-center border border-[#E5E8F5]">
+            <p class="text-[10px] text-[#464555] font-medium">Tasks Velocity</p>
+            <p class="text-base font-extrabold text-[#3525CD] mt-0.5">53 Done</p>
+            <span class="text-[9px] font-bold text-[#10B981]">88% weekly goal</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#F1F3FF] text-center border border-[#E5E8F5]">
+            <p class="text-[10px] text-[#464555] font-medium">Habits Kept</p>
+            <p class="text-base font-extrabold text-[#10B981] mt-0.5">32 / 35</p>
+            <span class="text-[9px] font-bold text-[#10B981]">91% consistency</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-[#F1F3FF] text-center border border-[#E5E8F5]">
+            <p class="text-[10px] text-[#464555] font-medium">Total Spending</p>
+            <p class="text-base font-extrabold text-[#0288D1] mt-0.5">₹19,050</p>
+            <span class="text-[9px] font-bold text-[#10B981]">₹15.9k under limit</span>
+          </div>
+        </div>
       </div>
 
       <!-- 4-Card Grid Metrics -->
@@ -643,6 +827,54 @@
       <div class="pt-1">
         <h2 class="text-xl font-black text-[#181B25]">Command Center</h2>
         <p class="text-xs text-[#464555]">All 33 interconnected life operating system modules</p>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- GLOBAL THEME SWITCHER CARD (Command Center Dark Mode Branding) -->
+      <!-- ============================================================ -->
+      <div id="command-center-theme-switcher" class="bg-white rounded-2xl p-4 border border-[#E5E8F5] shadow-sm space-y-3.5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div id="theme-card-icon-box" class="w-10 h-10 rounded-xl bg-[#EDE7F6] text-[#3525CD] flex items-center justify-center transition-colors">
+              <span id="theme-card-icon" class="material-symbols-rounded text-[22px]">palette</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-[#181B25]">Global System Theme</h3>
+                <span id="theme-status-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-[#E2DFFF] text-[#3525CD] transition-colors">Light Mode</span>
+              </div>
+              <p class="text-xs text-[#464555]">Synchronizes deep Slate-900 OLED dark branding across all 33 modules</p>
+            </div>
+          </div>
+
+          <!-- Quick Toggle Switch -->
+          <div onclick="toggleGlobalTheme()" id="global-theme-toggle-btn" class="w-12 h-6 rounded-full bg-gray-300 p-0.5 transition-colors relative flex items-center cursor-pointer select-none">
+            <div id="global-theme-toggle-knob" class="w-5 h-5 rounded-full bg-white shadow-md transform translate-x-0 transition-transform"></div>
+          </div>
+        </div>
+
+        <!-- 3 Mode Selection Pills -->
+        <div class="grid grid-cols-3 gap-2 pt-1">
+          <button onclick="setGlobalTheme('light')" id="theme-btn-light" class="p-2.5 rounded-xl border-2 border-[#3525CD] bg-[#F1F3FF] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer">
+            <span class="material-symbols-rounded text-[18px] text-[#3525CD]">light_mode</span>
+            <span class="text-[11px] font-bold text-[#3525CD]">Light</span>
+          </button>
+          
+          <button onclick="setGlobalTheme('dark')" id="theme-btn-dark" class="p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#3525CD] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer">
+            <span class="material-symbols-rounded text-[18px] text-[#464555]">dark_mode</span>
+            <span class="text-[11px] font-medium text-[#464555]">Dark Slate</span>
+          </button>
+
+          <button onclick="setGlobalTheme('system')" id="theme-btn-system" class="p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#3525CD] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer">
+            <span class="material-symbols-rounded text-[18px] text-[#464555]">brightness_auto</span>
+            <span class="text-[11px] font-medium text-[#464555]">Auto (OS)</span>
+          </button>
+        </div>
+
+        <div class="p-2.5 rounded-xl bg-[#F4F3FB] border border-[#E5E8F5] flex items-center gap-2 text-xs text-[#464555]">
+          <span class="material-symbols-rounded text-[16px] text-[#3525CD] shrink-0">auto_awesome</span>
+          <span>Adaptive contrast system: Slate-900 background, Slate-800 elevated surfaces, and high-legibility typography.</span>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -1065,6 +1297,7 @@
   <script>
     // Initial State (Mirroring DayMeetRepository and DayMeetViewModel in Android)
     let state = {
+      themeMode: localStorage.getItem('daymeet_theme_mode') || 'light',
       currentTab: 'home',
       activeCategoryFilter: 'All',
       selectedQuickAddCat: 'Task',
@@ -1074,6 +1307,17 @@
       exerciseStreak: 14,
       syncDeviceCalendarAlerts: true,
       selectedFinanceDayIndex: 3,
+      weeklySummaryMode: 'all', // 'all', 'tasks', 'habits', 'spending'
+      selectedWeeklySummaryIndex: 3,
+      weeklySummaryData: [
+        { day: 'Mon', fullDay: 'Monday', tasks: 6, habits: 4, spending: 2100 },
+        { day: 'Tue', fullDay: 'Tuesday', tasks: 8, habits: 5, spending: 1850 },
+        { day: 'Wed', fullDay: 'Wednesday', tasks: 7, habits: 5, spending: 3200 },
+        { day: 'Thu', fullDay: 'Thursday (Today)', tasks: 11, habits: 5, spending: 3450 },
+        { day: 'Fri', fullDay: 'Friday', tasks: 9, habits: 4, spending: 2400 },
+        { day: 'Sat', fullDay: 'Saturday', tasks: 5, habits: 5, spending: 1950 },
+        { day: 'Sun', fullDay: 'Sunday', tasks: 7, habits: 4, spending: 4100 }
+      ],
       crossStreamItems: [
         { id: 'cs1', time: '09:30 AM', title: 'Product Strategy Review', subtitle: '4 attendees • Google Meet', tag: 'Meeting', tagType: 'meeting', isCompleted: false },
         { id: 'cs2', time: '12:00 PM', title: 'Finalize Mobile Design Tokens', subtitle: 'Due at release freeze • 3 subtasks', tag: 'Priority', tagType: 'priority', isCompleted: false },
@@ -1310,6 +1554,10 @@
       });
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (tabId === 'insights') {
+        setTimeout(renderWeeklySummaryChart, 60);
+      }
     }
 
     function filterTasks(category) {
@@ -1578,6 +1826,389 @@
       }
     }
 
+    // ============================================================
+    // GLOBAL THEME SWITCHER LOGIC (Command Center & Header)
+    // ============================================================
+    function toggleGlobalTheme() {
+      const isDark = document.documentElement.classList.contains('dark');
+      setGlobalTheme(isDark ? 'light' : 'dark', true);
+    }
+
+    function setGlobalTheme(mode, showToast = true) {
+      state.themeMode = mode;
+      localStorage.setItem('daymeet_theme_mode', mode);
+
+      let effectiveDark = false;
+      if (mode === 'dark') {
+        effectiveDark = true;
+      } else if (mode === 'light') {
+        effectiveDark = false;
+      } else {
+        // System preference
+        effectiveDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      if (effectiveDark) {
+        document.documentElement.classList.add('dark');
+        document.body.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+        document.body.classList.remove('dark');
+      }
+
+      // Update Header Theme Icon
+      const headerIcon = document.getElementById('header-theme-icon');
+      if (headerIcon) {
+        headerIcon.innerText = effectiveDark ? 'light_mode' : 'dark_mode';
+        headerIcon.title = effectiveDark ? 'Switch to Light Mode' : 'Switch to Dark Mode';
+      }
+
+      // Update Command Center Theme Switcher UI
+      const knob = document.getElementById('global-theme-toggle-knob');
+      const toggleBtn = document.getElementById('global-theme-toggle-btn');
+      const badge = document.getElementById('theme-status-badge');
+      const iconBox = document.getElementById('theme-card-icon-box');
+
+      if (knob && toggleBtn) {
+        if (effectiveDark) {
+          toggleBtn.className = 'w-12 h-6 rounded-full bg-[#818CF8] p-0.5 transition-colors relative flex items-center cursor-pointer select-none';
+          knob.className = 'w-5 h-5 rounded-full bg-white shadow-md transform translate-x-6 transition-transform';
+        } else {
+          toggleBtn.className = 'w-12 h-6 rounded-full bg-gray-300 p-0.5 transition-colors relative flex items-center cursor-pointer select-none';
+          knob.className = 'w-5 h-5 rounded-full bg-white shadow-md transform translate-x-0 transition-transform';
+        }
+      }
+
+      if (badge) {
+        badge.innerText = effectiveDark ? 'Dark Mode Active' : 'Light Mode Active';
+        badge.className = effectiveDark
+          ? 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#312E81] text-[#C7D2FE] transition-colors'
+          : 'px-2 py-0.5 rounded text-[10px] font-bold bg-[#E2DFFF] text-[#3525CD] transition-colors';
+      }
+
+      if (iconBox) {
+        iconBox.className = effectiveDark
+          ? 'w-10 h-10 rounded-xl bg-[#312E81] text-[#818CF8] flex items-center justify-center transition-colors'
+          : 'w-10 h-10 rounded-xl bg-[#EDE7F6] text-[#3525CD] flex items-center justify-center transition-colors';
+      }
+
+      // Mode Selection Pills
+      ['light', 'dark', 'system'].forEach(m => {
+        const btn = document.getElementById(`theme-btn-${m}`);
+        if (!btn) return;
+        if (m === mode) {
+          btn.className = effectiveDark
+            ? 'p-2.5 rounded-xl border-2 border-[#818CF8] bg-[#334155] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer'
+            : 'p-2.5 rounded-xl border-2 border-[#3525CD] bg-[#F1F3FF] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer';
+          const icon = btn.querySelector('span:first-child');
+          const txt = btn.querySelector('span:last-child');
+          if (icon) icon.className = effectiveDark ? 'material-symbols-rounded text-[18px] text-[#818CF8]' : 'material-symbols-rounded text-[18px] text-[#3525CD]';
+          if (txt) txt.className = effectiveDark ? 'text-[11px] font-bold text-[#F8FAFC]' : 'text-[11px] font-bold text-[#3525CD]';
+        } else {
+          btn.className = 'p-2.5 rounded-xl border border-[#E5E8F5] bg-[#FAF9FF] hover:border-[#3525CD] flex flex-col items-center justify-center gap-1 transition-all cursor-pointer';
+          const icon = btn.querySelector('span:first-child');
+          const txt = btn.querySelector('span:last-child');
+          if (icon) icon.className = 'material-symbols-rounded text-[18px] text-[#464555]';
+          if (txt) txt.className = 'text-[11px] font-medium text-[#464555]';
+        }
+      });
+
+      if (showToast) {
+        triggerToast(effectiveDark ? '🌙 Dark Mode (Slate-900 OLED) activated across all modules' : '☀️ Light Mode activated');
+      }
+
+      // Re-render Recharts Weekly Summary to match active theme palette
+      setTimeout(renderWeeklySummaryChart, 40);
+    }
+
+    // ============================================================
+    // WEEKLY SUMMARY RECHARTS VISUALIZATION LOGIC
+    // ============================================================
+    function setWeeklySummaryStream(stream) {
+      state.weeklySummaryMode = stream;
+      ['all', 'tasks', 'habits', 'spending'].forEach(s => {
+        const pill = document.getElementById(`ws-pill-${s}`);
+        if (!pill) return;
+        if (s === stream) {
+          pill.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold transition bg-[#3525CD] text-white shadow-xs';
+        } else {
+          pill.className = 'px-2.5 py-1 rounded-lg text-[11px] font-medium transition text-[#464555] hover:text-[#181B25]';
+        }
+      });
+      renderWeeklySummaryChart();
+    }
+
+    function selectWeeklySummaryDay(index) {
+      state.selectedWeeklySummaryIndex = index;
+      const d = state.weeklySummaryData[index];
+      if (!d) return;
+
+      const dayEl = document.getElementById('ws-tooltip-day');
+      const tasksEl = document.getElementById('ws-tooltip-tasks');
+      const habitsEl = document.getElementById('ws-tooltip-habits');
+      const spendEl = document.getElementById('ws-tooltip-spend');
+
+      if (dayEl) dayEl.innerText = `${d.fullDay}: Output & Habit Balance`;
+      if (tasksEl) tasksEl.innerText = `✓ ${d.tasks} Tasks`;
+      if (habitsEl) habitsEl.innerText = `🔥 ${d.habits}/5 Habits`;
+      if (spendEl) spendEl.innerText = `₹ ₹${d.spending.toLocaleString()} Spend`;
+
+      // Update SVG highlights if in fallback mode
+      for (let i = 0; i < 7; i++) {
+        const guide = document.getElementById(`ws-guide-${i}`);
+        if (guide) {
+          guide.setAttribute('opacity', i === index ? '1' : '0');
+        }
+      }
+    }
+
+    let rechartsReactRoot = null;
+
+    function renderWeeklySummaryChart() {
+      const container = document.getElementById('weekly-summary-recharts-root');
+      if (!container) return;
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const data = state.weeklySummaryData;
+      const mode = state.weeklySummaryMode; // 'all', 'tasks', 'habits', 'spending'
+
+      // Check if React, ReactDOM, and Recharts are loaded from CDN
+      if (window.React && window.ReactDOM && window.Recharts) {
+        try {
+          const { ResponsiveContainer, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, CartesianGrid } = window.Recharts;
+          
+          const primaryColor = isDark ? '#818CF8' : '#3525CD';
+          const habitsColor = isDark ? '#34D399' : '#10B981';
+          const spendColor = isDark ? '#38BDF8' : '#0288D1';
+          const textColor = isDark ? '#94A3B8' : '#464555';
+          const gridColor = isDark ? '#334155' : '#E5E8F5';
+          const tooltipBg = isDark ? '#1E293B' : '#FFFFFF';
+          const tooltipBorder = isDark ? '#334155' : '#E5E8F5';
+
+          const ChartComponent = () => {
+            return React.createElement(
+              ResponsiveContainer,
+              { width: '100%', height: 230 },
+              React.createElement(
+                ComposedChart,
+                {
+                  data: data,
+                  margin: { top: 12, right: (mode === 'all' || mode === 'spending') ? 16 : 6, left: -22, bottom: 4 }
+                },
+                React.createElement(CartesianGrid, { strokeDasharray: '3 3', stroke: gridColor, vertical: false }),
+                React.createElement(XAxis, {
+                  dataKey: 'day',
+                  tick: { fill: textColor, fontSize: 11, fontWeight: 600 },
+                  stroke: gridColor,
+                  tickLine: false
+                }),
+                React.createElement(YAxis, {
+                  yAxisId: 'left',
+                  tick: { fill: textColor, fontSize: 10 },
+                  stroke: gridColor,
+                  domain: [0, 14],
+                  tickLine: false
+                }),
+                (mode === 'all' || mode === 'spending') && React.createElement(YAxis, {
+                  yAxisId: 'right',
+                  orientation: 'right',
+                  tick: { fill: textColor, fontSize: 10 },
+                  stroke: gridColor,
+                  domain: [0, 5000],
+                  tickLine: false,
+                  tickFormatter: (v) => `₹${v / 1000}k`
+                }),
+                React.createElement(Tooltip, {
+                  contentStyle: {
+                    backgroundColor: tooltipBg,
+                    borderColor: tooltipBorder,
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    color: isDark ? '#F8FAFC' : '#181B25',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+                  },
+                  formatter: (value, name) => {
+                    if (name === 'Tasks Completed') return [`${value} tasks`, name];
+                    if (name === 'Habits Kept') return [`${value}/5 maintained`, name];
+                    if (name === 'Total Spending') return [`₹${value.toLocaleString()}`, name];
+                    return [value, name];
+                  }
+                }),
+                React.createElement(Legend, {
+                  wrapperStyle: { fontSize: '11px', paddingTop: '8px' }
+                }),
+                (mode === 'all' || mode === 'tasks') && React.createElement(Bar, {
+                  yAxisId: 'left',
+                  dataKey: 'tasks',
+                  name: 'Tasks Completed',
+                  fill: primaryColor,
+                  radius: [4, 4, 0, 0],
+                  barSize: 20
+                }),
+                (mode === 'all' || mode === 'habits') && React.createElement(Line, {
+                  yAxisId: 'left',
+                  type: 'monotone',
+                  dataKey: 'habits',
+                  name: 'Habits Kept',
+                  stroke: habitsColor,
+                  strokeWidth: 3,
+                  dot: { r: 4, fill: habitsColor, stroke: tooltipBg, strokeWidth: 2 }
+                }),
+                (mode === 'all' || mode === 'spending') && React.createElement(Line, {
+                  yAxisId: 'right',
+                  type: 'monotone',
+                  dataKey: 'spending',
+                  name: 'Total Spending',
+                  stroke: spendColor,
+                  strokeWidth: 2.5,
+                  strokeDasharray: '4 4',
+                  dot: { r: 3.5, fill: spendColor, stroke: tooltipBg, strokeWidth: 1.5 }
+                })
+              )
+            );
+          };
+
+          if (!rechartsReactRoot) {
+            rechartsReactRoot = ReactDOM.createRoot(container);
+          }
+          rechartsReactRoot.render(React.createElement(ChartComponent));
+          return;
+        } catch (e) {
+          console.warn('Recharts React render error, falling back to SVG renderer:', e);
+        }
+      }
+
+      // Fallback: Render high-fidelity interactive SVG chart
+      renderSvgWeeklySummaryChart();
+    }
+
+    function renderSvgWeeklySummaryChart() {
+      const container = document.getElementById('weekly-summary-recharts-root');
+      if (!container) return;
+
+      const isDark = document.documentElement.classList.contains('dark');
+      const data = state.weeklySummaryData;
+      const mode = state.weeklySummaryMode;
+      const activeIdx = state.selectedWeeklySummaryIndex;
+
+      const primaryColor = isDark ? '#818CF8' : '#3525CD';
+      const habitsColor = isDark ? '#34D399' : '#10B981';
+      const spendColor = isDark ? '#38BDF8' : '#0288D1';
+      const gridColor = isDark ? '#334155' : '#E5E8F5';
+      const textColor = isDark ? '#94A3B8' : '#464555';
+
+      const width = 500;
+      const height = 210;
+      const padding = { top: 20, right: 35, bottom: 35, left: 35 };
+      const chartW = width - padding.left - padding.right;
+      const chartH = height - padding.top - padding.bottom;
+
+      // Calculate coordinates for 7 days
+      const stepX = chartW / 6;
+      const points = data.map((d, i) => {
+        const x = padding.left + i * stepX;
+        // Tasks: 0 to 14
+        const yTasks = padding.top + chartH - (d.tasks / 14) * chartH;
+        // Habits: 0 to 6
+        const yHabits = padding.top + chartH - (d.habits / 6) * chartH;
+        // Spending: 0 to 5000
+        const ySpend = padding.top + chartH - (d.spending / 5000) * chartH;
+        return { x, yTasks, yHabits, ySpend, d, i };
+      });
+
+      // Build smooth path for habits
+      let pathHabits = `M ${points[0].x} ${points[0].yHabits}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i + 1];
+        const midX = (p0.x + p1.x) / 2;
+        pathHabits += ` C ${midX} ${p0.yHabits}, ${midX} ${p1.yHabits}, ${p1.x} ${p1.yHabits}`;
+      }
+
+      // Build smooth path for spending
+      let pathSpend = `M ${points[0].x} ${points[0].ySpend}`;
+      for (let i = 0; i < points.length - 1; i++) {
+        const p0 = points[i];
+        const p1 = points[i + 1];
+        const midX = (p0.x + p1.x) / 2;
+        pathSpend += ` C ${midX} ${p0.ySpend}, ${midX} ${p1.ySpend}, ${p1.x} ${p1.ySpend}`;
+      }
+
+      let svgHtml = `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full h-[220px] select-none" preserveAspectRatio="none">
+          <!-- Cartesian Grid lines -->
+          <line x1="${padding.left}" y1="${padding.top}" x2="${width - padding.right}" y2="${padding.top}" stroke="${gridColor}" stroke-dasharray="3 3" />
+          <line x1="${padding.left}" y1="${padding.top + chartH * 0.33}" x2="${width - padding.right}" y2="${padding.top + chartH * 0.33}" stroke="${gridColor}" stroke-dasharray="3 3" />
+          <line x1="${padding.left}" y1="${padding.top + chartH * 0.66}" x2="${width - padding.right}" y2="${padding.top + chartH * 0.66}" stroke="${gridColor}" stroke-dasharray="3 3" />
+          <line x1="${padding.left}" y1="${padding.top + chartH}" x2="${width - padding.right}" y2="${padding.top + chartH}" stroke="${gridColor}" />
+
+          <!-- Y Axis Labels -->
+          <text x="${padding.left - 8}" y="${padding.top + 4}" fill="${textColor}" font-size="9" text-anchor="end" font-weight="600">14</text>
+          <text x="${padding.left - 8}" y="${padding.top + chartH * 0.5 + 3}" fill="${textColor}" font-size="9" text-anchor="end" font-weight="600">7</text>
+          <text x="${padding.left - 8}" y="${padding.top + chartH}" fill="${textColor}" font-size="9" text-anchor="end" font-weight="600">0</text>
+          
+          <text x="${width - padding.right + 8}" y="${padding.top + 4}" fill="${textColor}" font-size="9" text-anchor="start" font-weight="600">₹5k</text>
+          <text x="${width - padding.right + 8}" y="${padding.top + chartH * 0.5 + 3}" fill="${textColor}" font-size="9" text-anchor="start" font-weight="600">₹2.5k</text>
+          <text x="${width - padding.right + 8}" y="${padding.top + chartH}" fill="${textColor}" font-size="9" text-anchor="start" font-weight="600">₹0</text>
+      `;
+
+      // Vertical guide lines for each day
+      points.forEach(p => {
+        svgHtml += `
+          <line id="ws-guide-${p.i}" x1="${p.x}" y1="${padding.top}" x2="${p.x}" y2="${padding.top + chartH}" stroke="${primaryColor}" stroke-dasharray="2 2" opacity="${p.i === activeIdx ? '1' : '0'}" stroke-width="1.5" />
+        `;
+      });
+
+      // Tasks Bars
+      if (mode === 'all' || mode === 'tasks') {
+        points.forEach(p => {
+          const barW = 18;
+          const barH = padding.top + chartH - p.yTasks;
+          const isSelected = p.i === activeIdx;
+          svgHtml += `
+            <rect x="${p.x - barW / 2}" y="${p.yTasks}" width="${barW}" height="${barH}" rx="4" fill="${primaryColor}" opacity="${isSelected ? '1' : '0.75'}" class="transition-all cursor-pointer" onclick="selectWeeklySummaryDay(${p.i})" onmouseover="selectWeeklySummaryDay(${p.i})" />
+          `;
+        });
+      }
+
+      // Spending Dashed Spline
+      if (mode === 'all' || mode === 'spending') {
+        svgHtml += `
+          <path d="${pathSpend}" fill="none" stroke="${spendColor}" stroke-width="2.5" stroke-dasharray="4 4" />
+        `;
+        points.forEach(p => {
+          svgHtml += `
+            <circle cx="${p.x}" cy="${p.ySpend}" r="3.5" fill="${spendColor}" stroke="${isDark ? '#1E293B' : '#FFFFFF'}" stroke-width="1.5" class="cursor-pointer" onclick="selectWeeklySummaryDay(${p.i})" />
+          `;
+        });
+      }
+
+      // Habits Monotone Spline
+      if (mode === 'all' || mode === 'habits') {
+        svgHtml += `
+          <path d="${pathHabits}" fill="none" stroke="${habitsColor}" stroke-width="3" />
+        `;
+        points.forEach(p => {
+          svgHtml += `
+            <circle cx="${p.x}" cy="${p.yHabits}" r="4" fill="${habitsColor}" stroke="${isDark ? '#1E293B' : '#FFFFFF'}" stroke-width="2" class="cursor-pointer" onclick="selectWeeklySummaryDay(${p.i})" />
+          `;
+        });
+      }
+
+      // Day Labels on X-axis and interactive hit areas
+      points.forEach(p => {
+        const isSelected = p.i === activeIdx;
+        svgHtml += `
+          <text x="${p.x}" y="${height - 12}" fill="${isSelected ? primaryColor : textColor}" font-size="11" font-weight="${isSelected ? '700' : '500'}" text-anchor="middle" class="cursor-pointer select-none" onclick="selectWeeklySummaryDay(${p.i})">${p.d.day}</text>
+          <!-- Transparent clickable hit overlay -->
+          <rect x="${p.x - stepX / 2}" y="${padding.top}" width="${stepX}" height="${chartH + 25}" fill="transparent" class="cursor-pointer" onclick="selectWeeklySummaryDay(${p.i})" onmouseover="selectWeeklySummaryDay(${p.i})" />
+        `;
+      });
+
+      svgHtml += `</svg>`;
+      container.innerHTML = svgHtml;
+    }
+
     // Toast Notification Banner (DayMeet toast matching app_toast_banner)
     let toastTimer = null;
     function triggerToast(text) {
@@ -1594,10 +2225,21 @@
       }, 3200);
     }
 
-    // Initial Load
+    // Initial Load & System Theme Listener
     document.addEventListener('DOMContentLoaded', () => {
       renderCrossStream();
       renderTasksTab();
+      setGlobalTheme(state.themeMode, false);
+      renderWeeklySummaryChart();
+
+      // Listen to OS-level dark theme changes when in 'system' mode
+      if (window.matchMedia) {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+          if (state.themeMode === 'system') {
+            setGlobalTheme('system', false);
+          }
+        });
+      }
     });
   </script>
 </body>
