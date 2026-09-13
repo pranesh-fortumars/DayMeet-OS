@@ -10,9 +10,11 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -328,17 +330,24 @@ fun TasksScreen(
             AnimatedTaskItemRow(
                 task = task,
                 onToggle = { viewModel.toggleFeedTaskDone(task.id) },
-                onRemove = { viewModel.removeFeedTask(task.id) }
+                onRemove = { viewModel.removeFeedTask(task.id) },
+                onReschedule = { newTime -> viewModel.rescheduleTask(task.id, newTime) },
+                onSetPriority = { priority -> viewModel.updateTaskPriority(task.id, priority) },
+                onDelete = { viewModel.deleteTask(task.id) }
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AnimatedTaskItemRow(
     task: FeedItem,
     onToggle: () -> Unit,
     onRemove: () -> Unit,
+    onReschedule: (String) -> Unit = {},
+    onSetPriority: (Priority) -> Unit = {},
+    onDelete: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -349,6 +358,10 @@ fun AnimatedTaskItemRow(
     val strikeProgress = remember { Animatable(if (task.isCompleted) 1f else 0f) }
     val isDueSoon = remember(task.time) { TimeUtils.isDueWithinNextTwoHours(task.time) }
     val isWarning = isDueSoon && !task.isCompleted && !isToggledState
+
+    var showContextMenu by remember { mutableStateOf(false) }
+    var showPrioritySubMenu by remember { mutableStateOf(false) }
+    var showRescheduleSubMenu by remember { mutableStateOf(false) }
 
     fun triggerCheckboxToggle() {
         if (isAnimatingOut) return
@@ -420,14 +433,18 @@ fun AnimatedTaskItemRow(
                         Modifier
                     }
                 )
-                .clickable { triggerCheckboxToggle() }
+                .combinedClickable(
+                    onClick = { triggerCheckboxToggle() },
+                    onLongClick = { showContextMenu = true }
+                )
                 .testTag("task_item_${task.id}")
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min)
-            ) {
+            Box {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
+                ) {
                 // Left priority accent bar
                 Box(
                     modifier = Modifier
@@ -622,6 +639,120 @@ fun AnimatedTaskItemRow(
                     }
                 }
             }
+
+            // Long-press Context Mini-Menu
+            DropdownMenu(
+                expanded = showContextMenu,
+                onDismissRequest = {
+                    showContextMenu = false
+                    showPrioritySubMenu = false
+                    showRescheduleSubMenu = false
+                },
+                modifier = Modifier
+                    .background(SurfaceContainerLowest)
+                    .testTag("task_context_menu_${task.id}")
+            ) {
+                Text(
+                    text = task.title,
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = OnSurface
+                    ),
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                )
+                HorizontalDivider(color = SurfaceContainerHigh)
+
+                // Action 1: Reschedule
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
+                            Text("Reschedule", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    },
+                    onClick = {
+                        showRescheduleSubMenu = !showRescheduleSubMenu
+                        showPrioritySubMenu = false
+                    },
+                    modifier = Modifier.testTag("task_action_reschedule_${task.id}")
+                )
+
+                if (showRescheduleSubMenu) {
+                    listOf("Today 05:00 PM", "Tomorrow 09:00 AM", "In 2 Hours", "Next Week").forEach { preset ->
+                        DropdownMenuItem(
+                            text = {
+                                Text("  • $preset", style = MaterialTheme.typography.bodySmall.copy(color = Primary))
+                            },
+                            onClick = {
+                                onReschedule(preset)
+                                showContextMenu = false
+                                showRescheduleSubMenu = false
+                            }
+                        )
+                    }
+                }
+
+                // Action 2: Set Priority
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Flag, contentDescription = null, tint = AmberWarning, modifier = Modifier.size(18.dp))
+                            Text("Set Priority", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    },
+                    onClick = {
+                        showPrioritySubMenu = !showPrioritySubMenu
+                        showRescheduleSubMenu = false
+                    },
+                    modifier = Modifier.testTag("task_action_set_priority_${task.id}")
+                )
+
+                if (showPrioritySubMenu) {
+                    listOf(
+                        Priority.HIGH to "High Priority",
+                        Priority.MEDIUM to "Medium Priority",
+                        Priority.LOW to "Low Priority"
+                    ).forEach { (p, label) ->
+                        DropdownMenuItem(
+                            text = {
+                                Text("  • $label", style = MaterialTheme.typography.bodySmall)
+                            },
+                            onClick = {
+                                onSetPriority(p)
+                                showContextMenu = false
+                                showPrioritySubMenu = false
+                            }
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = SurfaceContainerHigh)
+
+                // Action 3: Delete
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
+                            Text("Delete Task", style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFD32F2F)))
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onDelete()
+                    },
+                    modifier = Modifier.testTag("task_action_delete_${task.id}")
+                )
+            }
         }
+    }
     }
 }

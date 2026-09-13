@@ -932,6 +932,42 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    fun updateTaskPriority(id: String, priority: Priority) {
+        val task = _feedItems.value.firstOrNull { it.id == id }
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == id) {
+                item.copy(priority = priority)
+            } else {
+                item
+            }
+        }
+        if (task != null) {
+            showToast("Updated priority of '${task.title}' to ${priority.label}")
+        }
+    }
+
+    fun rescheduleTask(id: String, newTime: String) {
+        val task = _feedItems.value.firstOrNull { it.id == id }
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == id) {
+                item.copy(time = newTime)
+            } else {
+                item
+            }
+        }
+        if (task != null) {
+            showToast("Rescheduled '${task.title}' to $newTime")
+        }
+    }
+
+    fun deleteTask(id: String) {
+        val task = _feedItems.value.firstOrNull { it.id == id }
+        _feedItems.value = _feedItems.value.filterNot { it.id == id }
+        if (task != null) {
+            showToast("Deleted task '${task.title}'")
+        }
+    }
+
     fun toggleCrossStreamDone(id: String) {
         _crossStreamItems.value = _crossStreamItems.value.map { item ->
             if (item.id == id) item.copy(isCompleted = !item.isCompleted) else item
