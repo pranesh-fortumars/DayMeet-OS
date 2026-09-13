@@ -146,6 +146,12 @@ class DayMeetViewModel : ViewModel() {
     private val _isFocusCompleted = MutableStateFlow(false)
     val isFocusCompleted: StateFlow<Boolean> = _isFocusCompleted.asStateFlow()
 
+    private val _isFocusModeActive = MutableStateFlow(false)
+    val isFocusModeActive: StateFlow<Boolean> = _isFocusModeActive.asStateFlow()
+
+    private val _selectedFocusTaskId = MutableStateFlow<String?>(null)
+    val selectedFocusTaskId: StateFlow<String?> = _selectedFocusTaskId.asStateFlow()
+
     // Calendar state
     private val _selectedDay = MutableStateFlow(24)
     val selectedDay: StateFlow<Int> = _selectedDay.asStateFlow()
@@ -981,6 +987,27 @@ class DayMeetViewModel : ViewModel() {
         if (item != null) {
             showToast("Completed: ${item.title} (Removed)")
         }
+    }
+
+    fun toggleFocusMode() {
+        val newState = !_isFocusModeActive.value
+        _isFocusModeActive.value = newState
+        if (newState) {
+            _isFocusRunning.value = true
+            showToast("🎯 Focus Mode Activated: All non-urgent notifications muted")
+        } else {
+            showToast("Focus Mode Deactivated: System notifications restored")
+        }
+    }
+
+    fun selectFocusTask(taskId: String) {
+        _selectedFocusTaskId.value = taskId
+    }
+
+    fun completeFocusTaskAndAdvance(taskId: String) {
+        toggleFeedTaskDone(taskId)
+        showToast("Task completed! Focusing on next task...")
+        triggerConfetti("🎯 Task Completed in Focus Mode!")
     }
 
     fun toggleFocusTimer() {

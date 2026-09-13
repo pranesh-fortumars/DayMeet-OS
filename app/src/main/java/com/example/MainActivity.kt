@@ -95,6 +95,7 @@ fun DayMeetApp(
     val confettiMilestone by viewModel.confettiMilestone.collectAsStateWithLifecycle()
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val lastSyncedTime by viewModel.lastSyncedTime.collectAsStateWithLifecycle()
+    val isFocusModeActive by viewModel.isFocusModeActive.collectAsStateWithLifecycle()
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
 
@@ -105,8 +106,9 @@ fun DayMeetApp(
     }
 
     // Handle back button on sub-screens
-    BackHandler(enabled = subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
+    BackHandler(enabled = isFocusModeActive || subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
         if (showUpdateDialog) viewModel.dismissUpdateDialog(context)
+        else if (isFocusModeActive) viewModel.toggleFocusMode()
         else if (showSearchOverlay) viewModel.closeSearch()
         else if (showDailyBriefing) viewModel.closeDailyBriefing()
         else if (showMeetingMinutes) viewModel.closeMeetingMinutes()
@@ -125,6 +127,10 @@ fun DayMeetApp(
                 DayMeetHeader(
                     isSyncing = isSyncing,
                     lastSyncedText = lastSyncedTime,
+                    isFocusModeActive = isFocusModeActive,
+                    onFocusClick = {
+                        viewModel.toggleFocusMode()
+                    },
                     onSyncClick = {
                         viewModel.triggerManualSync()
                     },
@@ -132,7 +138,11 @@ fun DayMeetApp(
                         viewModel.openSearch()
                     },
                     onNotificationsClick = {
-                        viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
+                        if (isFocusModeActive) {
+                            viewModel.showToast("🤫 Notifications muted: 12 non-urgent alerts silenced in Focus Mode")
+                        } else {
+                            viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
+                        }
                     },
                     onProfileClick = {
                         viewModel.showToast("Alex Chen • Product Lead (DayMeet Pro)")
@@ -144,7 +154,7 @@ fun DayMeetApp(
             }
         },
         bottomBar = {
-            if (!isFullscreenOverlay) {
+            if (!isFullscreenOverlay && !isFocusModeActive) {
                 DayMeetBottomDock(
                     currentScreen = currentScreen,
                     onTabSelected = { screen -> viewModel.navigateTo(screen) },
@@ -158,23 +168,27 @@ fun DayMeetApp(
                 .fillMaxSize()
                 .padding(top = if (!isFullscreenOverlay) innerPadding.calculateTopPadding() else 0.dp)
         ) {
-            // Main tabs transition
-            AnimatedContent(
-                targetState = currentScreen,
-                transitionSpec = {
-                    fadeIn() togetherWith fadeOut()
-                },
-                label = "screen_transition"
-            ) { screen ->
-                when (screen) {
-                    "home" -> HomeScreen(viewModel = viewModel)
-                    "calendar" -> CalendarScreen(viewModel = viewModel)
-                    "tasks" -> TasksScreen(viewModel = viewModel)
-                    "insights" -> HealthScreen(viewModel = viewModel)
-                    "more" -> MoreScreen(viewModel = viewModel)
-                    "meetings" -> MeetingsScreen(viewModel = viewModel)
-                    "finance" -> FinanceScreen(viewModel = viewModel)
-                    else -> HomeScreen(viewModel = viewModel)
+            if (isFocusModeActive) {
+                SimplifiedFocusModeView(viewModel = viewModel)
+            } else {
+                // Main tabs transition
+                AnimatedContent(
+                    targetState = currentScreen,
+                    transitionSpec = {
+                        fadeIn() togetherWith fadeOut()
+                    },
+                    label = "screen_transition"
+                ) { screen ->
+                    when (screen) {
+                        "home" -> HomeScreen(viewModel = viewModel)
+                        "calendar" -> CalendarScreen(viewModel = viewModel)
+                        "tasks" -> TasksScreen(viewModel = viewModel)
+                        "insights" -> HealthScreen(viewModel = viewModel)
+                        "more" -> MoreScreen(viewModel = viewModel)
+                        "meetings" -> MeetingsScreen(viewModel = viewModel)
+                        "finance" -> FinanceScreen(viewModel = viewModel)
+                        else -> HomeScreen(viewModel = viewModel)
+                    }
                 }
             }
 

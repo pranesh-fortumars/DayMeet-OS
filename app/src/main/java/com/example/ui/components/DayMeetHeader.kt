@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,7 +15,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.FilterCenterFocus
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
@@ -37,6 +40,8 @@ import com.example.ui.theme.*
 fun DayMeetHeader(
     isSyncing: Boolean = false,
     lastSyncedText: String = "Just now",
+    isFocusModeActive: Boolean = false,
+    onFocusClick: () -> Unit = {},
     onSyncClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
@@ -172,7 +177,42 @@ fun DayMeetHeader(
                         )
                     }
 
-                    // Notifications Button with badge
+                    // Focus Mode Toggle Pill Button
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = if (isFocusModeActive) Color(0xFF15803D) else SurfaceContainerLow,
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = if (isFocusModeActive) Color(0xFF22C55E) else Primary.copy(alpha = 0.25f)
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .clickable { onFocusClick() }
+                            .testTag("focus_mode_header_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.FilterCenterFocus,
+                                contentDescription = "Focus Mode Toggle",
+                                tint = if (isFocusModeActive) Color.White else Primary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = if (isFocusModeActive) "Focus ON" else "Focus",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isFocusModeActive) Color.White else Primary,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+
+                    // Notifications Button with badge (showing muted indicator when Focus Mode active)
                     IconButton(
                         onClick = onNotificationsClick,
                         modifier = Modifier
@@ -181,18 +221,20 @@ fun DayMeetHeader(
                     ) {
                         Box(contentAlignment = Alignment.TopEnd) {
                             Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = "Notifications",
-                                tint = OnSurfaceVariant,
+                                imageVector = if (isFocusModeActive) Icons.Default.NotificationsOff else Icons.Default.Notifications,
+                                contentDescription = if (isFocusModeActive) "Notifications Muted in Focus Mode" else "Notifications",
+                                tint = if (isFocusModeActive) Color(0xFFE65100) else OnSurfaceVariant,
                                 modifier = Modifier.size(22.dp)
                             )
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Primary)
-                                    .border(1.5.dp, Surface, CircleShape)
-                            )
+                            if (!isFocusModeActive) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Primary)
+                                        .border(1.5.dp, Surface, CircleShape)
+                                )
+                            }
                         }
                     }
 
