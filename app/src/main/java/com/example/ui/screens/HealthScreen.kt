@@ -137,7 +137,7 @@ fun HealthScreen(
         item {
             Column {
                 Text(
-                    text = "Health & Wellness",
+                    text = "Insights & Analytics",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         color = OnSurface,
                         fontWeight = FontWeight.Bold,
@@ -145,7 +145,7 @@ fun HealthScreen(
                     )
                 )
                 Text(
-                    text = "Holistic vitals, mindfulness & body metrics auto-synced with schedule",
+                    text = "Holistic financial health, body vitals & productivity metrics auto-synced",
                     style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                 )
             }
@@ -223,7 +223,17 @@ fun HealthScreen(
             WeeklySummaryCard(viewModel = viewModel)
         }
 
-        // 2. Big Circular Health Score Card
+        // 2. Financial Health Gauge Widget (Monthly Budget Progress vs Target Arc Speedometer)
+        item {
+            FinancialHealthGaugeCard(
+                monthlySpent = monthlySpent,
+                monthlyBudgetTarget = monthlyBudgetTarget,
+                transactions = transactions,
+                onCustomizeBudget = { showBudgetCustomizerDialog = true }
+            )
+        }
+
+        // 3. Big Circular Health Score Card
         item {
             Card(
                 shape = RoundedCornerShape(20.dp),
@@ -563,16 +573,6 @@ fun HealthScreen(
                     }
                 }
             }
-        }
-
-        // 4b. Financial Health Gauge
-        item {
-            FinancialHealthGaugeCard(
-                monthlySpent = monthlySpent,
-                monthlyBudgetTarget = monthlyBudgetTarget,
-                transactions = transactions,
-                onCustomizeBudget = { showBudgetCustomizerDialog = true }
-            )
         }
 
         // 5. Biometrics & Mindset
@@ -1181,6 +1181,7 @@ fun HealthScreen(
     if (showBudgetCustomizerDialog) {
         CustomizeMonthlyBudgetDialog(
             currentTarget = monthlyBudgetTarget,
+            monthlySpent = monthlySpent,
             onDismiss = { showBudgetCustomizerDialog = false },
             onSave = { newTarget ->
                 viewModel.updateMonthlyBudgetTarget(newTarget)
@@ -1999,6 +2000,8 @@ fun SpendingVelocityGaugeCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = modifier
             .fillMaxWidth()
+            .testTag("financial_health_gauge_widget")
+            .testTag("financial_health_gauge")
             .testTag("financial_health_card")
             .testTag("spending_velocity_gauge_card")
     ) {
@@ -2071,17 +2074,20 @@ fun SpendingVelocityGaugeCard(
                     shape = RoundedCornerShape(10.dp),
                     contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                     border = BorderStroke(1.dp, Primary.copy(alpha = 0.4f)),
-                    modifier = Modifier.testTag("customize_budget_target_btn")
+                    modifier = Modifier
+                        .testTag("customize_budget_target_btn")
+                        .testTag("configure_budget_target_btn")
+                        .testTag("set_monthly_budget_target_btn")
                 ) {
                     Icon(
                         imageVector = Icons.Default.Tune,
-                        contentDescription = "Customize Budget",
+                        contentDescription = "Set Monthly Budget Target",
                         tint = Primary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Limit",
+                        text = "Set Target",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = Primary
@@ -2092,7 +2098,7 @@ fun SpendingVelocityGaugeCard(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Interactive Tabs: Velocity Speedometer vs Runway & Limit
+            // Interactive Tabs: Budget Progress Arc vs Velocity Speedometer
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = SurfaceContainerLow,
@@ -2107,7 +2113,7 @@ fun SpendingVelocityGaugeCard(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Text("Velocity Dial", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Budget Progress Arc", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 )
@@ -2117,7 +2123,7 @@ fun SpendingVelocityGaugeCard(
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             Icon(imageVector = Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Text("Runway & Limit", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Text("Velocity Dial & Sim", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 )
@@ -2127,7 +2133,185 @@ fun SpendingVelocityGaugeCard(
 
             if (selectedTab == 0) {
                 // ==========================================
-                // 1. INTERACTIVE SPEEDOMETER GAUGE
+                // 1. BUDGET PROGRESS ARC & SPEEDOMETER GAUGE
+                // ==========================================
+                val clampedSpend = spendRatio.coerceIn(0f, 1.25f)
+                val targetProgressAngle = 150f + (clampedSpend / 1.0f).coerceIn(0f, 1.15f) * 240f
+                val animatedNeedleAngle by animateFloatAsState(
+                    targetValue = targetProgressAngle,
+                    animationSpec = spring(stiffness = Spring.StiffnessLow, dampingRatio = Spring.DampingRatioMediumBouncy),
+                    label = "budget_needle_angle"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(185.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val trackColor = SurfaceContainerHighest
+                    val progressBrush = Brush.horizontalGradient(
+                        colors = if (spendRatio <= 0.70f) {
+                            listOf(Color(0xFF06B6D4), Color(0xFF10B981))
+                        } else if (spendRatio <= 0.90f) {
+                            listOf(Color(0xFF10B981), Color(0xFFF59E0B))
+                        } else {
+                            listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
+                        }
+                    )
+
+                    Canvas(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 14.dp, vertical = 4.dp)
+                            .testTag("budget_progress_arc_canvas")
+                    ) {
+                        val strokeWidth = 15.dp.toPx()
+                        val arcRadius = min(size.width * 0.42f, size.height * 0.78f)
+                        val arcSize = arcRadius * 2f
+                        val center = Offset(size.width / 2f, size.height * 0.72f)
+                        val topLeft = Offset(center.x - arcRadius, center.y - arcRadius)
+
+                        // 1. Background Arc (240 deg: from 150 to 390)
+                        drawArc(
+                            color = trackColor,
+                            startAngle = 150f,
+                            sweepAngle = 240f,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = Size(arcSize, arcSize),
+                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                        )
+
+                        // 2. Spending Progress Arc (Dynamic gradient fill)
+                        val activeSweep = 240f * clampedSpend.coerceAtMost(1f)
+                        if (activeSweep > 0.5f) {
+                            drawArc(
+                                brush = progressBrush,
+                                startAngle = 150f,
+                                sweepAngle = activeSweep,
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = Size(arcSize, arcSize),
+                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                            )
+                        }
+
+                        // 3. Ticks at 0%, 25%, 50%, 75%, 100%
+                        val progressTicks = listOf(0.0f, 0.25f, 0.50f, 0.75f, 1.0f)
+                        for (tick in progressTicks) {
+                            val ang = 150f + tick * 240f
+                            val r = Math.toRadians(ang.toDouble())
+                            val p1 = center + Offset(cos(r).toFloat() * (arcRadius - strokeWidth * 0.65f), sin(r).toFloat() * (arcRadius - strokeWidth * 0.65f))
+                            val p2 = center + Offset(cos(r).toFloat() * (arcRadius + strokeWidth * 0.65f), sin(r).toFloat() * (arcRadius + strokeWidth * 0.65f))
+                            drawLine(
+                                color = if (tick == 1.0f) Color(0xFFEF4444) else Color.White.copy(alpha = 0.9f),
+                                start = p1,
+                                end = p2,
+                                strokeWidth = (if (tick == 1.0f) 3.5f else 2f).dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        }
+
+                        // 4. Time Elapsed Benchmark Marker (Day 14/31 = 45.2%)
+                        val timeAngle = 150f + 240f * timeElapsedRatio.coerceIn(0f, 1f)
+                        val timeRad = Math.toRadians(timeAngle.toDouble())
+                        val mInner = center + Offset(cos(timeRad).toFloat() * (arcRadius - strokeWidth * 0.95f), sin(timeRad).toFloat() * (arcRadius - strokeWidth * 0.95f))
+                        val mOuter = center + Offset(cos(timeRad).toFloat() * (arcRadius + strokeWidth * 0.95f), sin(timeRad).toFloat() * (arcRadius + strokeWidth * 0.95f))
+                        drawLine(
+                            color = Color(0xFF1E293B),
+                            start = mInner,
+                            end = mOuter,
+                            strokeWidth = 3.5.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+
+                        // 5. Speedometer Needle pointing to budget progress
+                        val needleRad = Math.toRadians(animatedNeedleAngle.toDouble())
+                        val needleLen = arcRadius * 0.82f
+                        val tip = center + Offset(cos(needleRad).toFloat() * needleLen, sin(needleRad).toFloat() * needleLen)
+                        val perpRad = needleRad + PI / 2.0
+                        val baseWidth = 5.dp.toPx()
+                        val baseL = center + Offset(cos(perpRad).toFloat() * baseWidth, sin(perpRad).toFloat() * baseWidth)
+                        val baseR = center + Offset(-cos(perpRad).toFloat() * baseWidth, -sin(perpRad).toFloat() * baseWidth)
+
+                        val needlePath = Path().apply {
+                            moveTo(baseL.x, baseL.y)
+                            lineTo(tip.x, tip.y)
+                            lineTo(baseR.x, baseR.y)
+                            close()
+                        }
+                        drawPath(needlePath, color = status.color)
+
+                        // 6. Metallic Center Pivot Hub
+                        drawCircle(color = Color(0xFF1E293B), radius = 10.dp.toPx(), center = center)
+                        drawCircle(color = status.color, radius = 6.dp.toPx(), center = center)
+                        drawCircle(color = Color.White, radius = 2.5.dp.toPx(), center = center)
+                    }
+
+                    // Center Digital Readout
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.offset(y = 16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(99.dp))
+                                .background(status.bg)
+                                .padding(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "${(spendRatio * 100).toInt()}% USED vs ${(timeElapsedRatio * 100).toInt()}% TIME",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = status.color,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(2.dp))
+
+                        Text(
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)}",
+                            style = MaterialTheme.typography.headlineMedium.copy(
+                                fontWeight = FontWeight.Black,
+                                color = OnSurface,
+                                fontSize = 24.sp
+                            )
+                        )
+
+                        Text(
+                            text = "of ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} target limit",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        )
+                    }
+
+                    // Dial Legend Pill
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = 8.dp)
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(SurfaceContainerLow)
+                            .padding(horizontal = 10.dp, vertical = 3.dp)
+                    ) {
+                        Text(
+                            text = "Needle: ${(spendRatio * 100).toInt()}% • Notch: Day $elapsedDays of $totalDaysInMonth (${(timeElapsedRatio * 100).toInt()}%)",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+                }
+            } else {
+                // ==========================================
+                // 2. INTERACTIVE VELOCITY DIAL & SIMULATOR
                 // ==========================================
                 val clampedVelocity = currentVelocityRatio.coerceIn(0f, 2.2f)
                 val targetAngle = 150f + (clampedVelocity / 2.2f) * 240f
@@ -2140,7 +2324,7 @@ fun SpendingVelocityGaugeCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(180.dp),
+                        .height(185.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     val trackBg = SurfaceContainerHighest
@@ -2231,7 +2415,7 @@ fun SpendingVelocityGaugeCard(
                         )
 
                         // 2. Multi-Zone Colored Velocity Segments
-                        // Zone 1: Safe Frugal (0.0x - 0.85x) -> 92.7 deg
+                        // Zone 1: Safe Frugal (0.0x - 0.85x)
                         val z1Sweep = 240f * (0.85f / 2.2f)
                         drawArc(
                             color = greenColor.copy(alpha = 0.75f),
@@ -2243,7 +2427,7 @@ fun SpendingVelocityGaugeCard(
                             style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
                         )
 
-                        // Zone 2: Target Sustainable (0.85x - 1.05x) -> 21.8 deg
+                        // Zone 2: Target Sustainable (0.85x - 1.05x)
                         val z2Start = 150f + z1Sweep
                         val z2Sweep = 240f * (0.20f / 2.2f)
                         drawArc(
@@ -2256,7 +2440,7 @@ fun SpendingVelocityGaugeCard(
                             style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
                         )
 
-                        // Zone 3: Caution Pace (1.05x - 1.30x) -> 27.2 deg
+                        // Zone 3: Caution Pace (1.05x - 1.30x)
                         val z3Start = z2Start + z2Sweep
                         val z3Sweep = 240f * (0.25f / 2.2f)
                         drawArc(
@@ -2269,7 +2453,7 @@ fun SpendingVelocityGaugeCard(
                             style = Stroke(width = strokeWidth, cap = StrokeCap.Butt)
                         )
 
-                        // Zone 4: Overdrive Danger (1.30x - 2.2x) -> 98.2 deg
+                        // Zone 4: Overdrive Danger (1.30x - 2.2x)
                         val z4Start = z3Start + z3Sweep
                         val z4Sweep = 240f - (z1Sweep + z2Sweep + z3Sweep)
                         drawArc(
@@ -2388,11 +2572,11 @@ fun SpendingVelocityGaugeCard(
                         )
                     }
 
-                    // Dial Legend / Instruction Pill
+                    // Dial Legend Pill
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
-                            .offset(y = 6.dp)
+                            .offset(y = 8.dp)
                             .clip(RoundedCornerShape(99.dp))
                             .background(SurfaceContainerLow)
                             .padding(horizontal = 10.dp, vertical = 3.dp)
@@ -2402,121 +2586,6 @@ fun SpendingVelocityGaugeCard(
                             style = MaterialTheme.typography.labelSmall.copy(
                                 color = OnSurfaceVariant,
                                 fontSize = 9.sp
-                            )
-                        )
-                    }
-                }
-            } else {
-                // ==========================================
-                // 2. RUNWAY & LIMIT PROGRESS ARC
-                // ==========================================
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(175.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val trackColor = SurfaceContainerHighest
-                    val progressBrush = Brush.horizontalGradient(
-                        colors = if (spendRatio <= 0.70f) {
-                            listOf(Color(0xFF06B6D4), Color(0xFF10B981))
-                        } else if (spendRatio <= 0.90f) {
-                            listOf(Color(0xFF10B981), Color(0xFFF59E0B))
-                        } else {
-                            listOf(Color(0xFFF59E0B), Color(0xFFEF4444))
-                        }
-                    )
-
-                    Canvas(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
-                    ) {
-                        val strokeWidth = 16.dp.toPx()
-                        val arcSize = min(size.width * 0.78f, size.height * 1.5f)
-                        val left = (size.width - arcSize) / 2f
-                        val top = size.height * 0.12f
-
-                        // Background Arc (240 deg: from 150 to 390)
-                        drawArc(
-                            color = trackColor,
-                            startAngle = 150f,
-                            sweepAngle = 240f,
-                            useCenter = false,
-                            topLeft = Offset(left, top),
-                            size = Size(arcSize, arcSize),
-                            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                        )
-
-                        // Spending Progress Arc
-                        val clampedSpend = spendRatio.coerceIn(0f, 1f)
-                        val activeSweep = 240f * clampedSpend
-                        if (activeSweep > 0.5f) {
-                            drawArc(
-                                brush = progressBrush,
-                                startAngle = 150f,
-                                sweepAngle = activeSweep,
-                                useCenter = false,
-                                topLeft = Offset(left, top),
-                                size = Size(arcSize, arcSize),
-                                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                            )
-                        }
-
-                        // Time Elapsed Benchmark Marker (Day 14/31 = 45.2%)
-                        val timeAngle = 150f + 240f * timeElapsedRatio.coerceIn(0f, 1f)
-                        val timeRad = Math.toRadians(timeAngle.toDouble())
-                        val arcCenter = Offset(left + arcSize / 2f, top + arcSize / 2f)
-                        val r = arcSize / 2f
-                        val mInner = arcCenter + Offset(cos(timeRad).toFloat() * (r - strokeWidth * 0.75f), sin(timeRad).toFloat() * (r - strokeWidth * 0.75f))
-                        val mOuter = arcCenter + Offset(cos(timeRad).toFloat() * (r + strokeWidth * 0.75f), sin(timeRad).toFloat() * (r + strokeWidth * 0.75f))
-                        drawLine(
-                            color = Color(0xFF1E293B),
-                            start = mInner,
-                            end = mOuter,
-                            strokeWidth = 3.5.dp.toPx(),
-                            cap = StrokeCap.Round
-                        )
-                    }
-
-                    // Center Readout
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.offset(y = 12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(99.dp))
-                                .background(status.bg)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "${(spendRatio * 100).toInt()}% USED vs ${(timeElapsedRatio * 100).toInt()}% TIME",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = status.color,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 10.sp
-                                )
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(2.dp))
-
-                        Text(
-                            text = "₹${String.format(Locale.getDefault(), "%,.0f", monthlySpent)}",
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.Black,
-                                color = OnSurface,
-                                fontSize = 24.sp
-                            )
-                        )
-
-                        Text(
-                            text = "of ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} limit",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = OnSurfaceVariant,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium
                             )
                         )
                     }
@@ -2754,7 +2823,10 @@ fun SpendingVelocityGaugeCard(
             Surface(
                 shape = RoundedCornerShape(12.dp),
                 color = SurfaceContainerHighest.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("daily_spending_guidance_card")
+                    .testTag("daily_spending_guidance")
             ) {
                 Row(
                     modifier = Modifier.padding(10.dp),
@@ -3580,14 +3652,24 @@ fun FinancialHealthGaugeCard(
 @Composable
 fun CustomizeMonthlyBudgetDialog(
     currentTarget: Double,
+    monthlySpent: Double = 35460.0,
     onDismiss: () -> Unit,
     onSave: (Double) -> Unit
 ) {
     var targetText by remember { mutableStateOf(String.format(Locale.getDefault(), "%.0f", currentTarget)) }
-    val quickPresets = listOf(40000.0, 50000.0, 60000.0, 75000.0, 100000.0)
+    val quickPresets = listOf(40000.0, 50000.0, 60000.0, 75000.0, 80000.0, 100000.0)
+
+    val parsedTarget = (targetText.toDoubleOrNull() ?: currentTarget).coerceAtLeast(1000.0)
+    val remainingDays = 17
+    val previewDailyAllowance = if (remainingDays > 0) (parsedTarget - monthlySpent).coerceAtLeast(0.0) / remainingDays else 0.0
+    val previewDailyPace = parsedTarget / 31.0
+    val previewUtilization = ((monthlySpent / parsedTarget) * 100).toInt()
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        modifier = Modifier
+            .testTag("budget_target_modal")
+            .testTag("monthly_budget_configuration_modal"),
         title = {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -3608,21 +3690,102 @@ fun CustomizeMonthlyBudgetDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(
-                    text = "Set your desired spending ceiling for this month. The Financial Health gauge dynamically tracks and scores your burn velocity against this goal.",
+                    text = "Set your desired spending ceiling for this month. The Financial Health arc gauge and daily spending guidance will update dynamically.",
                     style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                 )
 
-                OutlinedTextField(
-                    value = targetText,
-                    onValueChange = { targetText = it.filter { ch -> ch.isDigit() } },
-                    label = { Text("Budget Target (₹)") },
-                    prefix = { Text("₹ ", fontWeight = FontWeight.Bold) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("budget_target_input")
-                )
+                // Input field + quick stepper buttons
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            val cur = targetText.toDoubleOrNull() ?: currentTarget
+                            val newVal = (cur - 5000.0).coerceAtLeast(1000.0)
+                            targetText = String.format(Locale.getDefault(), "%.0f", newVal)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.height(52.dp)
+                    ) {
+                        Text("-5k", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    OutlinedTextField(
+                        value = targetText,
+                        onValueChange = { targetText = it.filter { ch -> ch.isDigit() } },
+                        label = { Text("Monthly Target") },
+                        prefix = { Text("₹ ", fontWeight = FontWeight.Bold) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("budget_target_input")
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            val cur = targetText.toDoubleOrNull() ?: currentTarget
+                            val newVal = cur + 5000.0
+                            targetText = String.format(Locale.getDefault(), "%.0f", newVal)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        modifier = Modifier.height(52.dp)
+                    ) {
+                        Text("+5k", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+
+                // Dynamic Live Preview Box
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = SurfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Live Guidance Preview",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary,
+                                fontSize = 10.sp
+                            )
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Safe Daily Allowance:", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = OnSurfaceVariant))
+                            Text("₹${String.format(Locale.getDefault(), "%,.0f", previewDailyAllowance)}/day", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF0288D1), fontSize = 11.sp))
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Target Daily Pace:", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = OnSurfaceVariant))
+                            Text("₹${String.format(Locale.getDefault(), "%,.0f", previewDailyPace)}/day", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = OnSurface, fontSize = 11.sp))
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Projected Utilization:", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = OnSurfaceVariant))
+                            Text(
+                                text = "$previewUtilization% of target",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (previewUtilization <= 85) Color(0xFF10B981) else if (previewUtilization <= 100) Color(0xFFF59E0B) else Color(0xFFEF4444),
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+                }
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -3669,7 +3832,9 @@ fun CustomizeMonthlyBudgetDialog(
                 },
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                modifier = Modifier.testTag("save_budget_target_btn")
+                modifier = Modifier
+                    .testTag("save_budget_target_btn")
+                    .testTag("confirm_budget_target_btn")
             ) {
                 Text("Save Target", fontWeight = FontWeight.Bold)
             }
