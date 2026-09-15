@@ -23,6 +23,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.localization.AppLanguage
+import com.example.localization.LocalAppLanguage
+import com.example.localization.LocalAppStrings
+import com.example.localization.LocalizationManager
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 
@@ -31,6 +35,8 @@ fun MoreScreen(
     viewModel: DayMeetViewModel,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -47,7 +53,7 @@ fun MoreScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Command Center",
+                        text = strings.commandCenterTitle,
                         style = MaterialTheme.typography.headlineLarge.copy(
                             fontWeight = FontWeight.Bold,
                             color = OnSurface,
@@ -73,10 +79,15 @@ fun MoreScreen(
                 }
 
                 Text(
-                    text = "All modules, connected automations, finance, health, and personal tools",
+                    text = strings.commandCenterSubtitle,
                     style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                 )
             }
+        }
+
+        // Dedicated Multilingual Selector Card (13 Languages)
+        item {
+            CommandCenterLanguageCard(viewModel = viewModel)
         }
 
         // Global Theme Switcher Card (Command Center Theme Branding)
@@ -86,7 +97,7 @@ fun MoreScreen(
 
         // 2. Intelligence & Core Super-App Engines
         item {
-            SectionHeader(title = "CORE INTELLIGENCE & ENGINES")
+            SectionHeader(title = strings.coreIntelligenceHeader)
         }
 
         item {
@@ -98,8 +109,8 @@ fun MoreScreen(
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     ModuleListRow(
-                        title = "Automations & Rules Engine",
-                        subtitle = "When → If → Then automated daily workflows",
+                        title = strings.automationsTitle,
+                        subtitle = strings.automationsSubtitle,
                         badge = "5 Active",
                         badgeColor = Color(0xFF2E7D32),
                         icon = Icons.Default.Bolt,
@@ -112,8 +123,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "DayMeet AI Copilot",
-                        subtitle = "Natural language schedule restructuring & insights",
+                        title = strings.aiCopilotTitle,
+                        subtitle = strings.aiCopilotSubtitle,
                         badge = "Gemini",
                         badgeColor = Primary,
                         icon = Icons.Default.AutoAwesome,
@@ -126,8 +137,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Morning & Evening Briefings",
-                        subtitle = "High-level summary of day's commitments & vitals",
+                        title = strings.dailyBriefingTitle,
+                        subtitle = strings.dailyBriefingSubtitle,
                         badge = "Scheduled",
                         badgeColor = Tertiary,
                         icon = Icons.Default.WbTwilight,
@@ -142,7 +153,7 @@ fun MoreScreen(
 
         // 3. Productivity & Workspaces
         item {
-            SectionHeader(title = "PRODUCTIVITY & WORKSPACES")
+            SectionHeader(title = strings.productivityWorkspacesHeader)
         }
 
         item {
@@ -154,8 +165,8 @@ fun MoreScreen(
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     ModuleListRow(
-                        title = "Meetings & Video Conferences",
-                        subtitle = "Sync Google Meet, Zoom, MS Teams & attendees",
+                        title = strings.meetingsTitle,
+                        subtitle = strings.meetingsSubtitle,
                         badge = "3 Today",
                         badgeColor = Color(0xFF673AB7),
                         icon = Icons.Default.Videocam,
@@ -168,8 +179,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Meeting Minutes & Action Items",
-                        subtitle = "Convert speaker takeaways into assigned tasks",
+                        title = strings.meetingMinutesTitle,
+                        subtitle = strings.meetingMinutesSubtitle,
                         badge = "Live Sync",
                         badgeColor = Primary,
                         icon = Icons.Default.Summarize,
@@ -182,8 +193,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Deep Focus & Pomodoro Sanctuary",
-                        subtitle = "DND mode with ambient sounds & auto-responder",
+                        title = strings.pomodoroSanctuaryTitle,
+                        subtitle = strings.pomodoroSanctuarySubtitle,
                         badge = "Active",
                         badgeColor = Primary,
                         icon = Icons.Default.FilterCenterFocus,
@@ -196,8 +207,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Notes, Docs & Knowledge Base",
-                        subtitle = "Quick capture, voice notes & tags",
+                        title = strings.notesTitle,
+                        subtitle = strings.notesSubtitle,
                         badge = "3 Notes",
                         badgeColor = SkyBlue,
                         icon = Icons.Default.EditNote,
@@ -212,7 +223,7 @@ fun MoreScreen(
 
         // 4. Personal Growth & Habits
         item {
-            SectionHeader(title = "HABITS, GOALS & WELLNESS")
+            SectionHeader(title = strings.habitsGoalsWellnessHeader)
         }
 
         item {
@@ -224,8 +235,8 @@ fun MoreScreen(
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     ModuleListRow(
-                        title = "Habits & Routine Streaks",
-                        subtitle = "5 habits tracked • 18-day morning streak 🔥",
+                        title = strings.habitsTitle,
+                        subtitle = strings.habitsSubtitle,
                         badge = "4/5 Done",
                         badgeColor = AmberWarning,
                         icon = Icons.Default.LocalFireDepartment,
@@ -238,8 +249,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Goals & Milestones",
-                        subtitle = "Financial, fitness & career target tracking",
+                        title = strings.goalsTitle,
+                        subtitle = strings.goalsSubtitle,
                         badge = "3 Targets",
                         badgeColor = Tertiary,
                         icon = Icons.Default.Flag,
@@ -252,8 +263,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Smart Reminders & Location Alerts",
-                        subtitle = "Location, time & cross-module triggers",
+                        title = strings.remindersTitle,
+                        subtitle = strings.remindersSubtitle,
                         badge = "4 Pending",
                         badgeColor = Primary,
                         icon = Icons.Default.NotificationsActive,
@@ -268,7 +279,7 @@ fun MoreScreen(
 
         // 5. Finance & Commerce
         item {
-            SectionHeader(title = "FINANCE, BILLS & COMMERCE")
+            SectionHeader(title = strings.financeBillsCommerceHeader)
         }
 
         item {
@@ -280,8 +291,8 @@ fun MoreScreen(
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     ModuleListRow(
-                        title = "Finance Dashboard & Ledger",
-                        subtitle = "Daily spending, monthly budget & auto-categorization",
+                        title = strings.financeDashboardTitle,
+                        subtitle = strings.financeDashboardSubtitle,
                         badge = "₹3,450 Today",
                         badgeColor = Color(0xFF2E7D32),
                         icon = Icons.Default.AccountBalanceWallet,
@@ -294,8 +305,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Subscriptions & Recurring Bills",
-                        subtitle = "Electricity, Fiber, Netflix & Figma tracker",
+                        title = strings.subscriptionsTitle,
+                        subtitle = strings.subscriptionsSubtitle,
                         badge = "₹3,228/mo",
                         badgeColor = Color(0xFFE65100),
                         icon = Icons.Default.CreditCard,
@@ -308,8 +319,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Shopping & Grocery Lists",
-                        subtitle = "Auto-budget estimation & aisle checkboxes",
+                        title = strings.shoppingListsTitle,
+                        subtitle = strings.shoppingListsSubtitle,
                         badge = "4 Items",
                         badgeColor = Primary,
                         icon = Icons.Default.ShoppingCart,
@@ -324,7 +335,7 @@ fun MoreScreen(
 
         // 6. Travel, Documents & Communication
         item {
-            SectionHeader(title = "TRAVEL, SECURITY & COMMUNICATION")
+            SectionHeader(title = strings.travelSecurityHeader)
         }
 
         item {
@@ -336,8 +347,8 @@ fun MoreScreen(
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     ModuleListRow(
-                        title = "Travel Itinerary & Trips",
-                        subtitle = "Chennai Flight 6E 412 • Taj Coromandel in 3 days",
+                        title = strings.travelItineraryTitle,
+                        subtitle = strings.travelItinerarySubtitle,
                         badge = "In 3 Days",
                         badgeColor = Color(0xFF3949AB),
                         icon = Icons.Default.Flight,
@@ -350,8 +361,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Secure Document Vault",
-                        subtitle = "Passport, insurance, lease with on-device encryption",
+                        title = strings.secureVaultTitle,
+                        subtitle = strings.secureVaultSubtitle,
                         badge = "Encrypted",
                         badgeColor = Color(0xFF00897B),
                         icon = Icons.Default.Lock,
@@ -364,8 +375,8 @@ fun MoreScreen(
                     HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
 
                     ModuleListRow(
-                        title = "Contacts & Scheduled Messages",
-                        subtitle = "CRM directory, birthday concierge & automated Slack/WhatsApp",
+                        title = strings.contactsTitle,
+                        subtitle = strings.contactsSubtitle,
                         badge = "2 Scheduled",
                         badgeColor = Primary,
                         icon = Icons.Default.People,
@@ -380,7 +391,7 @@ fun MoreScreen(
 
         // 7. System Appearance & Tailwind Theme Configuration
         item {
-            SectionHeader(title = "SYSTEM APPEARANCE & TAILWIND THEME")
+            SectionHeader(title = strings.themeSectionTitle)
         }
 
         item {
@@ -1097,6 +1108,170 @@ private fun CommandCenterThemeSwitcherCard(
                         )
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun CommandCenterLanguageCard(
+    viewModel: DayMeetViewModel,
+    modifier: Modifier = Modifier
+) {
+    val currentLanguage by viewModel.currentLanguage.collectAsStateWithLifecycle()
+    val strings = LocalAppStrings.current
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("command_center_language_card")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Language,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = strings.languageSectionTitle,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+                        Text(
+                            text = strings.languageCardSubtitle,
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant
+                            )
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Primary.copy(alpha = 0.15f),
+                    modifier = Modifier.clickable { viewModel.openLanguageSelector() }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = currentLanguage.flagEmoji,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = currentLanguage.nativeName,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Quick language selector pills
+            val quickLanguages = remember {
+                listOf(
+                    AppLanguage.ENGLISH,
+                    AppLanguage.SPANISH,
+                    AppLanguage.HINDI,
+                    AppLanguage.FRENCH,
+                    AppLanguage.GERMAN,
+                    AppLanguage.CHINESE,
+                    AppLanguage.JAPANESE,
+                    AppLanguage.ARABIC
+                )
+            }
+
+            androidx.compose.foundation.lazy.LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(quickLanguages.size) { index ->
+                    val lang = quickLanguages[index]
+                    val isSelected = lang == currentLanguage
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) Primary else SurfaceContainerHigh,
+                        border = if (isSelected) null else BorderStroke(1.dp, SurfaceContainerHighest),
+                        modifier = Modifier
+                            .clickable {
+                                viewModel.setLanguage(lang)
+                            }
+                            .testTag("quick_lang_${lang.code}")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(lang.flagEmoji, fontSize = 14.sp)
+                            Text(
+                                text = lang.nativeName,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else OnSurface
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // All 13 languages button
+            OutlinedButton(
+                onClick = { viewModel.openLanguageSelector() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("all_languages_selector_btn"),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Primary.copy(alpha = 0.5f))
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Translate,
+                    contentDescription = null,
+                    tint = Primary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = "View All 13 Supported Languages",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Primary
+                    )
+                )
             }
         }
     }

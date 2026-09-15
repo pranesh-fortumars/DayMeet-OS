@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.FilterCenterFocus
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Search
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
+import com.example.localization.AppLanguage
+import com.example.localization.LocalizationManager
 import com.example.ui.theme.*
 
 @Composable
@@ -41,6 +44,8 @@ fun DayMeetHeader(
     isSyncing: Boolean = false,
     lastSyncedText: String = "Just now",
     isFocusModeActive: Boolean = false,
+    currentLanguage: AppLanguage = AppLanguage.ENGLISH,
+    onLanguageClick: () -> Unit = {},
     onFocusClick: () -> Unit = {},
     onSyncClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
@@ -48,6 +53,8 @@ fun DayMeetHeader(
     onProfileClick: () -> Unit = {},
     onAiClick: () -> Unit = {}
 ) {
+    val strings = LocalizationManager.getStrings(currentLanguage)
+
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Surface.copy(alpha = 0.95f),
@@ -177,6 +184,39 @@ fun DayMeetHeader(
                         )
                     }
 
+                    // Language Switcher Header Pill
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = SurfaceContainerLow,
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = Primary.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .clickable { onLanguageClick() }
+                            .testTag("language_selector_header_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = currentLanguage.flagEmoji,
+                                fontSize = 12.sp
+                            )
+                            Text(
+                                text = currentLanguage.code.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+
                     // Focus Mode Toggle Pill Button
                     Surface(
                         shape = RoundedCornerShape(99.dp),
@@ -202,7 +242,7 @@ fun DayMeetHeader(
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
-                                text = if (isFocusModeActive) "Focus ON" else "Focus",
+                                text = if (isFocusModeActive) strings.focusActivePill else strings.focusPill,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = if (isFocusModeActive) Color.White else Primary,

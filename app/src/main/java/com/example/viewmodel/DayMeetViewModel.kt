@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.BuildConfig
 import com.example.data.DayMeetRepository
+import com.example.localization.AppLanguage
+import com.example.localization.LocalizationManager
 import com.example.model.*
 import com.example.util.AppUpdateManager
 import com.example.util.PlayAppUpdateManager
@@ -151,6 +153,13 @@ class DayMeetViewModel : ViewModel() {
 
     private val _selectedFocusTaskId = MutableStateFlow<String?>(null)
     val selectedFocusTaskId: StateFlow<String?> = _selectedFocusTaskId.asStateFlow()
+
+    // Multilingual & Dynamic Localization State
+    private val _currentLanguage = MutableStateFlow(AppLanguage.ENGLISH)
+    val currentLanguage: StateFlow<AppLanguage> = _currentLanguage.asStateFlow()
+
+    private val _showLanguageDialog = MutableStateFlow(false)
+    val showLanguageDialog: StateFlow<Boolean> = _showLanguageDialog.asStateFlow()
 
     // Calendar state
     private val _selectedDay = MutableStateFlow(24)
@@ -1002,6 +1011,35 @@ class DayMeetViewModel : ViewModel() {
 
     fun selectFocusTask(taskId: String) {
         _selectedFocusTaskId.value = taskId
+    }
+
+    fun openLanguageSelector() {
+        _showLanguageDialog.value = true
+    }
+
+    fun closeLanguageSelector() {
+        _showLanguageDialog.value = false
+    }
+
+    fun setLanguage(language: AppLanguage) {
+        _currentLanguage.value = language
+        _showLanguageDialog.value = false
+        val message = when (language) {
+            AppLanguage.ENGLISH -> "Language changed to English 🇺🇸"
+            AppLanguage.SPANISH -> "Idioma cambiado a Español 🇪🇸"
+            AppLanguage.FRENCH -> "Langue changée en Français 🇫🇷"
+            AppLanguage.GERMAN -> "Sprache auf Deutsch geändert 🇩🇪"
+            AppLanguage.HINDI -> "भाषा बदलकर हिन्दी कर दी गई 🇮🇳"
+            AppLanguage.JAPANESE -> "言語を日本語に変更しました 🇯🇵"
+            AppLanguage.CHINESE -> "语言已切换为简体中文 🇨🇳"
+            AppLanguage.ARABIC -> "تم تغيير اللغة إلى العربية 🇸🇦"
+            AppLanguage.PORTUGUESE -> "Idioma alterado para Português 🇧🇷"
+            AppLanguage.RUSSIAN -> "Язык изменен на Русский 🇷🇺"
+            AppLanguage.ITALIAN -> "Lingua cambiata in Italiano 🇮🇹"
+            AppLanguage.KOREAN -> "언어가 한국어로 변경되었습니다 🇰🇷"
+            AppLanguage.TAMIL -> "மொழி தமிழுக்கு மாற்றப்பட்டது 🇮🇳"
+        }
+        showToast(message)
     }
 
     fun completeFocusTaskAndAdvance(taskId: String) {

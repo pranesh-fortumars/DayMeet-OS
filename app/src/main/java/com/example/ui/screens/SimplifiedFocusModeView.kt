@@ -27,6 +27,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.localization.LocalAppLanguage
+import com.example.localization.LocalAppStrings
+import com.example.localization.LocalizationManager
 import com.example.model.FeedItem
 import com.example.model.Priority
 import com.example.ui.theme.*
@@ -38,6 +41,8 @@ fun SimplifiedFocusModeView(
     viewModel: DayMeetViewModel,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
+    val currentLang = LocalAppLanguage.current
     val feedItems by viewModel.feedItems.collectAsState()
     val selectedTaskId by viewModel.selectedFocusTaskId.collectAsState()
     val isFocusRunning by viewModel.isFocusRunning.collectAsState()
@@ -111,7 +116,7 @@ fun SimplifiedFocusModeView(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = "FOCUS MODE ACTIVE",
+                                text = strings.focusModeHeader,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Black,
                                     color = Color(0xFF4ADE80),
@@ -125,7 +130,7 @@ fun SimplifiedFocusModeView(
                                     .padding(horizontal = 6.dp, vertical = 1.dp)
                             ) {
                                 Text(
-                                    text = "MUTED",
+                                    text = strings.mutedBadge,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = Color(0xFF4ADE80),
                                         fontSize = 9.sp,
@@ -135,7 +140,7 @@ fun SimplifiedFocusModeView(
                             }
                         }
                         Text(
-                            text = "12 non-urgent alerts muted (Slack, email & reminders)",
+                            text = strings.mutedSubtitle,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF94A3B8),
                                 fontSize = 11.sp
@@ -157,12 +162,12 @@ fun SimplifiedFocusModeView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Exit Focus Mode",
+                        contentDescription = strings.exitFocusButton,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Exit",
+                        text = strings.exitFocusButton,
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -337,7 +342,7 @@ fun SimplifiedFocusModeView(
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = "SUBTASKS CHECKLIST",
+                                    text = strings.subtasksChecklist,
                                     style = MaterialTheme.typography.labelSmall.copy(
                                         color = Color(0xFF64748B),
                                         fontWeight = FontWeight.Bold,
@@ -407,7 +412,7 @@ fun SimplifiedFocusModeView(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Mark Task Complete",
+                                    text = strings.markTaskComplete,
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold
                                     )
@@ -449,7 +454,7 @@ fun SimplifiedFocusModeView(
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Text(
-                                        text = "Deep Focus Pomodoro",
+                                        text = strings.pomodoroFocusTitle,
                                         style = MaterialTheme.typography.labelMedium.copy(
                                             color = Color(0xFF94A3B8),
                                             fontWeight = FontWeight.Bold
@@ -477,13 +482,13 @@ fun SimplifiedFocusModeView(
                                 ) {
                                     Icon(
                                         imageVector = if (isFocusRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                        contentDescription = if (isFocusRunning) "Pause" else "Start",
+                                        contentDescription = if (isFocusRunning) strings.timerPause else strings.timerStart,
                                         tint = Color.White,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = if (isFocusRunning) "Pause" else "Start",
+                                        text = if (isFocusRunning) strings.timerPause else strings.timerStart,
                                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                     )
                                 }
@@ -517,7 +522,7 @@ fun SimplifiedFocusModeView(
                             }
 
                             Text(
-                                text = "Focus Sanctuary Clear!",
+                                text = strings.focusSanctuaryClearTitle,
                                 style = MaterialTheme.typography.headlineSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -526,7 +531,7 @@ fun SimplifiedFocusModeView(
                             )
 
                             Text(
-                                text = "You have completed all pending tasks in your queue. Take a well-deserved break or return to standard dashboard view.",
+                                text = strings.focusSanctuaryClearSubtitle,
                                 style = MaterialTheme.typography.bodyMedium.copy(
                                     color = Color(0xFF94A3B8)
                                 ),
@@ -538,7 +543,7 @@ fun SimplifiedFocusModeView(
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = Primary)
                             ) {
-                                Text("Exit Focus Mode", fontWeight = FontWeight.Bold)
+                                Text(strings.exitFocusButton, fontWeight = FontWeight.Bold)
                             }
                         }
                     }

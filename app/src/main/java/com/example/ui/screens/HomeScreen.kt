@@ -55,6 +55,7 @@ import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
 import com.example.model.HabitItem
 import com.example.model.NonRoutineTask
+import com.example.localization.LocalAppStrings
 import com.example.ui.theme.*
 import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
@@ -67,6 +68,7 @@ fun HomeScreen(
     viewModel: DayMeetViewModel,
     modifier: Modifier = Modifier
 ) {
+    val strings = LocalAppStrings.current
     val crossStreamItems by viewModel.crossStreamItems.collectAsState()
     val healthMetrics by viewModel.healthMetrics.collectAsState()
     val upcomingBills by viewModel.upcomingBills.collectAsState()

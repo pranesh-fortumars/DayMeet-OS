@@ -27,6 +27,11 @@ import com.example.ui.components.DayMeetBottomDock
 import com.example.ui.components.DayMeetHeader
 import com.example.ui.components.InAppUpdateDialog
 import com.example.ui.components.ConfettiOverlay
+import com.example.ui.components.LanguageSelectorSheet
+import com.example.localization.AppLanguage
+import com.example.localization.LocalAppLanguage
+import com.example.localization.LocalAppStrings
+import com.example.localization.LocalizationManager
 import com.example.ui.screens.*
 import com.example.ui.theme.InverseOnSurface
 import com.example.ui.theme.InverseSurface
@@ -96,6 +101,9 @@ fun DayMeetApp(
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val lastSyncedTime by viewModel.lastSyncedTime.collectAsStateWithLifecycle()
     val isFocusModeActive by viewModel.isFocusModeActive.collectAsStateWithLifecycle()
+    val currentLanguage by viewModel.currentLanguage.collectAsStateWithLifecycle()
+    val showLanguageDialog by viewModel.showLanguageDialog.collectAsStateWithLifecycle()
+    val appStrings = remember(currentLanguage) { LocalizationManager.getStrings(currentLanguage) }
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = context as? android.app.Activity
 
@@ -106,8 +114,9 @@ fun DayMeetApp(
     }
 
     // Handle back button on sub-screens
-    BackHandler(enabled = isFocusModeActive || subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
-        if (showUpdateDialog) viewModel.dismissUpdateDialog(context)
+    BackHandler(enabled = showLanguageDialog || isFocusModeActive || subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
+        if (showLanguageDialog) viewModel.closeLanguageSelector()
+        else if (showUpdateDialog) viewModel.dismissUpdateDialog(context)
         else if (isFocusModeActive) viewModel.toggleFocusMode()
         else if (showSearchOverlay) viewModel.closeSearch()
         else if (showDailyBriefing) viewModel.closeDailyBriefing()
@@ -118,41 +127,49 @@ fun DayMeetApp(
 
     val isFullscreenOverlay = showMeetingMinutes || showAiAssistant || subScreen != null
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
-        contentColor = MaterialTheme.colorScheme.onBackground,
-        topBar = {
-            if (!isFullscreenOverlay) {
-                DayMeetHeader(
-                    isSyncing = isSyncing,
-                    lastSyncedText = lastSyncedTime,
-                    isFocusModeActive = isFocusModeActive,
-                    onFocusClick = {
-                        viewModel.toggleFocusMode()
-                    },
-                    onSyncClick = {
-                        viewModel.triggerManualSync()
-                    },
-                    onSearchClick = {
-                        viewModel.openSearch()
-                    },
-                    onNotificationsClick = {
-                        if (isFocusModeActive) {
-                            viewModel.showToast("🤫 Notifications muted: 12 non-urgent alerts silenced in Focus Mode")
-                        } else {
-                            viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
+    CompositionLocalProvider(
+        LocalAppStrings provides appStrings,
+        LocalAppLanguage provides currentLanguage
+    ) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.onBackground,
+            topBar = {
+                if (!isFullscreenOverlay) {
+                    DayMeetHeader(
+                        isSyncing = isSyncing,
+                        lastSyncedText = lastSyncedTime,
+                        isFocusModeActive = isFocusModeActive,
+                        currentLanguage = currentLanguage,
+                        onLanguageClick = {
+                            viewModel.openLanguageSelector()
+                        },
+                        onFocusClick = {
+                            viewModel.toggleFocusMode()
+                        },
+                        onSyncClick = {
+                            viewModel.triggerManualSync()
+                        },
+                        onSearchClick = {
+                            viewModel.openSearch()
+                        },
+                        onNotificationsClick = {
+                            if (isFocusModeActive) {
+                                viewModel.showToast("🤫 Notifications muted: 12 non-urgent alerts silenced in Focus Mode")
+                            } else {
+                                viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
+                            }
+                        },
+                        onProfileClick = {
+                            viewModel.showToast("Alex Chen • Product Lead (DayMeet Pro)")
+                        },
+                        onAiClick = {
+                            viewModel.openAiAssistant()
                         }
-                    },
-                    onProfileClick = {
-                        viewModel.showToast("Alex Chen • Product Lead (DayMeet Pro)")
-                    },
-                    onAiClick = {
-                        viewModel.openAiAssistant()
-                    }
-                )
-            }
-        },
+                    )
+                }
+            },
         bottomBar = {
             if (!isFullscreenOverlay && !isFocusModeActive) {
                 DayMeetBottomDock(
@@ -314,6 +331,20 @@ fun DayMeetApp(
                 milestoneText = confettiMilestone,
                 onDismiss = { viewModel.dismissConfetti() }
             )
+
+            // Dynamic Multilingual Selector Bottom Sheet
+            if (showLanguageDialog) {
+                LanguageSelectorSheet(
+                    currentLanguage = currentLanguage,
+                    onLanguageSelected = { lang ->
+                        viewModel.setLanguage(lang)
+                    },
+                    onDismissRequest = {
+                        viewModel.closeLanguageSelector()
+                    }
+                )
+            }
         }
     }
+}
 }

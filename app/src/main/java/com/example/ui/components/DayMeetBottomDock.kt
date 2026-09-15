@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.localization.LocalAppStrings
 import com.example.ui.theme.*
 
 @Composable
@@ -28,6 +29,8 @@ fun DayMeetBottomDock(
     onTabSelected: (String) -> Unit,
     onCreateClick: () -> Unit
 ) {
+    val strings = LocalAppStrings.current
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -53,11 +56,11 @@ fun DayMeetBottomDock(
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
-                    contentDescription = "Quick Add",
+                    contentDescription = strings.navCreate,
                     modifier = Modifier.size(18.dp)
                 )
                 Text(
-                    text = "Quick Add",
+                    text = strings.navCreate,
                     style = MaterialTheme.typography.labelLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -83,7 +86,7 @@ fun DayMeetBottomDock(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 DockNavItem(
-                    label = "Home",
+                    label = strings.navHome,
                     icon = Icons.Default.Home,
                     isSelected = currentScreen == "home",
                     onClick = { onTabSelected("home") },
@@ -91,7 +94,7 @@ fun DayMeetBottomDock(
                 )
 
                 DockNavItem(
-                    label = "Calendar",
+                    label = strings.navCalendar,
                     icon = Icons.Default.CalendarToday,
                     isSelected = currentScreen == "calendar",
                     onClick = { onTabSelected("calendar") },
@@ -99,7 +102,7 @@ fun DayMeetBottomDock(
                 )
 
                 DockNavItem(
-                    label = "Tasks",
+                    label = strings.navTasks,
                     icon = Icons.Default.CheckCircle,
                     isSelected = currentScreen == "tasks",
                     badge = "4",
@@ -108,7 +111,7 @@ fun DayMeetBottomDock(
                 )
 
                 DockNavItem(
-                    label = "Insights",
+                    label = strings.navInsights,
                     icon = Icons.Default.TrendingUp,
                     isSelected = currentScreen == "insights",
                     onClick = { onTabSelected("insights") },
@@ -116,7 +119,7 @@ fun DayMeetBottomDock(
                 )
 
                 DockNavItem(
-                    label = "More",
+                    label = strings.navMore,
                     icon = Icons.Default.GridView,
                     isSelected = currentScreen == "more" || currentScreen !in listOf("home", "calendar", "tasks", "insights"),
                     onClick = { onTabSelected("more") },
