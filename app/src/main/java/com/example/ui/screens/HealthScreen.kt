@@ -10,9 +10,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -1957,6 +1963,21 @@ fun SpendingVelocityGaugeCard(
     // Projections
     val projectedTotalMonthEnd = monthlySpent + (currentDailySpend * remainingDays)
     val projectedVariance = monthlyBudgetTarget - projectedTotalMonthEnd
+    val isProjectedToExceed = projectedTotalMonthEnd > monthlyBudgetTarget
+    val projectedDeficit = (projectedTotalMonthEnd - monthlyBudgetTarget).coerceAtLeast(0.0)
+    val excessPercentage = if (monthlyBudgetTarget > 0) ((projectedDeficit / monthlyBudgetTarget) * 100).roundToInt() else 0
+
+    val infiniteTransition = rememberInfiniteTransition(label = "warning_pulse")
+    val warningPulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "warningPulseAlpha"
+    )
+
     val exhaustionDaysRemaining = if (currentDailySpend > 0) {
         ((monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0) / currentDailySpend).roundToInt()
     } else totalDaysInMonth
@@ -1998,6 +2019,7 @@ fun SpendingVelocityGaugeCard(
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = if (isProjectedToExceed) BorderStroke(1.5.dp, Color(0xFFEF4444).copy(alpha = warningPulseAlpha * 0.85f)) else null,
         modifier = modifier
             .fillMaxWidth()
             .testTag("financial_health_gauge_widget")
@@ -2020,13 +2042,13 @@ fun SpendingVelocityGaugeCard(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(CircleShape)
-                            .background(status.bg),
+                            .background(if (isProjectedToExceed) Color(0xFFFEE2E2) else status.bg),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Speed,
+                            imageVector = if (isProjectedToExceed) Icons.Default.WarningAmber else Icons.Default.Speed,
                             contentDescription = "Financial Health Speedometer",
-                            tint = status.color,
+                            tint = if (isProjectedToExceed) Color(0xFFDC2626) else status.color,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -2056,6 +2078,36 @@ fun SpendingVelocityGaugeCard(
                                         fontSize = 10.sp
                                     )
                                 )
+                            }
+                            if (isProjectedToExceed) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color(0xFFFEE2E2))
+                                        .border(0.8.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .testTag("gauge_velocity_warning_badge")
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Warning,
+                                            contentDescription = "Warning",
+                                            tint = Color(0xFFDC2626),
+                                            modifier = Modifier.size(10.dp)
+                                        )
+                                        Text(
+                                            text = "DEFICIT RISK",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color(0xFFDC2626),
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
                             }
                         }
                         Text(
@@ -2093,6 +2145,199 @@ fun SpendingVelocityGaugeCard(
                             color = Primary
                         )
                     )
+                }
+            }
+
+            // ==========================================
+            // VISUAL WARNING BANNER (When Projected Spend Exceeds Target)
+            // ==========================================
+            if (isProjectedToExceed) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFFEF2F2),
+                    border = BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("budget_velocity_warning_banner")
+                        .testTag("velocity_exceed_warning")
+                        .testTag("spending_velocity_warning")
+                        .testTag("projected_deficit_warning")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFEF4444).copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.WarningAmber,
+                                    contentDescription = "Velocity Exceed Warning",
+                                    tint = Color(0xFFDC2626),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Daily Spend Velocity Warning",
+                                        style = MaterialTheme.typography.titleSmall.copy(
+                                            fontWeight = FontWeight.Black,
+                                            color = Color(0xFF991B1B),
+                                            fontSize = 13.sp
+                                        )
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(Color(0xFFDC2626))
+                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                    ) {
+                                        Text(
+                                            text = "+$excessPercentage% DEFICIT",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(2.dp))
+
+                                Text(
+                                    text = "At your current velocity of ₹${String.format(Locale.getDefault(), "%,.0f", currentDailySpend)}/day (sustainable target: ₹${String.format(Locale.getDefault(), "%,.0f", targetDailySpend)}/day), month-end spend is projected to reach ₹${String.format(Locale.getDefault(), "%,.0f", projectedTotalMonthEnd)}, exceeding the ₹${String.format(Locale.getDefault(), "%,.0f", monthlyBudgetTarget)} budget limit by ₹${String.format(Locale.getDefault(), "%,.0f", projectedDeficit)}.",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = Color(0xFF7F1D1D),
+                                        fontSize = 11.sp,
+                                        lineHeight = 15.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Exhaustion timing & safe rate chip
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.EventBusy,
+                                        contentDescription = null,
+                                        tint = Color(0xFFB91C1C),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "Limit exhausts on Day $exhaustionCalendarDay (${(totalDaysInMonth - exhaustionCalendarDay).coerceAtLeast(1)}d early)",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFF991B1B),
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+
+                                Text(
+                                    text = "Safe cap: ₹${String.format(Locale.getDefault(), "%,.0f", safeDailyRemaining)}/d",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF0288D1),
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Quick mitigation buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = {
+                                    isSimulationActive = true
+                                    simulatedDailySpend = safeDailyRemaining
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                border = BorderStroke(1.dp, Color(0xFF059669).copy(alpha = 0.6f)),
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .testTag("warning_adjust_pace_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = Color(0xFF059669),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Simulate Safe Pace (₹${String.format(Locale.getDefault(), "%,.0f", safeDailyRemaining)}/d)",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFF059669),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.width(6.dp))
+
+                            Button(
+                                onClick = onCustomizeBudget,
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .testTag("warning_raise_target_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Adjust Limit",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
             }
 
@@ -2226,6 +2471,34 @@ fun SpendingVelocityGaugeCard(
                             cap = StrokeCap.Round
                         )
 
+                        // 4b. Projected Month-End Velocity Overrun Zone & Notch (Visual Warning)
+                        if (isProjectedToExceed) {
+                            val projectedRatio = if (monthlyBudgetTarget > 0) (projectedTotalMonthEnd / monthlyBudgetTarget).toFloat() else 1f
+                            val overflowSweep = 240f * (projectedRatio - 1f).coerceIn(0f, 0.25f)
+                            if (overflowSweep > 0f) {
+                                drawArc(
+                                    color = Color(0xFFEF4444).copy(alpha = 0.85f),
+                                    startAngle = 390f,
+                                    sweepAngle = overflowSweep,
+                                    useCenter = false,
+                                    topLeft = topLeft,
+                                    size = Size(arcSize, arcSize),
+                                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                                )
+                            }
+                            val projAngle = 150f + 240f * projectedRatio.coerceIn(0f, 1.25f)
+                            val projRad = Math.toRadians(projAngle.toDouble())
+                            val pInner = center + Offset(cos(projRad).toFloat() * (arcRadius - strokeWidth * 1.1f), sin(projRad).toFloat() * (arcRadius - strokeWidth * 1.1f))
+                            val pOuter = center + Offset(cos(projRad).toFloat() * (arcRadius + strokeWidth * 1.1f), sin(projRad).toFloat() * (arcRadius + strokeWidth * 1.1f))
+                            drawLine(
+                                color = Color(0xFFDC2626),
+                                start = pInner,
+                                end = pOuter,
+                                strokeWidth = 4.dp.toPx(),
+                                cap = StrokeCap.Round
+                            )
+                        }
+
                         // 5. Speedometer Needle pointing to budget progress
                         val needleRad = Math.toRadians(animatedNeedleAngle.toDouble())
                         val needleLen = arcRadius * 0.82f
@@ -2241,11 +2514,11 @@ fun SpendingVelocityGaugeCard(
                             lineTo(baseR.x, baseR.y)
                             close()
                         }
-                        drawPath(needlePath, color = status.color)
+                        drawPath(needlePath, color = if (isProjectedToExceed) Color(0xFFEF4444) else status.color)
 
                         // 6. Metallic Center Pivot Hub
                         drawCircle(color = Color(0xFF1E293B), radius = 10.dp.toPx(), center = center)
-                        drawCircle(color = status.color, radius = 6.dp.toPx(), center = center)
+                        drawCircle(color = if (isProjectedToExceed) Color(0xFFEF4444) else status.color, radius = 6.dp.toPx(), center = center)
                         drawCircle(color = Color.White, radius = 2.5.dp.toPx(), center = center)
                     }
 
@@ -2254,20 +2527,51 @@ fun SpendingVelocityGaugeCard(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         modifier = Modifier.offset(y = 16.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(99.dp))
-                                .background(status.bg)
-                                .padding(horizontal = 8.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "${(spendRatio * 100).toInt()}% USED vs ${(timeElapsedRatio * 100).toInt()}% TIME",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = status.color,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 10.sp
+                        if (isProjectedToExceed) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .background(Color(0xFFFEE2E2))
+                                    .border(1.dp, Color(0xFFEF4444).copy(alpha = 0.6f), RoundedCornerShape(99.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                                    .testTag("gauge_projected_over_target_pill")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = "Deficit Warning",
+                                        tint = Color(0xFFDC2626),
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = "PROJECTED DEFICIT: +₹${String.format(Locale.getDefault(), "%,.0f", projectedDeficit)} (${(currentVelocityRatio * 100).toInt()}% PACE)",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFFDC2626),
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .background(status.bg)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${(spendRatio * 100).toInt()}% USED vs ${(timeElapsedRatio * 100).toInt()}% TIME",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = status.color,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 10.sp
+                                    )
                                 )
-                            )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(2.dp))
@@ -2531,7 +2835,7 @@ fun SpendingVelocityGaugeCard(
                                 text = "${String.format(Locale.getDefault(), "%.2f", currentVelocityRatio)}x",
                                 style = MaterialTheme.typography.headlineMedium.copy(
                                     fontWeight = FontWeight.Black,
-                                    color = status.color,
+                                    color = if (isProjectedToExceed) Color(0xFFEF4444) else status.color,
                                     fontSize = 26.sp
                                 )
                             )
@@ -2552,6 +2856,25 @@ fun SpendingVelocityGaugeCard(
                                     )
                                 }
                             }
+                            if (isProjectedToExceed) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0xFFFEE2E2))
+                                        .border(0.8.dp, Color(0xFFEF4444).copy(alpha = 0.5f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                        .testTag("velocity_dial_warning_tag")
+                                ) {
+                                    Text(
+                                        text = "⚠️ DEFICIT",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color(0xFFDC2626),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
                         }
 
                         Text(
@@ -2564,10 +2887,12 @@ fun SpendingVelocityGaugeCard(
                         )
 
                         Text(
-                            text = "Target: ₹${String.format(Locale.getDefault(), "%,.0f", targetDailySpend)}/day (1.0x)",
+                            text = if (isProjectedToExceed) "⚠️ Over Target: Max ₹${String.format(Locale.getDefault(), "%,.0f", targetDailySpend)}/d"
+                                   else "Target: ₹${String.format(Locale.getDefault(), "%,.0f", targetDailySpend)}/day (1.0x)",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = OnSurfaceVariant,
-                                fontSize = 10.sp
+                                color = if (isProjectedToExceed) Color(0xFFDC2626) else OnSurfaceVariant,
+                                fontSize = 10.sp,
+                                fontWeight = if (isProjectedToExceed) FontWeight.SemiBold else FontWeight.Normal
                             )
                         )
                     }
@@ -2750,31 +3075,36 @@ fun SpendingVelocityGaugeCard(
                 // Projected Month-End / Remaining Buffer
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = SurfaceContainerLow,
-                    modifier = Modifier.weight(1f)
+                    color = if (isProjectedToExceed) Color(0xFFFEF2F2) else SurfaceContainerLow,
+                    border = if (isProjectedToExceed) BorderStroke(1.dp, Color(0xFFFCA5A5)) else null,
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("projected_deficit_pill")
                 ) {
                     Column(
                         modifier = Modifier.padding(10.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = if (isSimulationActive) "Projected Spend" else "Remaining",
-                            style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                            text = if (isSimulationActive) "Projected Spend" else "Projected Total",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (isProjectedToExceed) Color(0xFF991B1B) else OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
                         )
                         Text(
-                            text = if (isSimulationActive) "₹${String.format(Locale.getDefault(), "%,.0f", projectedTotalMonthEnd)}"
-                                   else "₹${String.format(Locale.getDefault(), "%,.0f", (monthlyBudgetTarget - monthlySpent).coerceAtLeast(0.0))}",
+                            text = "₹${String.format(Locale.getDefault(), "%,.0f", projectedTotalMonthEnd)}",
                             style = MaterialTheme.typography.labelMedium.copy(
                                 fontWeight = FontWeight.Bold,
-                                color = status.color,
+                                color = if (isProjectedToExceed) Color(0xFFDC2626) else status.color,
                                 fontSize = 13.sp
                             )
                         )
                         Text(
                             text = if (projectedVariance >= 0) "Surplus +₹${String.format(Locale.getDefault(), "%,.0f", projectedVariance)}"
-                                   else "Deficit -₹${String.format(Locale.getDefault(), "%,.0f", -projectedVariance)}",
+                                   else "Deficit -₹${String.format(Locale.getDefault(), "%,.0f", -projectedVariance)} ⚠️",
                             style = MaterialTheme.typography.labelSmall.copy(
-                                color = status.color,
+                                color = if (isProjectedToExceed) Color(0xFFDC2626) else status.color,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
