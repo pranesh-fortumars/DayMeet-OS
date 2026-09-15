@@ -239,6 +239,16 @@ fun HealthScreen(
             )
         }
 
+        // 2b. Top Expense Categories & Daily Spending Patterns Breakdown Widget
+        item {
+            TopExpenseCategoriesBreakdownWidget(
+                monthlySpent = monthlySpent,
+                monthlyBudgetTarget = monthlyBudgetTarget,
+                transactions = transactions,
+                onCustomizeBudget = { showBudgetCustomizerDialog = true }
+            )
+        }
+
         // 3. Big Circular Health Score Card
         item {
             Card(
@@ -1967,6 +1977,33 @@ fun SpendingVelocityGaugeCard(
     val projectedDeficit = (projectedTotalMonthEnd - monthlyBudgetTarget).coerceAtLeast(0.0)
     val excessPercentage = if (monthlyBudgetTarget > 0) ((projectedDeficit / monthlyBudgetTarget) * 100).roundToInt() else 0
 
+    // ==========================================
+    // WEEK-OVER-WEEK SPENDING METRICS & VARIANCE
+    // ==========================================
+    val previousWeekSpend = 16800.0 // Previous 7 days total spend baseline
+    val currentWeekBaseOutflow = 13500.0
+    val dynamicRecentTx = transactions.filter { it.amount < 0 }.sumOf { -it.amount }
+    val currentWeekSpend = if (isSimulationActive) (simulatedDailySpend * 7.0) else (currentWeekBaseOutflow + dynamicRecentTx)
+    val weekOverWeekDifference = currentWeekSpend - previousWeekSpend
+    val weekOverWeekVariancePercent = if (previousWeekSpend > 0) {
+        ((weekOverWeekDifference) / previousWeekSpend) * 100.0
+    } else 0.0
+    val isFavorableVariance = weekOverWeekVariancePercent <= 0.0
+
+    var selectedDayComparisonIndex by remember { mutableIntStateOf(3) } // Thursday (Today) default
+    val weekDaysComparison = remember(currentWeekSpend, previousWeekSpend, isSimulationActive, simulatedDailySpend) {
+        val dailySimFactor = if (isSimulationActive && actualDailySpend > 0) (simulatedDailySpend / actualDailySpend) else 1.0
+        listOf(
+            Triple("Mon", 2600.0, 2100.0 * dailySimFactor),
+            Triple("Tue", 4900.0, 4350.0 * dailySimFactor),
+            Triple("Wed", 3100.0, 2800.0 * dailySimFactor),
+            Triple("Thu", 3800.0, (3450.0 + dynamicRecentTx) * dailySimFactor),
+            Triple("Fri", 2200.0, 1800.0 * dailySimFactor),
+            Triple("Sat", 5400.0, 4800.0 * dailySimFactor),
+            Triple("Sun", 1500.0, 1200.0 * dailySimFactor)
+        )
+    }
+
     val infiniteTransition = rememberInfiniteTransition(label = "warning_pulse")
     val warningPulseAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
@@ -2341,9 +2378,101 @@ fun SpendingVelocityGaugeCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Interactive Tabs: Budget Progress Arc vs Velocity Speedometer
+            // ==========================================
+            // WEEK-OVER-WEEK SPENDING VARIANCE BANNER
+            // ==========================================
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (isFavorableVariance) Color(0xFFECFDF5) else Color(0xFFFFFBEB),
+                border = BorderStroke(1.dp, if (isFavorableVariance) Color(0xFFA7F3D0) else Color(0xFFFDE68A)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { selectedTab = 2 }
+                    .testTag("week_over_week_variance_banner")
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(if (isFavorableVariance) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isFavorableVariance) Icons.Default.TrendingDown else Icons.Default.TrendingUp,
+                                contentDescription = "Week-over-week trend",
+                                tint = if (isFavorableVariance) Color(0xFF059669) else Color(0xFFD97706),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Weekly Pace vs Prev Week",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(if (isFavorableVariance) Color(0xFF059669) else Color(0xFFD97706))
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                        .testTag("week_over_week_percentage_chip")
+                                ) {
+                                    Text(
+                                        text = "${if (weekOverWeekVariancePercent <= 0) "▼ " else "▲ +"}${String.format(Locale.getDefault(), "%.1f", Math.abs(weekOverWeekVariancePercent))}%",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "Current: ₹${String.format(Locale.getDefault(), "%,.0f", currentWeekSpend)} • Prev: ₹${String.format(Locale.getDefault(), "%,.0f", previousWeekSpend)} (${if (isFavorableVariance) "Saved ₹" + String.format(Locale.getDefault(), "%,.0f", -weekOverWeekDifference) else "+₹" + String.format(Locale.getDefault(), "%,.0f", weekOverWeekDifference)})",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isFavorableVariance) Color(0xFF047857) else Color(0xFFB45309),
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = if (selectedTab == 2) "Active" else "Compare →",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Primary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Interactive Tabs: Budget Progress Arc vs Velocity Speedometer vs Weekly Variance
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = SurfaceContainerLow,
@@ -2357,8 +2486,8 @@ fun SpendingVelocityGaugeCard(
                     onClick = { selectedTab = 0 },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Text("Budget Progress Arc", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Icon(imageVector = Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Text("Progress Arc", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 )
@@ -2367,10 +2496,21 @@ fun SpendingVelocityGaugeCard(
                     onClick = { selectedTab = 1 },
                     text = {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Icon(imageVector = Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(14.dp))
-                            Text("Velocity Dial & Sim", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            Icon(imageVector = Icons.Default.Timeline, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Text("Velocity & Sim", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
+                )
+                Tab(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    text = {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(imageVector = Icons.Default.CompareArrows, contentDescription = null, modifier = Modifier.size(13.dp))
+                            Text("WoW Variance", fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    },
+                    modifier = Modifier.testTag("tab_weekly_variance")
                 )
             }
 
@@ -2613,7 +2753,7 @@ fun SpendingVelocityGaugeCard(
                         )
                     }
                 }
-            } else {
+            } else if (selectedTab == 1) {
                 // ==========================================
                 // 2. INTERACTIVE VELOCITY DIAL & SIMULATOR
                 // ==========================================
@@ -3026,6 +3166,287 @@ fun SpendingVelocityGaugeCard(
                         colors = SliderDefaults.colors(thumbColor = status.color, activeTrackColor = status.color),
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+            } else {
+                // ==========================================
+                // 3. WEEK-OVER-WEEK SPENDING VARIANCE ANALYSIS
+                // ==========================================
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("weekly_variance_tab_view"),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Hero Comparison Card
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isFavorableVariance) Color(0xFFF0FDF4) else Color(0xFFFFFBEB),
+                        border = BorderStroke(1.dp, if (isFavorableVariance) Color(0xFFBBF7D0) else Color(0xFFFDE68A)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("week_over_week_variance_card")
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CompareArrows,
+                                        contentDescription = null,
+                                        tint = if (isFavorableVariance) Color(0xFF059669) else Color(0xFFD97706),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "WEEK-OVER-WEEK VARIANCE",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isFavorableVariance) Color(0xFF047857) else Color(0xFFB45309),
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (isFavorableVariance) Color(0xFF059669) else Color(0xFFD97706))
+                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                        .testTag("week_over_week_variance_badge")
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isFavorableVariance) Icons.Default.TrendingDown else Icons.Default.TrendingUp,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = "${if (weekOverWeekVariancePercent <= 0) "" else "+"}${String.format(Locale.getDefault(), "%.1f", weekOverWeekVariancePercent)}%",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "₹${String.format(Locale.getDefault(), "%,.0f", currentWeekSpend)}",
+                                        style = MaterialTheme.typography.headlineSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnSurface,
+                                            fontSize = 20.sp
+                                        ),
+                                        modifier = Modifier.testTag("current_week_spend_value")
+                                    )
+                                    Text(
+                                        text = "Current 7-day spending pace",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = OnSurfaceVariant,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "₹${String.format(Locale.getDefault(), "%,.0f", previousWeekSpend)}",
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = OnSurfaceVariant,
+                                            fontSize = 14.sp
+                                        ),
+                                        modifier = Modifier.testTag("previous_week_spend_value")
+                                    )
+                                    Text(
+                                        text = "Previous 7-day baseline",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = OnSurfaceVariant,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            Text(
+                                text = if (isFavorableVariance) {
+                                    "✨ Spending velocity decreased by ${String.format(Locale.getDefault(), "%.1f", -weekOverWeekVariancePercent)}% vs last week, saving ₹${String.format(Locale.getDefault(), "%,.0f", -weekOverWeekDifference)} in weekly outflow."
+                                } else {
+                                    "⚠️ Spending velocity increased by ${String.format(Locale.getDefault(), "%.1f", weekOverWeekVariancePercent)}% (+₹${String.format(Locale.getDefault(), "%,.0f", weekOverWeekDifference)}) vs last week. Consider reigning in discretionary dining."
+                                },
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = if (isFavorableVariance) Color(0xFF065F46) else Color(0xFF92400E),
+                                    fontSize = 11.sp,
+                                    lineHeight = 14.sp
+                                )
+                            )
+                        }
+                    }
+
+                    // Side-by-side Day-by-Day comparison bar chart
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceContainerLow,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("weekly_day_comparison_chart")
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Day-by-Day Spending Comparison",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF94A3B8)))
+                                        Text("Last Week", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 9.sp))
+                                    }
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(if (isFavorableVariance) Color(0xFF10B981) else Color(0xFF0288D1)))
+                                        Text("This Week", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 9.sp))
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Comparative bars
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(95.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.Bottom
+                            ) {
+                                val maxDayAmount = 5500.0
+                                weekDaysComparison.forEachIndexed { index, item ->
+                                    val dayName = item.first
+                                    val prevAmt = item.second
+                                    val currAmt = item.third
+                                    val isSelected = selectedDayComparisonIndex == index
+
+                                    val prevHeightFraction = (prevAmt / maxDayAmount).coerceIn(0.08, 1.0).toFloat()
+                                    val currHeightFraction = (currAmt / maxDayAmount).coerceIn(0.08, 1.0).toFloat()
+
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { selectedDayComparisonIndex = index }
+                                            .padding(horizontal = 2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .weight(1f),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.Bottom
+                                        ) {
+                                            // Previous week bar
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(7.dp)
+                                                    .fillMaxHeight(prevHeightFraction)
+                                                    .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                                    .background(Color(0xFF94A3B8).copy(alpha = if (isSelected) 1f else 0.65f))
+                                            )
+                                            Spacer(modifier = Modifier.width(3.dp))
+                                            // Current week bar
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(7.dp)
+                                                    .fillMaxHeight(currHeightFraction)
+                                                    .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                                                    .background(
+                                                        if (isFavorableVariance) Color(0xFF10B981).copy(alpha = if (isSelected) 1f else 0.85f)
+                                                        else Color(0xFF0288D1).copy(alpha = if (isSelected) 1f else 0.85f)
+                                                    )
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(4.dp))
+
+                                        Text(
+                                            text = dayName,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) Primary else OnSurfaceVariant,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Selected day detail readout
+                            val selectedDay = weekDaysComparison.getOrElse(selectedDayComparisonIndex) { weekDaysComparison[0] }
+                            val dayVariance = if (selectedDay.second > 0) ((selectedDay.third - selectedDay.second) / selectedDay.second) * 100 else 0.0
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = SurfaceContainerLowest,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 5.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${selectedDay.first}: ₹${String.format(Locale.getDefault(), "%,.0f", selectedDay.third)} vs ₹${String.format(Locale.getDefault(), "%,.0f", selectedDay.second)}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = OnSurface,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = "${if (dayVariance <= 0) "▼ " else "▲ +"}${String.format(Locale.getDefault(), "%.1f", dayVariance)}% variance",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (dayVariance <= 0) Color(0xFF059669) else Color(0xFFD97706),
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -3977,6 +4398,876 @@ fun FinancialHealthGaugeCard(
         onCustomizeBudget = onCustomizeBudget,
         modifier = modifier
     )
+}
+
+/**
+ * Top Expense Categories & Daily Spending Patterns Breakdown Widget
+ * Complements the Financial Health gauge with 7-day outflow cadence analytics,
+ * peak day detection, weekday vs weekend velocity, and itemized category breakdown.
+ */
+data class CategoryBreakdownItem(
+    val id: String,
+    val name: String,
+    val amount: Double,
+    val targetAllocation: Double,
+    val isEssential: Boolean,
+    val typeLabel: String,
+    val icon: ImageVector,
+    val iconColor: Color,
+    val iconBg: Color,
+    val dailyPace: Double,
+    val dailyPattern: String,
+    val peakFrequency: String
+)
+
+data class DayCadencePoint(
+    val dayLabel: String,
+    val fullDayName: String,
+    val amount: Double,
+    val topDriver: String,
+    val isToday: Boolean = false,
+    val isPeak: Boolean = false
+)
+
+@Composable
+fun TopExpenseCategoriesBreakdownWidget(
+    monthlySpent: Double,
+    monthlyBudgetTarget: Double,
+    transactions: List<FinanceTransaction> = emptyList(),
+    onCustomizeBudget: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Dynamic adjustments from active user transactions
+    val dynamicFood = transactions.filter { it.amount < 0 && (it.category.contains("Food", ignoreCase = true) || it.category.contains("Dining", ignoreCase = true)) }.sumOf { -it.amount }
+    val dynamicTransit = transactions.filter { it.amount < 0 && (it.category.contains("Transit", ignoreCase = true) || it.category.contains("Commute", ignoreCase = true)) }.sumOf { -it.amount }
+    val dynamicWork = transactions.filter { it.amount < 0 && (it.category.contains("Work", ignoreCase = true) || it.category.contains("Subscription", ignoreCase = true) || it.category.contains("Software", ignoreCase = true)) }.sumOf { -it.amount }
+    val dynamicOther = transactions.filter {
+        it.amount < 0 &&
+            !it.category.contains("Food", ignoreCase = true) &&
+            !it.category.contains("Dining", ignoreCase = true) &&
+            !it.category.contains("Transit", ignoreCase = true) &&
+            !it.category.contains("Commute", ignoreCase = true) &&
+            !it.category.contains("Work", ignoreCase = true) &&
+            !it.category.contains("Subscription", ignoreCase = true)
+    }.sumOf { -it.amount }
+
+    // 1. Category Breakdown Data Model
+    val categories = remember(monthlySpent, dynamicFood, dynamicTransit, dynamicWork, dynamicOther) {
+        listOf(
+            CategoryBreakdownItem(
+                id = "cat_housing",
+                name = "Housing & Utilities",
+                amount = 21000.0,
+                targetAllocation = 22000.0,
+                isEssential = true,
+                typeLabel = "Fixed Essential",
+                icon = Icons.Default.Home,
+                iconColor = Color(0xFF6366F1),
+                iconBg = Color(0xFFEEF2FF),
+                dailyPace = 677.42,
+                dailyPattern = "Debited on the 1st of each month. Static baseline anchor.",
+                peakFrequency = "1st of Month"
+            ),
+            CategoryBreakdownItem(
+                id = "cat_food",
+                name = "Food & Dining",
+                amount = 9000.0 + dynamicFood,
+                targetAllocation = 12000.0,
+                isEssential = false,
+                typeLabel = "Variable Lifestyle",
+                icon = Icons.Default.Restaurant,
+                iconColor = Color(0xFFF59E0B),
+                iconBg = Color(0xFFFFFBEB),
+                dailyPace = (9000.0 + dynamicFood) / 31.0,
+                dailyPattern = "Daily lunch & coffee. Spikes 2.4x on Friday & Saturday nights.",
+                peakFrequency = "Fri & Sat"
+            ),
+            CategoryBreakdownItem(
+                id = "cat_work",
+                name = "Tech & Work Tools",
+                amount = 3500.0 + dynamicWork,
+                targetAllocation = 4500.0,
+                isEssential = false,
+                typeLabel = "Recurring Cloud",
+                icon = Icons.Default.Devices,
+                iconColor = Color(0xFF0288D1),
+                iconBg = Color(0xFFE0F2FE),
+                dailyPace = (3500.0 + dynamicWork) / 31.0,
+                dailyPattern = "Cloud workspace tools & software licenses billed mid-month.",
+                peakFrequency = "Mid-Month"
+            ),
+            CategoryBreakdownItem(
+                id = "cat_commute",
+                name = "Commute & Transit",
+                amount = 1500.0 + dynamicTransit,
+                targetAllocation = 2500.0,
+                isEssential = true,
+                typeLabel = "Daily Mobility",
+                icon = Icons.Default.DirectionsTransit,
+                iconColor = Color(0xFF10B981),
+                iconBg = Color(0xFFE8F5E9),
+                dailyPace = (1500.0 + dynamicTransit) / 31.0,
+                dailyPattern = "Mon-Fri smart metro tap & occasional morning ride shares.",
+                peakFrequency = "Mon - Fri"
+            ),
+            CategoryBreakdownItem(
+                id = "cat_retail",
+                name = "Discretionary & Retail",
+                amount = 1460.0 + dynamicOther,
+                targetAllocation = 3000.0,
+                isEssential = false,
+                typeLabel = "Discretionary",
+                icon = Icons.Default.ShoppingBag,
+                iconColor = Color(0xFF8B5CF6),
+                iconBg = Color(0xFFF5F3FF),
+                dailyPace = (1460.0 + dynamicOther) / 31.0,
+                dailyPattern = "Incidental retail & weekend shopping outings.",
+                peakFrequency = "Saturdays"
+            ),
+            CategoryBreakdownItem(
+                id = "cat_health",
+                name = "Health & Wellness",
+                amount = 1200.0,
+                targetAllocation = 2000.0,
+                isEssential = true,
+                typeLabel = "Essential Wellbeing",
+                icon = Icons.Default.Favorite,
+                iconColor = Color(0xFFEC4899),
+                iconBg = Color(0xFFFDF2F8),
+                dailyPace = 38.71,
+                dailyPattern = "Gym membership & routine health supplement refills.",
+                peakFrequency = "Weekly"
+            )
+        )
+    }
+
+    // 2. Daily Spending Patterns Cadence Data
+    val dailyCadence = remember(dynamicFood, dynamicTransit, dynamicOther) {
+        listOf(
+            DayCadencePoint("M", "Monday", 2100.0, "Commute & Groceries", isToday = false, isPeak = false),
+            DayCadencePoint("T", "Tuesday", 4350.0, "Utility Auto-Debits", isToday = false, isPeak = false),
+            DayCadencePoint("W", "Wednesday", 2800.0, "Cloud Subscriptions", isToday = false, isPeak = false),
+            DayCadencePoint("T", "Thursday", 3450.0 + dynamicFood + dynamicTransit, "Team Lunch & Transit", isToday = true, isPeak = false),
+            DayCadencePoint("F", "Friday", 1800.0 + dynamicOther, "Evening Cafe", isToday = false, isPeak = false),
+            DayCadencePoint("S", "Saturday", 4800.0, "Weekend Dining & Retail", isToday = false, isPeak = true),
+            DayCadencePoint("S", "Sunday", 1200.0, "Personal Wellbeing", isToday = false, isPeak = false)
+        )
+    }
+
+    val totalWeeklyCadence = dailyCadence.sumOf { it.amount }
+    val avgDailySpend = totalWeeklyCadence / 7.0
+    val peakDay = dailyCadence.firstOrNull { it.isPeak } ?: dailyCadence.maxByOrNull { it.amount }
+    val lowestDay = dailyCadence.minByOrNull { it.amount }
+    val weekdaySum = dailyCadence.take(5).sumOf { it.amount }
+    val weekendSum = dailyCadence.takeLast(2).sumOf { it.amount }
+    val weekdayPercent = if (totalWeeklyCadence > 0) ((weekdaySum / totalWeeklyCadence) * 100).roundToInt() else 70
+    val weekendPercent = 100 - weekdayPercent
+
+    var selectedDayCadenceIndex by remember { mutableIntStateOf(3) } // Thursday (Today) default
+    var categoryFilter by remember { mutableStateOf("All") } // "All", "Essential", "Discretionary"
+    var sortOption by remember { mutableStateOf("Highest Spend") } // "Highest Spend", "Daily Pace"
+
+    val filteredCategories = remember(categories, categoryFilter, sortOption) {
+        val list = when (categoryFilter) {
+            "Essential" -> categories.filter { it.isEssential }
+            "Discretionary" -> categories.filter { !it.isEssential }
+            else -> categories
+        }
+        when (sortOption) {
+            "Daily Pace" -> list.sortedByDescending { it.dailyPace }
+            else -> list.sortedByDescending { it.amount }
+        }
+    }
+
+    Card(
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("top_expense_categories_widget")
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEDE9FE)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PieChart,
+                            contentDescription = "Top Expense Categories",
+                            tint = Color(0xFF7C3AED),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "Top Expense Categories",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFEDE9FE))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "MTD Analytics",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = Color(0xFF6D28D9),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Daily spending patterns & allocation breakdown",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onCustomizeBudget,
+                    modifier = Modifier.size(34.dp).testTag("customize_category_budget_btn")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Tune,
+                        contentDescription = "Adjust Budget Targets",
+                        tint = Primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ==========================================
+            // DAILY SPENDING PATTERNS ANALYSIS SUB-CARD
+            // ==========================================
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = SurfaceContainerLow,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("daily_spending_patterns_card")
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.BarChart,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Daily Spending Patterns & Velocity",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface,
+                                    fontSize = 12.sp
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = "Tap bar to inspect",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 9.sp
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 4 Pattern Metrics Tiles
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Average Daily Outflow
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = SurfaceContainerLowest,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("spending_pattern_avg_metric")
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "Daily Average",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                                Text(
+                                    text = "₹${String.format(Locale.getDefault(), "%,.0f", avgDailySpend)}",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary,
+                                        fontSize = 12.sp
+                                    )
+                                )
+                                Text(
+                                    text = "7-day pace",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 8.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Peak Outflow Day
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = SurfaceContainerLowest,
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("spending_pattern_peak_metric")
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "Peak Day",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                                Text(
+                                    text = "${peakDay?.fullDayName?.take(3)} (₹${String.format(Locale.getDefault(), "%,.0f", peakDay?.amount ?: 0.0)})",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFDC2626),
+                                        fontSize = 12.sp
+                                    )
+                                )
+                                Text(
+                                    text = "Weekend surge",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 8.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Lowest Day
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = SurfaceContainerLowest,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "Lowest Day",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                                Text(
+                                    text = "${lowestDay?.fullDayName?.take(3)} (₹${String.format(Locale.getDefault(), "%,.0f", lowestDay?.amount ?: 0.0)})",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF10B981),
+                                        fontSize = 12.sp
+                                    )
+                                )
+                                Text(
+                                    text = "Disciplined rest",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 8.sp
+                                    )
+                                )
+                            }
+                        }
+
+                        // Weekday / Weekend Split
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = SurfaceContainerLowest,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "Weekday/End",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 9.sp
+                                    )
+                                )
+                                Text(
+                                    text = "$weekdayPercent% / $weekendPercent%",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface,
+                                        fontSize = 12.sp
+                                    )
+                                )
+                                Text(
+                                    text = "Split balance",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = OnSurfaceVariant,
+                                        fontSize = 8.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // 7-Day Outflow Cadence Bar Chart
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(105.dp)
+                            .testTag("daily_spending_patterns_chart")
+                    ) {
+                        val maxDayVal = 5500.0
+                        Row(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Bottom
+                        ) {
+                            dailyCadence.forEachIndexed { idx, item ->
+                                val isSelected = selectedDayCadenceIndex == idx
+                                val barHeightFraction = (item.amount / maxDayVal).coerceIn(0.12, 1.0).toFloat()
+
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedDayCadenceIndex = idx }
+                                        .padding(horizontal = 3.dp)
+                                        .testTag("daily_cadence_bar_$idx")
+                                ) {
+                                    // Peak or Today badge
+                                    if (item.isPeak) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(Color(0xFFEF4444))
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = "PEAK",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 7.sp
+                                                )
+                                            )
+                                        }
+                                    } else if (item.isToday) {
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(Primary)
+                                                .padding(horizontal = 3.dp, vertical = 1.dp)
+                                        ) {
+                                            Text(
+                                                text = "TODAY",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    color = Color.White,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 7.sp
+                                                )
+                                            )
+                                        }
+                                    } else {
+                                        Spacer(modifier = Modifier.height(12.dp))
+                                    }
+
+                                    Spacer(modifier = Modifier.height(2.dp))
+
+                                    // Bar column
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .fillMaxHeight(barHeightFraction)
+                                            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                            .background(
+                                                when {
+                                                    item.isPeak -> Color(0xFFF87171)
+                                                    item.isToday -> Primary
+                                                    isSelected -> Color(0xFF6366F1)
+                                                    else -> Color(0xFFCBD5E1)
+                                                }
+                                            )
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    Text(
+                                        text = item.dayLabel,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected || item.isToday) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (item.isToday) Primary else if (isSelected) Color(0xFF6366F1) else OnSurfaceVariant,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Selected Day Detail Banner
+                    val activeDay = dailyCadence.getOrElse(selectedDayCadenceIndex) { dailyCadence[0] }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = SurfaceContainerLowest,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (activeDay.isToday) Primary else if (activeDay.isPeak) Color(0xFFEF4444) else Color(0xFF6366F1))
+                                )
+                                Text(
+                                    text = "${activeDay.fullDayName} Outflow: ₹${String.format(Locale.getDefault(), "%,.0f", activeDay.amount)}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
+                            Text(
+                                text = "Driver: ${activeDay.topDriver}",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Daily Pattern Behavioral Insight Callout
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF1F5F9))
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = Color(0xFF475569),
+                            modifier = Modifier.size(14.dp).offset(y = 1.dp)
+                        )
+                        Text(
+                            text = "💡 Daily Pattern: Highest spending velocity occurs on Saturdays (bulk groceries & leisure dining) and weekday lunch windows (12:00-2:00 PM). Fixed housing debits on the 1st maintain a steady core baseline.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFF334155),
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // ==========================================
+            // CATEGORY BREAKDOWN CONTROLS & FILTER CHIPS
+            // ==========================================
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Expense Categories",
+                    style = MaterialTheme.typography.labelMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = OnSurface,
+                        fontSize = 13.sp
+                    )
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf("All", "Essential", "Discretionary").forEach { filter ->
+                        val isSelected = categoryFilter == filter
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) Primary else SurfaceContainerLow)
+                                .clickable { categoryFilter = filter }
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .testTag("category_filter_chip_${filter.lowercase(Locale.getDefault())}")
+                        ) {
+                            Text(
+                                text = filter,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) Color.White else OnSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Top Expense Category Cards
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                val totalCategorizedSpend = categories.sumOf { it.amount }
+
+                filteredCategories.forEachIndexed { index, cat ->
+                    val percentageOfSpend = if (totalCategorizedSpend > 0) (cat.amount / totalCategorizedSpend) * 100 else 0.0
+                    val progressRatio = (cat.amount / cat.targetAllocation).coerceIn(0.0, 1.0).toFloat()
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = SurfaceContainerLow,
+                        border = BorderStroke(0.8.dp, SurfaceContainerHighest),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("top_expense_category_card_$index")
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    // Rank circle
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(SurfaceContainerHighest),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "#${index + 1}",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = OnSurfaceVariant,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+
+                                    // Category Icon
+                                    Box(
+                                        modifier = Modifier
+                                            .size(32.dp)
+                                            .clip(CircleShape)
+                                            .background(cat.iconBg),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = cat.icon,
+                                            contentDescription = cat.name,
+                                            tint = cat.iconColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(
+                                                text = cat.name,
+                                                style = MaterialTheme.typography.labelMedium.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = OnSurface,
+                                                    fontSize = 12.sp
+                                                )
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(4.dp))
+                                                    .background(if (cat.isEssential) Color(0xFFE8F5E9) else Color(0xFFF3E8FF))
+                                                    .padding(horizontal = 4.dp, vertical = 1.dp)
+                                            ) {
+                                                Text(
+                                                    text = cat.typeLabel,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = if (cat.isEssential) Color(0xFF2E7D32) else Color(0xFF7E22CE),
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        fontSize = 8.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+
+                                        Text(
+                                            text = "Daily burn: ₹${String.format(Locale.getDefault(), "%,.0f", cat.dailyPace)}/day • Peak: ${cat.peakFrequency}",
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = OnSurfaceVariant,
+                                                fontSize = 10.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "₹${String.format(Locale.getDefault(), "%,.0f", cat.amount)}",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnSurface,
+                                            fontSize = 13.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = "${String.format(Locale.getDefault(), "%.1f", percentageOfSpend)}% of spend",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = OnSurfaceVariant,
+                                            fontSize = 9.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            // Consumption Progress Bar vs Target Allocation
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                LinearProgressIndicator(
+                                    progress = { progressRatio },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(5.dp)
+                                        .clip(RoundedCornerShape(3.dp)),
+                                    color = cat.iconColor,
+                                    trackColor = SurfaceContainerHighest,
+                                )
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = cat.dailyPattern,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = OnSurfaceVariant,
+                                            fontSize = 9.sp
+                                        ),
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Text(
+                                        text = "Target: ₹${String.format(Locale.getDefault(), "%,.0f", cat.targetAllocation)}",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = OnSurfaceVariant,
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Category Concentration Summary Strip
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = SurfaceContainerLow,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(
+                            imageVector = Icons.Default.Category,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Top 2 categories (Housing & Food) comprise 73% of monthly spend.",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurface,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+
+                    TextButton(
+                        onClick = onCustomizeBudget,
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text("Edit →", style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp))
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
