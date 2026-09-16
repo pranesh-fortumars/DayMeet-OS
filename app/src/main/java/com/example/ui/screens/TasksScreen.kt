@@ -598,12 +598,33 @@ fun AnimatedTaskItemRow(
         val effectivePriority = task.priority ?: when {
             task.statusTag?.contains("High", ignoreCase = true) == true || isWarning -> Priority.HIGH
             task.statusTag?.contains("Low", ignoreCase = true) == true -> Priority.LOW
+            task.subtitle.contains("Priority: High", ignoreCase = true) -> Priority.HIGH
+            task.subtitle.contains("Priority: Low", ignoreCase = true) -> Priority.LOW
             else -> Priority.MEDIUM
         }
-        val (priorityBg, priorityTextColor, priorityLeftBorderColor, priorityLabel) = when (effectivePriority) {
-            Priority.URGENT, Priority.HIGH -> listOf(Color(0xFFFFEBEE), Color(0xFFC62828), Color(0xFFEF5350), "High") // Red for High
-            Priority.MEDIUM -> listOf(Color(0xFFFFF8E1), Color(0xFFE65100), Color(0xFFFFB74D), "Medium") // Amber for Medium
-            Priority.LOW -> listOf(Color(0xFFE3F2FD), Color(0xFF1565C0), Color(0xFF64B5F6), "Low") // Blue for Low
+        // Small color-coded badges: Red for High, Amber for Medium, Blue for Low
+        val (priorityBg, priorityTextColor, priorityBorderColor, priorityDotColor, priorityLabel) = when (effectivePriority) {
+            Priority.URGENT, Priority.HIGH -> listOf(
+                Color(0xFFFFEBEE), // Red background
+                Color(0xFFC62828), // Red text
+                Color(0xFFFFCDD2), // Red border
+                Color(0xFFE53935), // Red dot indicator
+                "High"
+            )
+            Priority.MEDIUM -> listOf(
+                Color(0xFFFFF8E1), // Amber background
+                Color(0xFFE65100), // Amber text
+                Color(0xFFFFE082), // Amber border
+                Color(0xFFFFA000), // Amber dot indicator
+                "Medium"
+            )
+            Priority.LOW -> listOf(
+                Color(0xFFE3F2FD), // Blue background
+                Color(0xFF1565C0), // Blue text
+                Color(0xFFBBDEFB), // Blue border
+                Color(0xFF1E88E5), // Blue dot indicator
+                "Low"
+            )
         }
 
         Card(
@@ -642,7 +663,7 @@ fun AnimatedTaskItemRow(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(5.dp)
-                        .background(priorityLeftBorderColor as Color)
+                        .background(priorityDotColor as Color)
                 )
 
                 Row(
@@ -688,36 +709,81 @@ fun AnimatedTaskItemRow(
                             }
                         }
 
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            // Title with CSS-style strike-through animation
-                            Box {
-                                val textColor = if (isToggledState) {
-                                    OnSurfaceVariant.copy(alpha = 0.55f)
-                                } else {
-                                    OnSurface
-                                }
-                                Text(
-                                    text = task.title,
-                                    style = MaterialTheme.typography.titleMedium.copy(
-                                        color = textColor,
-                                        fontWeight = FontWeight.SemiBold
-                                    ),
-                                    modifier = Modifier.drawWithContent {
-                                        drawContent()
-                                        if (strikeProgress.value > 0f) {
-                                            val strokeW = 2.dp.toPx()
-                                            val y = size.height * 0.52f
-                                            drawLine(
-                                                color = OnSurfaceVariant,
-                                                start = Offset(0f, y),
-                                                end = Offset(size.width * strikeProgress.value, y),
-                                                strokeWidth = strokeW,
-                                                cap = StrokeCap.Round
-                                            )
-                                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            // Title row with small color-coded priority badge
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(modifier = Modifier.weight(1f, fill = false)) {
+                                    val textColor = if (isToggledState) {
+                                        OnSurfaceVariant.copy(alpha = 0.55f)
+                                    } else {
+                                        OnSurface
                                     }
-                                )
+                                    Text(
+                                        text = task.title,
+                                        style = MaterialTheme.typography.titleMedium.copy(
+                                            color = textColor,
+                                            fontWeight = FontWeight.SemiBold
+                                        ),
+                                        modifier = Modifier.drawWithContent {
+                                            drawContent()
+                                            if (strikeProgress.value > 0f) {
+                                                val strokeW = 2.dp.toPx()
+                                                val y = size.height * 0.52f
+                                                drawLine(
+                                                    color = OnSurfaceVariant,
+                                                    start = Offset(0f, y),
+                                                    end = Offset(size.width * strikeProgress.value, y),
+                                                    strokeWidth = strokeW,
+                                                    cap = StrokeCap.Round
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+
+                                // Small color-coded priority badge (Red for High, Amber for Medium, Blue for Low)
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = priorityBg as Color,
+                                    border = BorderStroke(1.dp, priorityBorderColor as Color),
+                                    modifier = Modifier
+                                        .testTag("task_priority_badge_${task.id}")
+                                        .testTag("priority_badge_${(priorityLabel as String).lowercase()}")
+                                        .clickable {
+                                            showPrioritySubMenu = true
+                                            showContextMenu = true
+                                        }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(priorityDotColor as Color)
+                                        )
+                                        Text(
+                                            text = priorityLabel as String,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = priorityTextColor as Color,
+                                                fontSize = 10.5.sp
+                                            )
+                                        )
+                                    }
+                                }
                             }
+
                             Text(
                                 text = task.subtitle,
                                 style = MaterialTheme.typography.bodySmall.copy(
@@ -760,7 +826,7 @@ fun AnimatedTaskItemRow(
                         // Category Badge
                         val categoryName = remember(task.statusTag, task.subtitle) {
                             when {
-                                task.statusTag in listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health") -> task.statusTag!!
+                                task.statusTag in listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health", "Engineering", "Design", "Security", "Documentation", "Deliverable", "Tech Debt") -> task.statusTag!!
                                 task.subtitle.contains("Work", ignoreCase = true) -> "Work"
                                 task.subtitle.contains("Personal", ignoreCase = true) -> "Personal"
                                 task.subtitle.contains("Shopping", ignoreCase = true) -> "Shopping"
@@ -777,6 +843,12 @@ fun AnimatedTaskItemRow(
                             "Urgent" -> Triple("⚡", Color(0xFFFFEBEE), Color(0xFFC62828))
                             "Finance" -> Triple("💰", Color(0xFFE8F5E9), Color(0xFF2E7D32))
                             "Health" -> Triple("🏥", Color(0xFFE1F5FE), Color(0xFF0277BD))
+                            "Engineering" -> Triple("⚙️", Color(0xFFEDE7F6), Color(0xFF512DA8))
+                            "Design" -> Triple("🎨", Color(0xFFFCE4EC), Color(0xFFC2185B))
+                            "Security" -> Triple("🔒", Color(0xFFFFF3E0), Color(0xFFE65100))
+                            "Documentation" -> Triple("📝", Color(0xFFE0F2F1), Color(0xFF00796B))
+                            "Deliverable" -> Triple("🚀", Color(0xFFE8F5E9), Color(0xFF2E7D32))
+                            "Tech Debt" -> Triple("🔧", Color(0xFFFBE9E7), Color(0xFFD84315))
                             else -> Triple("📌", Color(0xFFF5F5F5), Color(0xFF424242))
                         }
 
@@ -793,51 +865,6 @@ fun AnimatedTaskItemRow(
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                 .testTag("task_category_badge_${task.id}")
                         )
-
-                        // Priority Indicator (Badge) based on task's priority level (High, Medium, Low)
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = priorityBg as Color,
-                            border = BorderStroke(1.dp, priorityLeftBorderColor as Color),
-                            modifier = Modifier
-                                .testTag("task_priority_badge_${task.id}")
-                                .testTag("priority_badge_${(priorityLabel as String).lowercase()}")
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(priorityTextColor as Color)
-                                )
-                                Text(
-                                    text = priorityLabel as String,
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = priorityTextColor as Color,
-                                        fontSize = 10.5.sp
-                                    )
-                                )
-                            }
-                        }
-
-                        task.statusTag?.takeIf { it != priorityLabel }?.let { tag ->
-                            Text(
-                                text = tag,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isWarning) Color(0xFFD32F2F) else Primary
-                                ),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isWarning) Color(0xFFFFEBEE) else PrimaryFixed)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
 
                         // Existing time display with warning indicator
                         Row(
@@ -937,19 +964,38 @@ fun AnimatedTaskItemRow(
 
                 if (showPrioritySubMenu) {
                     listOf(
-                        Priority.HIGH to "High Priority",
-                        Priority.MEDIUM to "Medium Priority",
-                        Priority.LOW to "Low Priority"
-                    ).forEach { (p, label) ->
+                        Triple(Priority.HIGH, "High Priority", Color(0xFFC62828)),
+                        Triple(Priority.MEDIUM, "Medium Priority", Color(0xFFE65100)),
+                        Triple(Priority.LOW, "Low Priority", Color(0xFF1565C0))
+                    ).forEach { (p, label, color) ->
                         DropdownMenuItem(
                             text = {
-                                Text("  • $label", style = MaterialTheme.typography.bodySmall)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(start = 8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(color)
+                                    )
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontWeight = if (task.priority == p) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (task.priority == p) color else OnSurface
+                                        )
+                                    )
+                                }
                             },
                             onClick = {
                                 onSetPriority(p)
                                 showContextMenu = false
                                 showPrioritySubMenu = false
-                            }
+                            },
+                            modifier = Modifier.testTag("priority_select_${p.name.lowercase()}")
                         )
                     }
                 }

@@ -76,4 +76,21 @@ class ExampleRobolectricTest {
     assertTrue(spent > 0.0)
     assertTrue(viewModel.monthlyBudgetTarget.value >= spent)
   }
+
+  @Test
+  fun `tasks priority assignment and update functions correctly`() {
+    val viewModel = DayMeetViewModel()
+    val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK }
+    assertTrue(tasks.isNotEmpty())
+
+    // Verify task priorities exist among High, Medium, Low
+    val targetTask = tasks.first()
+    viewModel.updateTaskPriority(targetTask.id, com.example.model.Priority.HIGH)
+    val updatedTask = viewModel.feedItems.value.first { it.id == targetTask.id }
+    assertEquals(com.example.model.Priority.HIGH, updatedTask.priority)
+
+    viewModel.updateTaskPriority(targetTask.id, com.example.model.Priority.LOW)
+    val lowTask = viewModel.feedItems.value.first { it.id == targetTask.id }
+    assertEquals(com.example.model.Priority.LOW, lowTask.priority)
+  }
 }
