@@ -38,7 +38,8 @@ data class FeedItem(
     val isCompleted: Boolean = false,
     val habitProgress: Float? = null,
     val detail: String? = null,
-    val reminderTime: String? = null
+    val reminderTime: String? = null,
+    val notes: String? = null
 )
 
 data class Subtask(

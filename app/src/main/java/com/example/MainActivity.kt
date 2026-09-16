@@ -41,6 +41,7 @@ import com.example.viewmodel.DayMeetViewModel
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.util.TaskNotificationScheduler.createNotificationChannel(this)
         enableEdgeToEdge()
         setContent {
             val viewModel: DayMeetViewModel = viewModel()

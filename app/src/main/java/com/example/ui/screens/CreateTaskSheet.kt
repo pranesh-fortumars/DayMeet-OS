@@ -255,7 +255,7 @@ fun CreateTaskSheet(
                     focusedBorderColor = Primary,
                     unfocusedBorderColor = SurfaceContainerHigh
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth().testTag("quick_add_detail_input")
             )
 
             // Optional 3rd parameter input (e.g., Amount, Time, Target Value)

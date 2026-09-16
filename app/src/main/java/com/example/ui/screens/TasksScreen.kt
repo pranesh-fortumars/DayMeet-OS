@@ -37,6 +37,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
@@ -57,6 +58,29 @@ fun TasksScreen(
     viewModel: DayMeetViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
+    // Notification permission request for Android 13+ (API 33+)
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            android.widget.Toast.makeText(context, "Task reminders enabled", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     val feedItems by viewModel.feedItems.collectAsState()
     val tasksOnly = remember(feedItems) {
         feedItems.filter { it.category == FeedCategory.TASK }
@@ -628,6 +652,9 @@ fun TasksScreen(
                 onReschedule = { newTime -> viewModel.rescheduleTask(task.id, newTime) },
                 onSetPriority = { priority -> viewModel.updateTaskPriority(task.id, priority) },
                 onDelete = { viewModel.deleteTask(task.id) },
+                onUpdateNotes = { newNotes -> viewModel.updateTaskNotes(task.id, newNotes) },
+                onTriggerNotification = { viewModel.triggerTaskNotificationNow(context, task.id) },
+                onScheduleAlert = { viewModel.scheduleTaskNotification(context, task.id) },
                 modifier = Modifier.animateItem(
                     fadeInSpec = spring(
                         dampingRatio = Spring.DampingRatioLowBouncy,
@@ -676,6 +703,9 @@ fun AnimatedTaskItemRow(
     onReschedule: (String) -> Unit = {},
     onSetPriority: (Priority) -> Unit = {},
     onDelete: () -> Unit = {},
+    onUpdateNotes: (String) -> Unit = {},
+    onTriggerNotification: () -> Unit = {},
+    onScheduleAlert: () -> Unit = {},
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onSelectToggle: () -> Unit = {},
@@ -695,6 +725,9 @@ fun AnimatedTaskItemRow(
     var showContextMenu by remember { mutableStateOf(false) }
     var showPrioritySubMenu by remember { mutableStateOf(false) }
     var showRescheduleSubMenu by remember { mutableStateOf(false) }
+    var isNotesExpanded by remember { mutableStateOf(false) }
+    var isEditingNotes by remember { mutableStateOf(false) }
+    var editedNotesText by remember(task.notes) { mutableStateOf(task.notes ?: "") }
 
     fun triggerCheckboxToggle() {
         if (isAnimatingOut) return
@@ -837,13 +870,16 @@ fun AnimatedTaskItemRow(
                         .background(priorityDotColor as Color)
                 )
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -980,6 +1016,42 @@ fun AnimatedTaskItemRow(
                                     color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant
                                 )
                             )
+
+                            // Notes Badge / Toggle Button
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        if (task.notes.isNullOrBlank()) SurfaceContainerHigh.copy(alpha = 0.5f)
+                                        else Primary.copy(alpha = 0.12f)
+                                    )
+                                    .clickable { isNotesExpanded = !isNotesExpanded }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("task_notes_toggle_${task.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (task.notes.isNullOrBlank()) Icons.Default.NoteAdd else Icons.Default.Notes,
+                                    contentDescription = "Notes",
+                                    tint = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = if (task.notes.isNullOrBlank()) "Add Note" else "Note",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                                Icon(
+                                    imageVector = if (isNotesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (isNotesExpanded) "Collapse Notes" else "Expand Notes",
+                                    tint = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
                             if (!task.reminderTime.isNullOrBlank()) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -1076,6 +1148,159 @@ fun AnimatedTaskItemRow(
                             )
                         }
                     }
+                }
+
+                // Expandable Notes Section
+                AnimatedVisibility(
+                    visible = isNotesExpanded,
+                    enter = expandVertically(animationSpec = tween(250)) + fadeIn(animationSpec = tween(250)),
+                    exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(200))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(SurfaceContainerLowest.copy(alpha = 0.9f))
+                            .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(10.dp))
+                            .padding(10.dp)
+                            .testTag("task_notes_section_${task.id}")
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Text(
+                                    text = "Detailed Notes",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = OnSurface
+                                    )
+                                )
+                            }
+
+                            if (!isEditingNotes) {
+                                TextButton(
+                                    onClick = {
+                                        editedNotesText = task.notes ?: ""
+                                        isEditingNotes = true
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier
+                                        .height(28.dp)
+                                        .testTag("task_notes_edit_button_${task.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Notes",
+                                        tint = Primary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = if (task.notes.isNullOrBlank()) "Add" else "Edit",
+                                        style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontWeight = FontWeight.Bold)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        if (isEditingNotes) {
+                            OutlinedTextField(
+                                value = editedNotesText,
+                                onValueChange = { editedNotesText = it },
+                                placeholder = {
+                                    Text(
+                                        "Add detailed task notes, checklist, links, or context...",
+                                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant.copy(alpha = 0.6f))
+                                    )
+                                },
+                                textStyle = MaterialTheme.typography.bodySmall.copy(color = OnSurface),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("task_notes_input_${task.id}"),
+                                minLines = 2,
+                                maxLines = 5,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        isEditingNotes = false
+                                        editedNotesText = task.notes ?: ""
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                    modifier = Modifier.testTag("task_notes_cancel_button_${task.id}")
+                                ) {
+                                    Text("Cancel", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+                                }
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                Button(
+                                    onClick = {
+                                        onUpdateNotes(editedNotesText.trim())
+                                        isEditingNotes = false
+                                    },
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier
+                                        .height(32.dp)
+                                        .testTag("task_notes_save_button_${task.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Save", style = MaterialTheme.typography.labelSmall.copy(color = Color.White, fontWeight = FontWeight.Bold))
+                                }
+                            }
+                        } else {
+                            if (!task.notes.isNullOrBlank()) {
+                                Text(
+                                    text = task.notes!!,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = OnSurface.copy(alpha = 0.85f),
+                                        lineHeight = 18.sp
+                                    ),
+                                    modifier = Modifier.testTag("task_notes_content_${task.id}")
+                                )
+                            } else {
+                                Text(
+                                    text = "No notes added yet. Tap Add to attach details, meeting points, or checklist.",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = OnSurfaceVariant.copy(alpha = 0.6f),
+                                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
                 }
             }
 
@@ -1192,7 +1417,45 @@ fun AnimatedTaskItemRow(
 
                 HorizontalDivider(color = SurfaceContainerHigh)
 
-                // Action 3: Delete
+                // Action 3: Schedule Notification Alert
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.Alarm, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
+                            Text("Schedule Due Alert", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onScheduleAlert()
+                    },
+                    modifier = Modifier.testTag("task_action_schedule_alert_${task.id}")
+                )
+
+                // Action 4: Trigger Notification Now (Instant Test)
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFF0288D1), modifier = Modifier.size(18.dp))
+                            Text("Trigger Alert Now", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        onTriggerNotification()
+                    },
+                    modifier = Modifier.testTag("task_action_trigger_alert_${task.id}")
+                )
+
+                HorizontalDivider(color = SurfaceContainerHigh)
+
+                // Action 5: Delete
                 DropdownMenuItem(
                     text = {
                         Row(

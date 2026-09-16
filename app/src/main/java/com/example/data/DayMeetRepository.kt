@@ -29,7 +29,8 @@ object DayMeetRepository {
             statusTag = "Engineering",
             priority = Priority.HIGH,
             isCompleted = false,
-            reminderTime = "Today 10:15 AM"
+            reminderTime = "Today 10:15 AM",
+            notes = "Perform full verification of all semantic color tokens, typography scales, and corner radii against Figma specs. Verify Dark Mode parity across all Compose components."
         ),
         FeedItem(
             id = "f3",
@@ -48,7 +49,8 @@ object DayMeetRepository {
             statusTag = "Design",
             priority = Priority.MEDIUM,
             isCompleted = true,
-            reminderTime = "Today 01:00 PM"
+            reminderTime = "Today 01:00 PM",
+            notes = "Cross-check user story estimates with the frontend lead. Prioritize the expandable notes and notification scheduler deliverables."
         ),
         FeedItem(
             id = "f4_2",
@@ -59,7 +61,8 @@ object DayMeetRepository {
             statusTag = "Security",
             priority = Priority.HIGH,
             isCompleted = false,
-            reminderTime = "Today 02:15 PM"
+            reminderTime = "Today 02:15 PM",
+            notes = "Review input field sanitization, verify zero plain-text secret logging, and inspect all Android notification channel configurations."
         ),
         FeedItem(
             id = "f4_3",
@@ -69,7 +72,8 @@ object DayMeetRepository {
             category = FeedCategory.TASK,
             statusTag = "Documentation",
             priority = Priority.LOW,
-            isCompleted = true
+            isCompleted = true,
+            notes = "Highlight the new local notification scheduler and expandable task notes features in the engineering release changelog."
         ),
         FeedItem(
             id = "f4_4",
@@ -79,7 +83,8 @@ object DayMeetRepository {
             category = FeedCategory.TASK,
             statusTag = "Documentation",
             priority = Priority.LOW,
-            isCompleted = false
+            isCompleted = false,
+            notes = "Add troubleshooting steps for NotificationManager permissions and AlarmManager exact alarm behavior across API levels."
         ),
         FeedItem(
             id = "f4_5",
@@ -90,7 +95,8 @@ object DayMeetRepository {
             statusTag = "Deliverable",
             priority = Priority.HIGH,
             isCompleted = false,
-            reminderTime = "Today 05:15 PM"
+            reminderTime = "Today 05:15 PM",
+            notes = "Include architecture diagrams, live notification demo walkthrough, and performance metrics from the recent Robolectric test run."
         ),
         FeedItem(
             id = "f4_6",
@@ -100,7 +106,8 @@ object DayMeetRepository {
             category = FeedCategory.TASK,
             statusTag = "Tech Debt",
             priority = Priority.MEDIUM,
-            isCompleted = false
+            isCompleted = false,
+            notes = "Ensure all indices are explicitly declared on foreign keys and verify schema export matches current Entity definitions."
         ),
         FeedItem(
             id = "f5",

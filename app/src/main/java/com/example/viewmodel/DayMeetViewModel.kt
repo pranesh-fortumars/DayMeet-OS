@@ -11,6 +11,7 @@ import com.example.localization.LocalizationManager
 import com.example.model.*
 import com.example.util.AppUpdateManager
 import com.example.util.PlayAppUpdateManager
+import com.example.util.TaskNotificationScheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -1060,6 +1061,44 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    fun updateTaskNotes(id: String, newNotes: String) {
+        val task = _feedItems.value.firstOrNull { it.id == id }
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == id) {
+                item.copy(notes = newNotes)
+            } else {
+                item
+            }
+        }
+        if (task != null) {
+            showToast("Updated notes for '${task.title}' 📝")
+        }
+    }
+
+    fun triggerTaskNotificationNow(context: Context, taskId: String) {
+        val task = _feedItems.value.firstOrNull { it.id == taskId } ?: return
+        TaskNotificationScheduler.showNotification(
+            context = context,
+            taskId = task.id,
+            title = task.title,
+            notes = task.notes ?: task.detail ?: "",
+            time = task.time
+        )
+        showToast("🔔 Triggered due alert for '${task.title}'")
+    }
+
+    fun scheduleTaskNotification(context: Context, taskId: String) {
+        val task = _feedItems.value.firstOrNull { it.id == taskId } ?: return
+        TaskNotificationScheduler.scheduleTaskAlert(
+            context = context,
+            taskId = task.id,
+            title = task.title,
+            notes = task.notes ?: task.detail ?: "",
+            timeStr = task.reminderTime ?: task.time
+        )
+        showToast("⏰ Alert scheduled for ${task.reminderTime ?: task.time}")
+    }
+
     fun deleteTask(id: String) {
         val task = _feedItems.value.firstOrNull { it.id == id }
         _feedItems.value = _feedItems.value.filterNot { it.id == id }
@@ -1257,7 +1296,8 @@ class DayMeetViewModel : ViewModel() {
             priority = priority,
             statusTag = categoryTag,
             isCompleted = false,
-            reminderTime = reminderTime
+            reminderTime = reminderTime,
+            notes = notes.ifBlank { null }
         )
         _feedItems.value = listOf(newTask) + _feedItems.value
 
