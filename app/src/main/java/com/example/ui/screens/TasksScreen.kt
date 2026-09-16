@@ -94,6 +94,10 @@ fun TasksScreen(
     var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
+    // Multi-select state
+    var isSelectionMode by remember { mutableStateOf(false) }
+    var selectedTaskIds by remember { mutableStateOf(emptySet<String>()) }
+
     val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled, searchQuery) {
         var base = when (filterState) {
             "Pending" -> tasksOnly.filter { !it.isCompleted }
@@ -147,67 +151,198 @@ fun TasksScreen(
     ) {
         // Header
         item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
+            if (isSelectionMode) {
+                // Multi-select Active Header Bar
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryContainer),
+                    border = BorderStroke(1.dp, Primary.copy(alpha = 0.3f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("selection_mode_bar")
+                ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "Tasks & Backlog",
-                            style = MaterialTheme.typography.headlineLarge.copy(
-                                color = OnSurface,
-                                fontSize = 24.sp
-                            )
-                        )
-                        // Task Completion Streak Counter Badge
-                        Surface(
-                            shape = RoundedCornerShape(99.dp),
-                            color = Color(0xFFFFF3E0),
-                            border = BorderStroke(1.dp, Color(0xFFFFB74D)),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(99.dp))
-                                .clickable { showStreakDialog = true }
-                                .testTag("task_completion_streak_badge")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            IconButton(
+                                onClick = {
+                                    isSelectionMode = false
+                                    selectedTaskIds = emptySet()
+                                },
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .testTag("cancel_selection_btn")
                             ) {
-                                Text("🔥", fontSize = 12.sp)
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel Selection",
+                                    tint = OnPrimaryContainer
+                                )
+                            }
+
+                            Text(
+                                text = "${selectedTaskIds.size} selected",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnPrimaryContainer
+                                ),
+                                modifier = Modifier.testTag("selected_count_text")
+                            )
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    val selectable = displayedTasks.filter { !it.isCompleted }.map { it.id }.toSet()
+                                    selectedTaskIds = if (selectedTaskIds.size == selectable.size && selectable.isNotEmpty()) {
+                                        emptySet()
+                                    } else {
+                                        selectable
+                                    }
+                                },
+                                modifier = Modifier.testTag("select_all_btn")
+                            ) {
                                 Text(
-                                    text = "${streakDays}d Streak",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFE65100)
+                                    text = if (selectedTaskIds.isNotEmpty() && selectedTaskIds.size == displayedTasks.filter { !it.isCompleted }.size) "Deselect All" else "Select All",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Primary
                                     )
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (selectedTaskIds.isNotEmpty()) {
+                                        viewModel.bulkMarkTasksCompleted(selectedTaskIds)
+                                        selectedTaskIds = emptySet()
+                                        isSelectionMode = false
+                                    }
+                                },
+                                enabled = selectedTaskIds.isNotEmpty(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = EmeraldSuccess,
+                                    contentColor = Color.White,
+                                    disabledContainerColor = SurfaceContainerHigh,
+                                    disabledContentColor = OnSurfaceVariant
+                                ),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.testTag("bulk_complete_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Mark Done",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
                         }
                     }
-                    Text(
-                        text = "$pendingCount open • $completedCount completed today",
-                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
-                    )
                 }
-
-                Button(
-                    onClick = { viewModel.openCreateTask() },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                    modifier = Modifier.testTag("add_task_top_btn")
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Task", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Tasks & Backlog",
+                                style = MaterialTheme.typography.headlineLarge.copy(
+                                    color = OnSurface,
+                                    fontSize = 24.sp
+                                )
+                            )
+                            // Task Completion Streak Counter Badge
+                            Surface(
+                                shape = RoundedCornerShape(99.dp),
+                                color = Color(0xFFFFF3E0),
+                                border = BorderStroke(1.dp, Color(0xFFFFB74D)),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .clickable { showStreakDialog = true }
+                                    .testTag("task_completion_streak_badge")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text("🔥", fontSize = 12.sp)
+                                    Text(
+                                        text = "${streakDays}d Streak",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFFE65100)
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                        Text(
+                            text = "$pendingCount open • $completedCount completed today",
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        // Multi-select toggle button
+                        IconButton(
+                            onClick = {
+                                isSelectionMode = true
+                                selectedTaskIds = emptySet()
+                            },
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceContainerHigh)
+                                .testTag("toggle_multi_select_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Checklist,
+                                contentDescription = "Select multiple tasks",
+                                tint = OnSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Button(
+                            onClick = { viewModel.openCreateTask() },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                            modifier = Modifier.testTag("add_task_top_btn")
+                        ) {
+                            Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add Task", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
                 }
             }
         }
@@ -479,6 +614,15 @@ fun TasksScreen(
         items(displayedTasks, key = { it.id }) { task ->
             AnimatedTaskItemRow(
                 task = task,
+                isSelectionMode = isSelectionMode,
+                isSelected = selectedTaskIds.contains(task.id),
+                onSelectToggle = {
+                    selectedTaskIds = if (selectedTaskIds.contains(task.id)) {
+                        selectedTaskIds - task.id
+                    } else {
+                        selectedTaskIds + task.id
+                    }
+                },
                 onToggle = { viewModel.toggleFeedTaskDone(task.id) },
                 onRemove = { viewModel.removeFeedTask(task.id) },
                 onReschedule = { newTime -> viewModel.rescheduleTask(task.id, newTime) },
@@ -532,6 +676,9 @@ fun AnimatedTaskItemRow(
     onReschedule: (String) -> Unit = {},
     onSetPriority: (Priority) -> Unit = {},
     onDelete: () -> Unit = {},
+    isSelectionMode: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -630,25 +777,49 @@ fun AnimatedTaskItemRow(
         Card(
             shape = RoundedCornerShape(16.dp),
             colors = CardDefaults.cardColors(
-                containerColor = if (isWarning) Color(0xFFFFF8F8) else SurfaceContainerLowest
+                containerColor = when {
+                    isSelectionMode && isSelected -> PrimaryContainer.copy(alpha = 0.45f)
+                    isWarning -> Color(0xFFFFF8F8)
+                    else -> SurfaceContainerLowest
+                }
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning) 2.dp else 1.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning || (isSelectionMode && isSelected)) 2.dp else 1.dp),
             modifier = modifier
                 .fillMaxWidth()
                 .then(
-                    if (isWarning) {
-                        Modifier.border(
-                            width = 2.dp,
-                            color = Color(0xFFE53935),
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                    } else {
-                        Modifier
+                    when {
+                        isSelectionMode && isSelected -> {
+                            Modifier.border(
+                                width = 2.dp,
+                                color = Primary,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                        }
+                        isWarning -> {
+                            Modifier.border(
+                                width = 2.dp,
+                                color = Color(0xFFE53935),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                        }
+                        else -> Modifier
                     }
                 )
                 .combinedClickable(
-                    onClick = { triggerCheckboxToggle() },
-                    onLongClick = { showContextMenu = true }
+                    onClick = {
+                        if (isSelectionMode) {
+                            onSelectToggle()
+                        } else {
+                            triggerCheckboxToggle()
+                        }
+                    },
+                    onLongClick = {
+                        if (isSelectionMode) {
+                            onSelectToggle()
+                        } else {
+                            showContextMenu = true
+                        }
+                    }
                 )
                 .testTag("task_item_${task.id}")
         ) {
@@ -678,21 +849,40 @@ fun AnimatedTaskItemRow(
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Checkbox with spring/bounce and color transition
+                        // Checkbox: In selection mode, acts as multi-select checkbox; otherwise toggles completion
                         Box(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(8.dp))
                                 .background(
-                                    if (isToggledState) EmeraldSuccess
-                                    else if (isWarning) Color(0xFFFFEBEE)
-                                    else SurfaceContainerHigh
+                                    when {
+                                        isSelectionMode && isSelected -> Primary
+                                        isSelectionMode -> SurfaceContainerHigh
+                                        isToggledState -> EmeraldSuccess
+                                        isWarning -> Color(0xFFFFEBEE)
+                                        else -> SurfaceContainerHigh
+                                    }
                                 )
-                                .clickable { triggerCheckboxToggle() }
+                                .clickable {
+                                    if (isSelectionMode) {
+                                        onSelectToggle()
+                                    } else {
+                                        triggerCheckboxToggle()
+                                    }
+                                }
                                 .testTag("task_checkbox_${task.id}"),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (isToggledState) {
+                            if (isSelectionMode) {
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else if (isToggledState) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Completed",

@@ -93,4 +93,19 @@ class ExampleRobolectricTest {
     val lowTask = viewModel.feedItems.value.first { it.id == targetTask.id }
     assertEquals(com.example.model.Priority.LOW, lowTask.priority)
   }
+
+  @Test
+  fun `tasks bulk completion marks multiple items as completed in one action`() {
+    val viewModel = DayMeetViewModel()
+    val uncompletedTasks = viewModel.feedItems.value
+        .filter { it.category == com.example.model.FeedCategory.TASK && !it.isCompleted }
+    assertTrue("Should have uncompleted tasks to test bulk completion", uncompletedTasks.size >= 2)
+
+    val targetIds = uncompletedTasks.take(2).map { it.id }.toSet()
+    viewModel.bulkMarkTasksCompleted(targetIds)
+
+    val updatedTasks = viewModel.feedItems.value.filter { it.id in targetIds }
+    assertEquals(2, updatedTasks.size)
+    assertTrue("All target tasks should now be completed", updatedTasks.all { it.isCompleted })
+  }
 }

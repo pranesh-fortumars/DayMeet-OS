@@ -1003,6 +1003,27 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    fun bulkMarkTasksCompleted(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val count = ids.size
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id in ids) {
+                item.copy(isCompleted = true)
+            } else {
+                item
+            }
+        }
+        showToast("Marked $count tasks as completed! ✓")
+        triggerConfetti("🎉 Batch completed $count tasks!")
+    }
+
+    fun bulkRemoveTasks(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val count = ids.size
+        _feedItems.value = _feedItems.value.filterNot { it.id in ids }
+        showToast("Removed $count completed tasks")
+    }
+
     fun removeFeedTask(id: String) {
         val task = _feedItems.value.firstOrNull { it.id == id }
         _feedItems.value = _feedItems.value.filterNot { it.id == id }
