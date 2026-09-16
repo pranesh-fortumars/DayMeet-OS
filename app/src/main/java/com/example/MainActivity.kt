@@ -91,6 +91,7 @@ fun DayMeetApp(
     val showAiAssistant by viewModel.showAiAssistant.collectAsStateWithLifecycle()
     val showCreateSheet by viewModel.showCreateSheet.collectAsStateWithLifecycle()
     val showQuickMeetingDialog by viewModel.showQuickMeetingDialog.collectAsStateWithLifecycle()
+    val showScheduleMeetingModal by viewModel.showScheduleMeetingModal.collectAsStateWithLifecycle()
     val showDailyBriefing by viewModel.showDailyBriefing.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
@@ -114,8 +115,9 @@ fun DayMeetApp(
     }
 
     // Handle back button on sub-screens
-    BackHandler(enabled = showLanguageDialog || isFocusModeActive || subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
+    BackHandler(enabled = showLanguageDialog || showScheduleMeetingModal || isFocusModeActive || subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
         if (showLanguageDialog) viewModel.closeLanguageSelector()
+        else if (showScheduleMeetingModal) viewModel.closeScheduleMeeting()
         else if (showUpdateDialog) viewModel.dismissUpdateDialog(context)
         else if (isFocusModeActive) viewModel.toggleFocusMode()
         else if (showSearchOverlay) viewModel.closeSearch()
@@ -276,6 +278,14 @@ fun DayMeetApp(
                 CreateTaskSheet(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeCreateTask() }
+                )
+            }
+
+            // Schedule Meeting Modal (with Participants & Duration selection)
+            if (showScheduleMeetingModal) {
+                ScheduleMeetingModal(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeScheduleMeeting() }
                 )
             }
 

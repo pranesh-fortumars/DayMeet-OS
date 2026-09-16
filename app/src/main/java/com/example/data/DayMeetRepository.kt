@@ -26,7 +26,8 @@ object DayMeetRepository {
             title = "Submit Q4 Token Audit",
             subtitle = "Tasks Workspace • Final signoff required",
             category = FeedCategory.TASK,
-            statusTag = "Weekly Goal",
+            statusTag = "Engineering",
+            priority = Priority.HIGH,
             isCompleted = false,
             reminderTime = "Today 10:15 AM"
         ),
@@ -44,7 +45,8 @@ object DayMeetRepository {
             title = "Review Sprint Backlog",
             subtitle = "Figma component sync & tokens review",
             category = FeedCategory.TASK,
-            statusTag = "Weekly Goal",
+            statusTag = "Design",
+            priority = Priority.MEDIUM,
             isCompleted = true,
             reminderTime = "Today 01:00 PM"
         ),
@@ -54,9 +56,9 @@ object DayMeetRepository {
             title = "Complete UI Security Review",
             subtitle = "Design token sanitation & audit",
             category = FeedCategory.TASK,
-            statusTag = "Weekly Goal",
-            isCompleted = false,
+            statusTag = "Security",
             priority = Priority.HIGH,
+            isCompleted = false,
             reminderTime = "Today 02:15 PM"
         ),
         FeedItem(
@@ -65,8 +67,40 @@ object DayMeetRepository {
             title = "Publish Weekly Release Notes",
             subtitle = "Documentation and release announcement",
             category = FeedCategory.TASK,
-            statusTag = "Weekly Goal",
+            statusTag = "Documentation",
+            priority = Priority.LOW,
             isCompleted = true
+        ),
+        FeedItem(
+            id = "f4_4",
+            time = "04:45 PM",
+            title = "Update Developer Onboarding Guide",
+            subtitle = "Architecture docs & local environment setup",
+            category = FeedCategory.TASK,
+            statusTag = "Documentation",
+            priority = Priority.LOW,
+            isCompleted = false
+        ),
+        FeedItem(
+            id = "f4_5",
+            time = "05:30 PM",
+            title = "Prepare Client Demo Slides",
+            subtitle = "Executive quarterly progress deck",
+            category = FeedCategory.TASK,
+            statusTag = "Deliverable",
+            priority = Priority.HIGH,
+            isCompleted = false,
+            reminderTime = "Today 05:15 PM"
+        ),
+        FeedItem(
+            id = "f4_6",
+            time = "06:15 PM",
+            title = "Refactor Database Schema Migrations",
+            subtitle = "Local Room entities and KSP optimization",
+            category = FeedCategory.TASK,
+            statusTag = "Tech Debt",
+            priority = Priority.MEDIUM,
+            isCompleted = false
         ),
         FeedItem(
             id = "f5",

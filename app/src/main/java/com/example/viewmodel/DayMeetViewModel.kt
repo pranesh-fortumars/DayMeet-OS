@@ -43,6 +43,9 @@ class DayMeetViewModel : ViewModel() {
     private val _showQuickMeetingDialog = MutableStateFlow(false)
     val showQuickMeetingDialog: StateFlow<Boolean> = _showQuickMeetingDialog.asStateFlow()
 
+    private val _showScheduleMeetingModal = MutableStateFlow(false)
+    val showScheduleMeetingModal: StateFlow<Boolean> = _showScheduleMeetingModal.asStateFlow()
+
     private val _quickAddInitialTab = MutableStateFlow("Task")
     val quickAddInitialTab: StateFlow<String> = _quickAddInitialTab.asStateFlow()
 
@@ -350,11 +353,71 @@ class DayMeetViewModel : ViewModel() {
     }
 
     fun openQuickScheduleMeeting() {
-        _showQuickMeetingDialog.value = true
+        _showScheduleMeetingModal.value = true
     }
 
     fun closeQuickScheduleMeeting() {
         _showQuickMeetingDialog.value = false
+        _showScheduleMeetingModal.value = false
+    }
+
+    fun openScheduleMeeting() {
+        _showScheduleMeetingModal.value = true
+    }
+
+    fun closeScheduleMeeting() {
+        _showScheduleMeetingModal.value = false
+    }
+
+    fun scheduleMeeting(
+        title: String,
+        participants: List<String>,
+        date: String = "Today",
+        time: String = "Today, 03:00 PM",
+        duration: String = "30 mins",
+        platform: String = "Google Meet",
+        agenda: String = ""
+    ) {
+        val attendeesList = if (participants.isEmpty()) {
+            listOf(Attendee("Alex Chen (You)", avatarUrl = DayMeetRepository.ALEX_AVATAR))
+        } else {
+            participants.map { name ->
+                Attendee(
+                    name = name.trim(),
+                    role = "Participant",
+                    avatarUrl = if (name.contains("Alex", ignoreCase = true)) DayMeetRepository.ALEX_AVATAR else null,
+                    initials = name.trim().take(2).uppercase()
+                )
+            }
+        }
+        val newMeeting = MeetingItem(
+            id = "m_${System.currentTimeMillis()}",
+            title = title.ifBlank { "Team Meeting" },
+            time = time.ifBlank { "Today, 03:00 PM" },
+            duration = duration,
+            platform = platform,
+            status = "Scheduled",
+            attendees = attendeesList,
+            attendeesCount = attendeesList.size
+        )
+        _meetings.value = listOf(newMeeting) + _meetings.value
+
+        // Also add to Cross-Module Stream
+        val newStreamItem = CrossStreamItem(
+            id = "cs_${System.currentTimeMillis()}",
+            time = if (time.contains(",")) time.substringAfter(",").trim() else time,
+            title = title.ifBlank { "Team Meeting" },
+            subtitle = "${attendeesList.size} attendees • $duration • $platform",
+            tag = "Meeting",
+            tagType = "meeting",
+            isCompleted = false
+        )
+        _crossStreamItems.value = listOf(newStreamItem) + _crossStreamItems.value
+
+        _showScheduleMeetingModal.value = false
+        _showQuickMeetingDialog.value = false
+        val participantsDesc = if (participants.isNotEmpty()) " with ${participants.size} participants" else ""
+        showToast("Meeting scheduled for $duration$participantsDesc! 📅")
     }
 
     fun scheduleMeetingFromHub(

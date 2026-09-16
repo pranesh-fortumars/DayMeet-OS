@@ -18,6 +18,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -88,7 +90,7 @@ fun TasksScreen(
     }
     var showStreakDialog by remember { mutableStateOf(false) }
 
-    var filterState by remember { mutableStateOf("All") } // "All", "Pending", "Completed", "High"
+    var filterState by remember { mutableStateOf("All") } // "All", "High", "Medium", "Low", "Pending", "Completed"
     var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -97,6 +99,8 @@ fun TasksScreen(
             "Pending" -> tasksOnly.filter { !it.isCompleted }
             "Completed" -> tasksOnly.filter { it.isCompleted }
             "High" -> tasksOnly.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
+            "Medium" -> tasksOnly.filter { it.priority == Priority.MEDIUM || (it.priority == null && it.statusTag?.contains("High", ignoreCase = true) != true && it.statusTag?.contains("Low", ignoreCase = true) != true) }
+            "Low" -> tasksOnly.filter { it.priority == Priority.LOW || it.statusTag?.contains("Low", ignoreCase = true) == true }
             else -> tasksOnly
         }
 
@@ -326,13 +330,23 @@ fun TasksScreen(
             val highCount = remember(tasksOnly) {
                 tasksOnly.count { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
             }
+            val mediumCount = remember(tasksOnly) {
+                tasksOnly.count { it.priority == Priority.MEDIUM || (it.priority == null && it.statusTag?.contains("High", ignoreCase = true) != true && it.statusTag?.contains("Low", ignoreCase = true) != true) }
+            }
+            val lowCount = remember(tasksOnly) {
+                tasksOnly.count { it.priority == Priority.LOW || it.statusTag?.contains("Low", ignoreCase = true) == true }
+            }
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 listOf(
                     "All (${tasksOnly.size})",
                     "High ($highCount)",
+                    "Medium ($mediumCount)",
+                    "Low ($lowCount)",
                     "Pending ($pendingCount)",
                     "Completed ($completedCount)"
                 ).forEach { tab ->
@@ -344,6 +358,7 @@ fun TasksScreen(
                             .background(if (isSelected) Primary else SurfaceContainer)
                             .clickable { filterState = rawTab }
                             .padding(horizontal = 14.dp, vertical = 7.dp)
+                            .testTag("filter_tab_${rawTab.lowercase()}")
                     ) {
                         Text(
                             text = tab,
@@ -586,9 +601,9 @@ fun AnimatedTaskItemRow(
             else -> Priority.MEDIUM
         }
         val (priorityBg, priorityTextColor, priorityLeftBorderColor, priorityLabel) = when (effectivePriority) {
-            Priority.URGENT, Priority.HIGH -> listOf(Color(0xFFFFEBEE), Color(0xFFC62828), Color(0xFFE53935), "HIGH") // Red for High
-            Priority.MEDIUM -> listOf(Color(0xFFFFF8E1), Color(0xFFE65100), Color(0xFFFFA000), "MED") // Amber for Medium
-            Priority.LOW -> listOf(Color(0xFFE3F2FD), Color(0xFF1565C0), Color(0xFF1E88E5), "LOW") // Blue for Low
+            Priority.URGENT, Priority.HIGH -> listOf(Color(0xFFFFEBEE), Color(0xFFC62828), Color(0xFFEF5350), "High") // Red for High
+            Priority.MEDIUM -> listOf(Color(0xFFFFF8E1), Color(0xFFE65100), Color(0xFFFFB74D), "Medium") // Amber for Medium
+            Priority.LOW -> listOf(Color(0xFFE3F2FD), Color(0xFF1565C0), Color(0xFF64B5F6), "Low") // Blue for Low
         }
 
         Card(
@@ -779,31 +794,35 @@ fun AnimatedTaskItemRow(
                                 .testTag("task_category_badge_${task.id}")
                         )
 
-                        // Visual Priority Badge
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        // Priority Indicator (Badge) based on task's priority level (High, Medium, Low)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = priorityBg as Color,
+                            border = BorderStroke(1.dp, priorityLeftBorderColor as Color),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(priorityBg as Color)
-                                .border(1.dp, priorityLeftBorderColor as Color, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
                                 .testTag("task_priority_badge_${task.id}")
+                                .testTag("priority_badge_${(priorityLabel as String).lowercase()}")
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(priorityTextColor as Color)
-                            )
-                            Text(
-                                text = priorityLabel as String,
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = priorityTextColor as Color,
-                                    fontSize = 10.sp
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(priorityTextColor as Color)
                                 )
-                            )
+                                Text(
+                                    text = priorityLabel as String,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = priorityTextColor as Color,
+                                        fontSize = 10.5.sp
+                                    )
+                                )
+                            }
                         }
 
                         task.statusTag?.takeIf { it != priorityLabel }?.let { tag ->

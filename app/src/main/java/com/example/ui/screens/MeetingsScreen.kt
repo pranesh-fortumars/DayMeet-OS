@@ -79,7 +79,7 @@ fun MeetingsScreen(
                 }
 
                 Button(
-                    onClick = { viewModel.showToast("Create Meeting sheet opened") },
+                    onClick = { viewModel.openScheduleMeeting() },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
