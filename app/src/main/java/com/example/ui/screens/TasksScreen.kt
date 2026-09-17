@@ -20,6 +20,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -655,6 +656,15 @@ fun TasksScreen(
                 onUpdateNotes = { newNotes -> viewModel.updateTaskNotes(task.id, newNotes) },
                 onTriggerNotification = { viewModel.triggerTaskNotificationNow(context, task.id) },
                 onScheduleAlert = { viewModel.scheduleTaskNotification(context, task.id) },
+                onEditTask = { title, subtitle, priority, category, time, notes ->
+                    viewModel.editTask(task.id, title, subtitle, priority, category, time, notes)
+                },
+                onMoveToCalendar = { timeSlot ->
+                    viewModel.moveTaskToCalendar(task.id, timeSlot)
+                },
+                onSetReminder = { reminderTime ->
+                    viewModel.setTaskReminder(context, task.id, reminderTime)
+                },
                 modifier = Modifier.animateItem(
                     fadeInSpec = spring(
                         dampingRatio = Spring.DampingRatioLowBouncy,
@@ -706,6 +716,9 @@ fun AnimatedTaskItemRow(
     onUpdateNotes: (String) -> Unit = {},
     onTriggerNotification: () -> Unit = {},
     onScheduleAlert: () -> Unit = {},
+    onEditTask: (title: String, subtitle: String, priority: Priority, category: String, time: String, notes: String?) -> Unit = { _, _, _, _, _, _ -> },
+    onMoveToCalendar: (timeSlot: String) -> Unit = {},
+    onSetReminder: (reminderTime: String) -> Unit = {},
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onSelectToggle: () -> Unit = {},
@@ -725,6 +738,10 @@ fun AnimatedTaskItemRow(
     var showContextMenu by remember { mutableStateOf(false) }
     var showPrioritySubMenu by remember { mutableStateOf(false) }
     var showRescheduleSubMenu by remember { mutableStateOf(false) }
+    var showQuickEditDialog by remember { mutableStateOf(false) }
+    var showMoveToCalendarDialog by remember { mutableStateOf(false) }
+    var showSetReminderDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var isNotesExpanded by remember { mutableStateOf(false) }
     var isEditingNotes by remember { mutableStateOf(false) }
     var editedNotesText by remember(task.notes) { mutableStateOf(task.notes ?: "") }
@@ -805,6 +822,19 @@ fun AnimatedTaskItemRow(
                 Color(0xFF1E88E5), // Blue dot indicator
                 "Low"
             )
+        }
+
+        val categoryName = remember(task.statusTag, task.subtitle) {
+            when {
+                task.statusTag in listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health", "Engineering", "Design", "Security", "Documentation", "Deliverable", "Tech Debt") -> task.statusTag!!
+                task.subtitle.contains("Work", ignoreCase = true) -> "Work"
+                task.subtitle.contains("Personal", ignoreCase = true) -> "Personal"
+                task.subtitle.contains("Shopping", ignoreCase = true) -> "Shopping"
+                task.subtitle.contains("Urgent", ignoreCase = true) -> "Urgent"
+                task.subtitle.contains("Finance", ignoreCase = true) -> "Finance"
+                task.subtitle.contains("Health", ignoreCase = true) -> "Health"
+                else -> task.statusTag?.takeIf { it != priorityLabel } ?: "Work"
+            }
         }
 
         Card(
@@ -1086,18 +1116,6 @@ fun AnimatedTaskItemRow(
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         // Category Badge
-                        val categoryName = remember(task.statusTag, task.subtitle) {
-                            when {
-                                task.statusTag in listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health", "Engineering", "Design", "Security", "Documentation", "Deliverable", "Tech Debt") -> task.statusTag!!
-                                task.subtitle.contains("Work", ignoreCase = true) -> "Work"
-                                task.subtitle.contains("Personal", ignoreCase = true) -> "Personal"
-                                task.subtitle.contains("Shopping", ignoreCase = true) -> "Shopping"
-                                task.subtitle.contains("Urgent", ignoreCase = true) -> "Urgent"
-                                task.subtitle.contains("Finance", ignoreCase = true) -> "Finance"
-                                task.subtitle.contains("Health", ignoreCase = true) -> "Health"
-                                else -> task.statusTag?.takeIf { it != priorityLabel } ?: "Work"
-                            }
-                        }
                         val (catIcon, catBg, catColor) = when (categoryName) {
                             "Work" -> Triple("💼", Color(0xFFE8EAF6), Color(0xFF283593))
                             "Personal" -> Triple("👤", Color(0xFFF3E5F5), Color(0xFF6A1B9A))
@@ -1114,19 +1132,44 @@ fun AnimatedTaskItemRow(
                             else -> Triple("📌", Color(0xFFF5F5F5), Color(0xFF424242))
                         }
 
-                        Text(
-                            text = "$catIcon $categoryName",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = catColor,
-                                fontSize = 10.sp
-                            ),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(catBg)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                                .testTag("task_category_badge_${task.id}")
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = "$catIcon $categoryName",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = catColor,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(catBg)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .testTag("task_category_badge_${task.id}")
+                            )
+
+                            // Fast Tap Context Menu Button
+                            IconButton(
+                                onClick = {
+                                    try {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    } catch (_: Exception) {}
+                                    showContextMenu = true
+                                },
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .testTag("task_menu_trigger_${task.id}")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MoreVert,
+                                    contentDescription = "Task Context Menu",
+                                    tint = OnSurfaceVariant,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+                        }
 
                         // Existing time display with warning indicator
                         Row(
@@ -1316,25 +1359,211 @@ fun AnimatedTaskItemRow(
                     .background(SurfaceContainerLowest)
                     .testTag("task_context_menu_${task.id}")
             ) {
-                Text(
-                    text = task.title,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurface
-                    ),
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                )
+                // Header: Task title preview
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = task.title,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            ),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = "Quick Options",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = OnSurfaceVariant,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+                }
                 HorizontalDivider(color = SurfaceContainerHigh)
 
-                // Action 1: Reschedule
+                // 1. Quick Option: 'Edit' (in-place dialog, no separate edit mode required)
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Edit",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                                Text(
+                                    text = "Modify title, priority, due date or notes",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showQuickEditDialog = true
+                    },
+                    modifier = Modifier.testTag("task_action_edit_${task.id}")
+                )
+
+                // 2. Quick Option: 'Move to Calendar'
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF0288D1).copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Event,
+                                    contentDescription = null,
+                                    tint = Color(0xFF0288D1),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Move to Calendar",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                                Text(
+                                    text = "Schedule into timeline agenda",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showMoveToCalendarDialog = true
+                    },
+                    modifier = Modifier.testTag("task_action_move_calendar_${task.id}")
+                )
+
+                // 3. Quick Option: 'Set Reminder'
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(AmberWarning.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NotificationsActive,
+                                    contentDescription = null,
+                                    tint = Color(0xFFE65100),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Set Reminder",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                                Text(
+                                    text = "Configure push notification alert",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showSetReminderDialog = true
+                    },
+                    modifier = Modifier.testTag("task_action_set_reminder_${task.id}")
+                )
+
+                HorizontalDivider(color = SurfaceContainerHigh)
+
+                // 4. Quick Option: 'Delete'
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFEBEE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Color(0xFFD32F2F),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Delete",
+                                    style = MaterialTheme.typography.bodyMedium.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFD32F2F)
+                                    )
+                                )
+                                Text(
+                                    text = "Remove task without edit mode",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFFEF5350), fontSize = 10.sp)
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showDeleteConfirmDialog = true
+                    },
+                    modifier = Modifier.testTag("task_action_delete_${task.id}")
+                )
+
+                HorizontalDivider(color = SurfaceContainerHigh)
+
+                // Secondary Inline Actions: Reschedule & Priority
                 DropdownMenuItem(
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
-                            Text("Reschedule", style = MaterialTheme.typography.bodyMedium)
+                            Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
+                            Text("Reschedule...", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium))
                         }
                     },
                     onClick = {
@@ -1359,15 +1588,14 @@ fun AnimatedTaskItemRow(
                     }
                 }
 
-                // Action 2: Set Priority
                 DropdownMenuItem(
                     text = {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Icon(Icons.Default.Flag, contentDescription = null, tint = AmberWarning, modifier = Modifier.size(18.dp))
-                            Text("Set Priority", style = MaterialTheme.typography.bodyMedium)
+                            Icon(Icons.Default.Flag, contentDescription = null, tint = AmberWarning, modifier = Modifier.size(16.dp))
+                            Text("Set Priority...", style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium))
                         }
                     },
                     onClick = {
@@ -1379,6 +1607,7 @@ fun AnimatedTaskItemRow(
 
                 if (showPrioritySubMenu) {
                     listOf(
+                        Triple(Priority.URGENT, "Urgent", Color(0xFFB71C1C)),
                         Triple(Priority.HIGH, "High Priority", Color(0xFFC62828)),
                         Triple(Priority.MEDIUM, "Medium Priority", Color(0xFFE65100)),
                         Triple(Priority.LOW, "Low Priority", Color(0xFF1565C0))
@@ -1414,66 +1643,655 @@ fun AnimatedTaskItemRow(
                         )
                     }
                 }
-
-                HorizontalDivider(color = SurfaceContainerHigh)
-
-                // Action 3: Schedule Notification Alert
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Alarm, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
-                            Text("Schedule Due Alert", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onScheduleAlert()
-                    },
-                    modifier = Modifier.testTag("task_action_schedule_alert_${task.id}")
-                )
-
-                // Action 4: Trigger Notification Now (Instant Test)
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.NotificationsActive, contentDescription = null, tint = Color(0xFF0288D1), modifier = Modifier.size(18.dp))
-                            Text("Trigger Alert Now", style = MaterialTheme.typography.bodyMedium)
-                        }
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onTriggerNotification()
-                    },
-                    modifier = Modifier.testTag("task_action_trigger_alert_${task.id}")
-                )
-
-                HorizontalDivider(color = SurfaceContainerHigh)
-
-                // Action 5: Delete
-                DropdownMenuItem(
-                    text = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
-                            Text("Delete Task", style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFFD32F2F)))
-                        }
-                    },
-                    onClick = {
-                        showContextMenu = false
-                        onDelete()
-                    },
-                    modifier = Modifier.testTag("task_action_delete_${task.id}")
-                )
             }
         }
+    }
+
+    // 1. Quick Edit Task Dialog (In-place modal editing without separate edit mode)
+    if (showQuickEditDialog) {
+        var editTitle by remember(task.title) { mutableStateOf(task.title) }
+        var editSubtitle by remember(task.subtitle) { mutableStateOf(task.subtitle) }
+        var editTime by remember(task.time) { mutableStateOf(task.time) }
+        var editPriority by remember(task.priority) { mutableStateOf(effectivePriority) }
+        var editCategory by remember(categoryName) { mutableStateOf(categoryName) }
+        var editNotes by remember(task.notes) { mutableStateOf(task.notes ?: "") }
+
+        AlertDialog(
+            onDismissRequest = { showQuickEditDialog = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = SurfaceContainerLowest,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Primary.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Quick Edit Task",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Update details instantly in place",
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant, fontSize = 11.sp)
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedTextField(
+                        value = editTitle,
+                        onValueChange = { editTitle = it },
+                        label = { Text("Task Title") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("edit_task_title_input_${task.id}"),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+
+                    // Priority Selector
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Priority Level",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, color = OnSurfaceVariant)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf(
+                                Triple(Priority.LOW, "Low", Color(0xFF1565C0)),
+                                Triple(Priority.MEDIUM, "Med", Color(0xFFE65100)),
+                                Triple(Priority.HIGH, "High", Color(0xFFC62828)),
+                                Triple(Priority.URGENT, "Urgent", Color(0xFFB71C1C))
+                            ).forEach { (p, label, color) ->
+                                val isSelected = editPriority == p
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) color.copy(alpha = 0.15f) else SurfaceContainerHigh.copy(alpha = 0.5f),
+                                    border = BorderStroke(1.dp, if (isSelected) color else Color.Transparent),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { editPriority = p }
+                                        .testTag("edit_task_priority_${label.lowercase()}_${task.id}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(7.dp)
+                                                .clip(CircleShape)
+                                                .background(color)
+                                        )
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text(
+                                            text = label,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) color else OnSurfaceVariant,
+                                                fontSize = 11.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Category Selector
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Category",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, color = OnSurfaceVariant)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health").forEach { cat ->
+                                val isSelected = editCategory == cat
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSelected) Primary else SurfaceContainerHigh,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { editCategory = cat }
+                                        .testTag("edit_task_cat_${cat.lowercase()}_${task.id}")
+                                ) {
+                                    Text(
+                                        text = cat,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isSelected) Color.White else OnSurfaceVariant
+                                        ),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Due Time Input & Presets
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        OutlinedTextField(
+                            value = editTime,
+                            onValueChange = { editTime = it },
+                            label = { Text("Due Date & Time") },
+                            singleLine = true,
+                            leadingIcon = {
+                                Icon(Icons.Default.Schedule, contentDescription = null, tint = Primary, modifier = Modifier.size(18.dp))
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("edit_task_time_input_${task.id}"),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("Today 05:00 PM", "Tomorrow 09:00 AM", "In 2 Hours", "Saturday").forEach { preset ->
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = SurfaceContainerHigh.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { editTime = preset }
+                                ) {
+                                    Text(
+                                        text = preset,
+                                        style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontSize = 10.sp),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Notes Input
+                    OutlinedTextField(
+                        value = editNotes,
+                        onValueChange = { editNotes = it },
+                        label = { Text("Detailed Notes & Context") },
+                        minLines = 2,
+                        maxLines = 4,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("edit_task_notes_input_${task.id}"),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onEditTask(
+                            editTitle.trim().ifBlank { task.title },
+                            editSubtitle.trim().ifBlank { task.subtitle },
+                            editPriority,
+                            editCategory,
+                            editTime.trim().ifBlank { task.time },
+                            editNotes.trim().ifBlank { null }
+                        )
+                        showQuickEditDialog = false
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier.testTag("save_edit_task_btn_${task.id}")
+                ) {
+                    Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Save Changes", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showQuickEditDialog = false },
+                    modifier = Modifier.testTag("cancel_edit_task_btn_${task.id}")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // 2. Move to Calendar Dialog
+    if (showMoveToCalendarDialog) {
+        var selectedSlot by remember { mutableStateOf("Today, 03:00 PM") }
+        var selectedDuration by remember { mutableStateOf("30 mins") }
+
+        val presetSlots = listOf(
+            "Today, 11:00 AM",
+            "Today, 02:00 PM",
+            "Today, 04:30 PM",
+            "Tomorrow, 10:00 AM",
+            "Tomorrow, 03:00 PM"
+        )
+
+        AlertDialog(
+            onDismissRequest = { showMoveToCalendarDialog = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = SurfaceContainerLowest,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF0288D1).copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Event,
+                            contentDescription = null,
+                            tint = Color(0xFF0288D1),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Move to Calendar",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Schedule into your daily timeline",
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant, fontSize = 11.sp)
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Select time block for '${task.title}':",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurface, fontWeight = FontWeight.Medium)
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        presetSlots.forEach { slot ->
+                            val isSelected = selectedSlot == slot
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) Color(0xFF0288D1).copy(alpha = 0.12f) else SurfaceContainerHigh.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, if (isSelected) Color(0xFF0288D1) else Color.Transparent),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { selectedSlot = slot }
+                                    .testTag("calendar_slot_${slot.replace(" ", "_").replace(",", "")}")
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Schedule,
+                                            contentDescription = null,
+                                            tint = if (isSelected) Color(0xFF0288D1) else OnSurfaceVariant,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = slot,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) Color(0xFF0288D1) else OnSurface
+                                            )
+                                        )
+                                    }
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color(0xFF0288D1),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = selectedSlot,
+                        onValueChange = { selectedSlot = it },
+                        label = { Text("Or Enter Custom Slot") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("custom_calendar_slot_input_${task.id}"),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    // Duration Selector
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Duration",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, color = OnSurfaceVariant)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            listOf("15 mins", "30 mins", "45 mins", "60 mins").forEach { dur ->
+                                val isDurSelected = selectedDuration == dur
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isDurSelected) Color(0xFF0288D1) else SurfaceContainerHigh,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { selectedDuration = dur }
+                                ) {
+                                    Text(
+                                        text = dur,
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = if (isDurSelected) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (isDurSelected) Color.White else OnSurfaceVariant,
+                                            fontSize = 11.sp
+                                        ),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 6.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val durationInt = selectedDuration.substringBefore(" ").toIntOrNull() ?: 30
+                        onMoveToCalendar(selectedSlot)
+                        showMoveToCalendarDialog = false
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0288D1)),
+                    modifier = Modifier.testTag("confirm_move_calendar_btn_${task.id}")
+                ) {
+                    Icon(Icons.Default.Event, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Schedule on Calendar", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showMoveToCalendarDialog = false },
+                    modifier = Modifier.testTag("cancel_move_calendar_btn_${task.id}")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // 3. Set Reminder Dialog
+    if (showSetReminderDialog) {
+        var selectedReminder by remember(task.reminderTime) { mutableStateOf(task.reminderTime ?: "In 15 minutes") }
+
+        val presetReminders = listOf(
+            "In 15 minutes",
+            "In 30 minutes",
+            "In 1 hour",
+            "Today at 05:00 PM",
+            "Tomorrow at 09:00 AM"
+        )
+
+        AlertDialog(
+            onDismissRequest = { showSetReminderDialog = false },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = SurfaceContainerLowest,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(AmberWarning.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = Color(0xFFE65100),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Set Reminder Alert",
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                        Text(
+                            text = "Get push alerts when due",
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant, fontSize = 11.sp)
+                        )
+                    }
+                }
+            },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Notify me for '${task.title}':",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurface, fontWeight = FontWeight.Medium)
+                    )
+
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        presetReminders.forEach { preset ->
+                            val isSelected = selectedReminder == preset
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) AmberWarning.copy(alpha = 0.12f) else SurfaceContainerHigh.copy(alpha = 0.5f),
+                                border = BorderStroke(1.dp, if (isSelected) AmberWarning else Color.Transparent),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable { selectedReminder = preset }
+                                    .testTag("reminder_preset_${preset.replace(" ", "_")}")
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Alarm,
+                                            contentDescription = null,
+                                            tint = if (isSelected) Color(0xFFE65100) else OnSurfaceVariant,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = preset,
+                                            style = MaterialTheme.typography.bodyMedium.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                color = if (isSelected) Color(0xFFE65100) else OnSurface
+                                            )
+                                        )
+                                    }
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color(0xFFE65100),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = selectedReminder,
+                        onValueChange = { selectedReminder = it },
+                        label = { Text("Or Custom Reminder Time") },
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("custom_reminder_input_${task.id}"),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedButton(
+                        onClick = {
+                            onTriggerNotification()
+                            showSetReminderDialog = false
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("test_alert_now_btn_${task.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.NotificationsActive,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Trigger Alert Immediately (Test)",
+                            style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onSetReminder(selectedReminder)
+                        showSetReminderDialog = false
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE65100)),
+                    modifier = Modifier.testTag("confirm_set_reminder_btn_${task.id}")
+                ) {
+                    Icon(Icons.Default.Alarm, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Set Reminder", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showSetReminderDialog = false },
+                    modifier = Modifier.testTag("cancel_set_reminder_btn_${task.id}")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // 4. Delete Confirm Dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            shape = RoundedCornerShape(18.dp),
+            containerColor = SurfaceContainerLowest,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFFEBEE)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = Color(0xFFD32F2F),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            },
+            title = {
+                Text("Delete Task?", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+            },
+            text = {
+                Text(
+                    "Are you sure you want to delete '${task.title}'? This action cannot be undone.",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.testTag("confirm_delete_task_btn_${task.id}")
+                ) {
+                    Text("Delete", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteConfirmDialog = false },
+                    modifier = Modifier.testTag("cancel_delete_task_btn_${task.id}")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
     }
 }

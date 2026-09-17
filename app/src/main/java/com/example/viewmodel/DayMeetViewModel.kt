@@ -1315,6 +1315,91 @@ class DayMeetViewModel : ViewModel() {
         showToast("⏰ Alert scheduled for ${task.reminderTime ?: task.time}")
     }
 
+    fun setTaskReminder(context: Context, taskId: String, reminderTimeStr: String) {
+        val task = _feedItems.value.firstOrNull { it.id == taskId } ?: return
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                item.copy(reminderTime = reminderTimeStr)
+            } else item
+        }
+        TaskNotificationScheduler.scheduleTaskAlert(
+            context = context,
+            taskId = task.id,
+            title = task.title,
+            notes = task.notes ?: task.detail ?: "",
+            timeStr = reminderTimeStr
+        )
+        showToast("⏰ Reminder set for $reminderTimeStr")
+    }
+
+    fun moveTaskToCalendar(taskId: String, timeSlot: String, durationMinutes: Int = 30) {
+        val task = _feedItems.value.firstOrNull { it.id == taskId } ?: return
+        
+        // 1. Update task with calendar time and status
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                item.copy(
+                    time = timeSlot,
+                    statusTag = "Calendar"
+                )
+            } else item
+        }
+
+        // 2. Add or update TimelineEvent in calendar
+        val timeClean = if (timeSlot.contains(",")) timeSlot.substringAfter(",").trim() else timeSlot
+        val period = if (timeSlot.contains("PM", ignoreCase = true)) "Afternoon" else "Morning"
+        val newTimelineEvent = TimelineEvent(
+            id = "timeline_${task.id}",
+            time = timeClean,
+            period = period,
+            title = task.title,
+            subtitle = task.notes ?: task.subtitle,
+            durationMinutes = durationMinutes,
+            type = TimelineType.TASK,
+            isCompleted = task.isCompleted
+        )
+        _timelineEvents.value = listOf(newTimelineEvent) + _timelineEvents.value.filterNot { it.id == newTimelineEvent.id }
+
+        // 3. Add to cross-stream
+        val crossStream = CrossStreamItem(
+            id = "cs_cal_${task.id}",
+            time = timeClean,
+            title = task.title,
+            subtitle = "Scheduled task • $durationMinutes mins",
+            tag = "Calendar Task",
+            tagType = "task",
+            isCompleted = task.isCompleted
+        )
+        _crossStreamItems.value = listOf(crossStream) + _crossStreamItems.value.filterNot { it.id == crossStream.id }
+
+        showToast("📅 Moved '${task.title}' to Calendar at $timeSlot")
+    }
+
+    fun editTask(
+        id: String,
+        title: String,
+        subtitle: String,
+        priority: Priority,
+        category: String,
+        time: String,
+        notes: String?
+    ) {
+        val task = _feedItems.value.firstOrNull { it.id == id } ?: return
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == id) {
+                item.copy(
+                    title = title.ifBlank { item.title },
+                    subtitle = subtitle.ifBlank { item.subtitle },
+                    priority = priority,
+                    statusTag = category,
+                    time = time.ifBlank { item.time },
+                    notes = notes
+                )
+            } else item
+        }
+        showToast("Task '${title.ifBlank { task.title }}' updated ✓")
+    }
+
     fun deleteTask(id: String) {
         val task = _feedItems.value.firstOrNull { it.id == id }
         _feedItems.value = _feedItems.value.filterNot { it.id == id }
