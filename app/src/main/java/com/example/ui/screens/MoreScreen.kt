@@ -217,6 +217,20 @@ fun MoreScreen(
                         onClick = { viewModel.openSubScreen("notes") },
                         testTag = "module_notes"
                     )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Projects & Initiatives",
+                        subtitle = "Milestones, deliverables, task boards & budgets",
+                        badge = "2 Active",
+                        badgeColor = Primary,
+                        icon = Icons.Default.Folder,
+                        iconTint = Primary,
+                        iconBg = PrimaryFixed,
+                        onClick = { viewModel.openSubScreen("projects") },
+                        testTag = "module_projects"
+                    )
                 }
             }
         }
@@ -384,6 +398,34 @@ fun MoreScreen(
                         iconBg = Color(0xFFEDE7F6),
                         onClick = { viewModel.openSubScreen("contacts") },
                         testTag = "module_contacts"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Appointments & Bookings",
+                        subtitle = "Doctor, dentist, salon, services & clinic visits",
+                        badge = "3 Upcoming",
+                        badgeColor = Color(0xFF00897B),
+                        icon = Icons.Default.EventAvailable,
+                        iconTint = Color(0xFF00897B),
+                        iconBg = Color(0xFFE0F2F1),
+                        onClick = { viewModel.openSubScreen("appointments") },
+                        testTag = "module_appointments"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Home & Vehicle Care",
+                        subtitle = "Maintenance schedules, vehicle service, PUC & renewals",
+                        badge = "1 Overdue",
+                        badgeColor = AmberWarning,
+                        icon = Icons.Default.Build,
+                        iconTint = AmberWarning,
+                        iconBg = Color(0xFFFFF3E0),
+                        onClick = { viewModel.openSubScreen("home_vehicle") },
+                        testTag = "module_home_vehicle"
                     )
                 }
             }

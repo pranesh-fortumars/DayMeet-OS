@@ -337,3 +337,49 @@ data class ScheduledMessage(
     val isSent: Boolean = false,
     val isAutomated: Boolean = true
 )
+
+data class ProjectItem(
+    val id: String,
+    val title: String,
+    val description: String,
+    val progressPercent: Int,
+    val tasksCount: Int,
+    val completedTasks: Int,
+    val meetingsCount: Int,
+    val filesCount: Int,
+    val budget: String,
+    val deadline: String,
+    val colorHex: String = "#673AB7",
+    val status: String = "In Progress",
+    val category: String = "Productivity"
+)
+
+data class AppointmentItem(
+    val id: String,
+    val title: String,
+    val category: String, // "Doctor", "Vehicle Servicing", "Salon", "Banking", "Classes"
+    val date: String,
+    val time: String,
+    val locationOrProvider: String,
+    val reminderNotice: String = "1 day before & 1 hour before",
+    val isCompleted: Boolean = false,
+    val notes: String = ""
+) {
+    val type: String get() = category
+}
+
+data class HomeVehicleItem(
+    val id: String,
+    val title: String,
+    val category: String, // "Home", "Vehicle", "Appliance"
+    val dueDate: String,
+    val detail: String,
+    val statusTag: String = "Scheduled", // "Due Soon", "Warranty Active", "Scheduled"
+    val costEstimate: String? = null,
+    val isCompleted: Boolean = false
+) {
+    val type: String get() = category
+    val details: String get() = detail
+    val estimatedCost: String? get() = costEstimate
+}
+

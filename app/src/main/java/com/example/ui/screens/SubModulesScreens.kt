@@ -843,3 +843,444 @@ fun SubscriptionsSubScreen(
         }
     }
 }
+
+// 8. Projects SubScreen (Section 9: Projects)
+@Composable
+fun ProjectsSubScreen(
+    viewModel: DayMeetViewModel,
+    onBack: () -> Unit
+) {
+    val projects by viewModel.projects.collectAsState()
+
+    SubModuleContainer(
+        title = "Projects & Initiatives",
+        subtitle = "Goals, milestones, deliverables and project budgets",
+        onBack = onBack
+    ) {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.fillMaxSize().testTag("projects_subscreen")
+        ) {
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryFixed),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "ACTIVE PORTFOLIO",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurfaceVariant
+                                )
+                            )
+                            Text(
+                                text = "${projects.size} Initiatives Tracked",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                            )
+                            Text(
+                                text = "Automated cross-linking to Tasks & Finance",
+                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                            )
+                        }
+
+                        Button(
+                            onClick = { viewModel.openQuickAdd("Project") },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("New", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+                }
+            }
+
+            items(projects, key = { it.id }) { project ->
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("project_item_${project.id}")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = project.category,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(PrimaryFixed)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+
+                            Text(
+                                text = project.status,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (project.status == "Completed") Color(0xFF1B873F) else OnSurfaceVariant
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceContainerHigh)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+
+                        Text(
+                            text = project.title,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+
+                        Text(
+                            text = project.description,
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                        )
+
+                        // Progress bar
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Progress (${project.tasksCount} tasks)",
+                                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = OnSurfaceVariant)
+                                )
+                                Text(
+                                    text = "${project.progressPercent}%",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Primary)
+                                )
+                            }
+                            LinearProgressIndicator(
+                                progress = { project.progressPercent / 100f },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = Primary,
+                                trackColor = SurfaceContainerHigh
+                            )
+                        }
+
+                        Divider(color = SurfaceContainerHigh, thickness = 0.8.dp)
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(Icons.Default.DateRange, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                                Text("Due: ${project.deadline}", style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.sp, color = OnSurfaceVariant))
+                            }
+
+                            Text(
+                                text = "Budget: ${project.budget}",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, color = OnSurface)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 9. Appointments SubScreen (Section 11: Appointments)
+@Composable
+fun AppointmentsSubScreen(
+    viewModel: DayMeetViewModel,
+    onBack: () -> Unit
+) {
+    val appointments by viewModel.appointments.collectAsState()
+
+    SubModuleContainer(
+        title = "Appointments & Bookings",
+        subtitle = "Doctors, salons, consultations, services and visits",
+        onBack = onBack
+    ) {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize().testTag("appointments_subscreen")
+        ) {
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryFixed),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "UPCOMING VISITS",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurfaceVariant
+                                )
+                            )
+                            Text(
+                                text = "${appointments.size} Scheduled",
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                            )
+                            Text(
+                                text = "Synced with DayMeet Calendar & Alerts",
+                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                            )
+                        }
+
+                        Button(
+                            onClick = { viewModel.openQuickAdd("Appointment") },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Primary)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Book", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+                }
+            }
+
+            items(appointments, key = { it.id }) { appt ->
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.5.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("appointment_item_${appt.id}")
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = appt.category,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(PrimaryFixed)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+
+                            Text(
+                                text = "${appt.date} • ${appt.time}",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                            )
+                        }
+
+                        Text(
+                            text = appt.title,
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurface
+                            )
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.LocationOn, contentDescription = null, tint = OnSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Text(
+                                text = appt.locationOrProvider,
+                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                            )
+                        }
+
+                        if (appt.notes.isNotBlank()) {
+                            Text(
+                                text = appt.notes,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(SurfaceContainerLow)
+                                    .fillMaxWidth()
+                                    .padding(8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 10. Home & Vehicle SubScreen (Sections 28 & 29: Home & Vehicle Management)
+@Composable
+fun HomeVehicleSubScreen(
+    viewModel: DayMeetViewModel,
+    onBack: () -> Unit
+) {
+    val items by viewModel.homeVehicleItems.collectAsState()
+    var selectedFilter by remember { mutableStateOf("All") }
+
+    val filteredList = remember(items, selectedFilter) {
+        if (selectedFilter == "All") items
+        else items.filter { it.type == selectedFilter }
+    }
+
+    SubModuleContainer(
+        title = "Home & Vehicle Care",
+        subtitle = "Maintenance schedules, insurance, renewals & service logs",
+        onBack = onBack
+    ) {
+        LazyColumn(
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize().testTag("home_vehicle_subscreen")
+        ) {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf("All", "Vehicle", "Home").forEach { filter ->
+                        val isSelected = selectedFilter == filter
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { selectedFilter = filter },
+                            label = { Text(filter) },
+                            shape = RoundedCornerShape(99.dp),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = Primary,
+                                selectedLabelColor = Color.White,
+                                containerColor = SurfaceContainerLow,
+                                labelColor = OnSurfaceVariant
+                            )
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    IconButton(
+                        onClick = { viewModel.openQuickAdd("Home & Vehicle") },
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryFixed)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Item", tint = Primary, modifier = Modifier.size(20.dp))
+                    }
+                }
+            }
+
+            items(filteredList, key = { it.id }) { item ->
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (item.isCompleted) SurfaceContainerLow else SurfaceContainerLowest
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("home_vehicle_item_${item.id}")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Checkbox(
+                            checked = item.isCompleted,
+                            onCheckedChange = { viewModel.toggleHomeVehicleItem(item.id) },
+                            colors = CheckboxDefaults.colors(checkedColor = Primary)
+                        )
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = item.type,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (item.type == "Vehicle") Primary else Color(0xFF1B873F)
+                                    )
+                                )
+                                Text(
+                                    text = "• ${item.dueDate}",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 11.sp,
+                                        color = OnSurfaceVariant
+                                    )
+                                )
+                            }
+
+                            Text(
+                                text = item.title,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (item.isCompleted) OnSurfaceVariant else OnSurface,
+                                    textDecoration = if (item.isCompleted) TextDecoration.LineThrough else TextDecoration.None
+                                )
+                            )
+
+                            Text(
+                                text = "${item.details} • Est: ${item.estimatedCost}",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

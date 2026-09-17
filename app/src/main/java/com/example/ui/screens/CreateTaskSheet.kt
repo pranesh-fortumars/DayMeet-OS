@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ fun CreateTaskSheet(
 ) {
     val initialTab by viewModel.quickAddInitialTab.collectAsState()
     var selectedType by remember { mutableStateOf(initialTab) }
+    var nlpInput by remember { mutableStateOf("") }
 
     var title by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
@@ -43,7 +45,11 @@ fun CreateTaskSheet(
     var hasReceiptAttached by remember { mutableStateOf(false) }
     var isDebtOwedToMe by remember { mutableStateOf(true) }
 
-    val types = listOf("Task", "Expense", "Income", "EMI", "Debt", "Subscription", "Bill", "Meeting", "Reminder", "Habit", "Goal", "Note", "Shopping", "Message")
+    val types = listOf(
+        "Task", "Meeting", "Reminder", "Expense", "Income", "Bill", "Project",
+        "Appointment", "Home & Vehicle", "Note", "Shopping", "Habit", "Goal",
+        "Subscription", "Debt", "EMI", "Message"
+    )
 
     LaunchedEffect(initialTab) {
         selectedType = initialTab
@@ -118,6 +124,24 @@ fun CreateTaskSheet(
                 detail = "Hey, let's sync up before the sprint review tomorrow!"
                 extraValue = "Tomorrow, 09:00 AM"
             }
+            "Project" -> {
+                title = "Website Launch"
+                detail = "Deliverables, task board and budget tracker"
+                extraValue = "₹42,000"
+                selectedCategory = "Work"
+            }
+            "Appointment" -> {
+                title = "Dr. Mehta Dental Consultation"
+                detail = "SmileCare Clinic"
+                extraValue = "22 Sep, 04:30 PM"
+                selectedCategory = "Doctor"
+            }
+            "Home & Vehicle" -> {
+                title = "Royal Enfield Periodic Maintenance"
+                detail = "Scheduled service and brake inspection"
+                extraValue = "12 November"
+                selectedCategory = "Vehicle"
+            }
             else -> {
                 title = "Finalize Mobile Design Tokens"
                 detail = "Review token architecture with mobile engineering squad."
@@ -125,6 +149,7 @@ fun CreateTaskSheet(
             }
         }
     }
+
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -187,6 +212,135 @@ fun CreateTaskSheet(
                 }
             }
 
+            // Smart NLP Universal Quick Capture Box (Section 5 Spec)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Primary.copy(alpha = 0.05f),
+                border = BorderStroke(1.dp, Primary.copy(alpha = 0.22f)),
+                modifier = Modifier.fillMaxWidth().testTag("nlp_quick_capture_card")
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Natural Language Quick Capture (Type anything)",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = Primary
+                            )
+                        )
+                    }
+
+                    OutlinedTextField(
+                        value = nlpInput,
+                        onValueChange = { nlpInput = it },
+                        placeholder = {
+                            Text(
+                                "e.g. 'Call Arun tomorrow at 5', 'Buy milk', 'Pay bill ₹1,500'...",
+                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp)
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().testTag("nlp_quick_capture_input"),
+                        shape = RoundedCornerShape(10.dp),
+                        singleLine = true,
+                        trailingIcon = {
+                            if (nlpInput.isNotBlank()) {
+                                IconButton(onClick = {
+                                    viewModel.executeNaturalLanguageCapture(nlpInput)
+                                    onDismiss()
+                                }) {
+                                    Icon(
+                                        imageVector = Icons.Default.Send,
+                                        contentDescription = "Parse & Save",
+                                        tint = Primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    )
+
+                    // Suggested quick chips (Directly from section 5 specification!)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(
+                            "Call Arun tomorrow at 5",
+                            "Buy milk when I reach home",
+                            "Pay electricity bill ₹1,500 on 25th",
+                            "Meet John next Tuesday afternoon",
+                            "Car service 25 Sep 10:30 AM"
+                        ).forEach { samplePrompt ->
+                            SuggestionChip(
+                                onClick = { nlpInput = samplePrompt },
+                                label = {
+                                    Text(
+                                        samplePrompt,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp)
+                                    )
+                                },
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                        }
+                    }
+
+                    if (nlpInput.isNotBlank()) {
+                        val parsed = remember(nlpInput) { viewModel.parseNaturalLanguage(nlpInput) }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(Primary.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                Text(
+                                    text = "✨ Detected: ${parsed.type}",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary
+                                    )
+                                )
+                                Text(
+                                    text = parsed.explanation,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontSize = 11.sp,
+                                        color = OnSurfaceVariant
+                                    )
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    viewModel.executeNaturalLanguageCapture(nlpInput)
+                                    onDismiss()
+                                },
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                modifier = Modifier.testTag("nlp_quick_capture_execute_btn")
+                            ) {
+                                Text("Capture", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                            }
+                        }
+                    }
+                }
+            }
+
             // Type Selector Chips
             Row(
                 modifier = Modifier
@@ -216,6 +370,21 @@ fun CreateTaskSheet(
                                     title = "Internet Bill"
                                     detail = "Broadband"
                                     extraValue = "1179"
+                                }
+                                "Project" -> {
+                                    title = "Website Launch"
+                                    detail = "Deliverables, task board and budget"
+                                    extraValue = "₹42,000"
+                                }
+                                "Appointment" -> {
+                                    title = "Dr. Mehta Dental Consultation"
+                                    detail = "SmileCare Clinic"
+                                    extraValue = "22 Sep, 04:30 PM"
+                                }
+                                "Home & Vehicle" -> {
+                                    title = "Air Conditioner Annual Servicing"
+                                    detail = "Filter deep cleaning & gas check"
+                                    extraValue = "15 October"
                                 }
                                 else -> {
                                     if (title.isBlank()) title = "New $type"
@@ -253,6 +422,9 @@ fun CreateTaskSheet(
                             "Message" -> "Recipient Name"
                             "Bill" -> "Biller / Provider Name"
                             "Goal" -> "Goal Name"
+                            "Project" -> "Project Title"
+                            "Appointment" -> "Appointment / Specialist"
+                            "Home & Vehicle" -> "Maintenance Item / Vehicle"
                             else -> "Title"
                         }
                     )
@@ -278,6 +450,9 @@ fun CreateTaskSheet(
                             "Message" -> "Message Content"
                             "Bill" -> "Department / Utility"
                             "Goal" -> "Category / Target Description"
+                            "Project" -> "Deliverables & Scope"
+                            "Appointment" -> "Clinic / Provider Location"
+                            "Home & Vehicle" -> "Service Scope / Warranty Details"
                             else -> "Notes & Context"
                         }
                     )
@@ -292,7 +467,7 @@ fun CreateTaskSheet(
             )
 
             // Optional 3rd parameter input (e.g., Amount, Time, Target Value)
-            if (selectedType in listOf("Expense", "Income", "Meeting", "Reminder", "Bill", "Goal", "Message", "EMI", "Debt", "Subscription", "Shopping")) {
+            if (selectedType in listOf("Expense", "Income", "Meeting", "Reminder", "Bill", "Goal", "Message", "EMI", "Debt", "Subscription", "Shopping", "Project", "Appointment", "Home & Vehicle")) {
                 OutlinedTextField(
                     value = extraValue,
                     onValueChange = { extraValue = it },
@@ -303,7 +478,9 @@ fun CreateTaskSheet(
                                 "EMI" -> "Monthly EMI Installment (₹)"
                                 "Debt" -> "Debt / Share Amount (₹)"
                                 "Subscription" -> "Monthly Subscription Fee (₹)"
-                                "Meeting", "Reminder", "Message" -> "Scheduled Date & Time"
+                                "Meeting", "Reminder", "Message", "Appointment" -> "Scheduled Date & Time"
+                                "Project" -> "Budget / Target (e.g. ₹42,000)"
+                                "Home & Vehicle" -> "Due Date (e.g. 15 October)"
                                 "Goal" -> "Target Metric"
                                 else -> "Value"
                             }
@@ -318,6 +495,7 @@ fun CreateTaskSheet(
                     modifier = Modifier.fillMaxWidth().testTag("quick_add_amount_input")
                 )
             }
+
 
             // Debt Direction Selector
             if (selectedType == "Debt") {

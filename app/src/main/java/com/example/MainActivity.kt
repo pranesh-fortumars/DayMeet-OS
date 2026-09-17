@@ -231,6 +231,9 @@ fun DayMeetApp(
                     "documents" -> DocumentsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                     "contacts" -> ContactsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                     "subscriptions" -> SubscriptionsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "projects" -> ProjectsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "appointments" -> AppointmentsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "home_vehicle" -> HomeVehicleSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                 }
             }
 

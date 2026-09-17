@@ -819,4 +819,122 @@ object DayMeetRepository {
             estimatedMinutes = 45
         )
     )
+
+    fun getInitialProjects(): List<ProjectItem> = listOf(
+        ProjectItem(
+            id = "proj_1",
+            title = "Website Launch",
+            description = "Complete redesign and deployment of DayMeet super-app landing portal.",
+            progressPercent = 72,
+            tasksCount = 25,
+            completedTasks = 18,
+            meetingsCount = 6,
+            filesCount = 12,
+            budget = "₹42,000",
+            deadline = "30 September",
+            colorHex = "#673AB7",
+            status = "In Progress"
+        ),
+        ProjectItem(
+            id = "proj_2",
+            title = "Mobile Engineering V2",
+            description = "Kotlin multiplatform unification & Room database caching migration.",
+            progressPercent = 45,
+            tasksCount = 20,
+            completedTasks = 9,
+            meetingsCount = 4,
+            filesCount = 8,
+            budget = "₹85,000",
+            deadline = "15 October",
+            colorHex = "#1E88E5",
+            status = "Active"
+        ),
+        ProjectItem(
+            id = "proj_3",
+            title = "Home Office Renovation",
+            description = "Acoustic panels, ergonomic standing desk, and cable routing setup.",
+            progressPercent = 90,
+            tasksCount = 10,
+            completedTasks = 9,
+            meetingsCount = 2,
+            filesCount = 4,
+            budget = "₹35,000",
+            deadline = "24 September",
+            colorHex = "#00897B",
+            status = "Near Completion"
+        )
+    )
+
+    fun getInitialAppointments(): List<AppointmentItem> = listOf(
+        AppointmentItem(
+            id = "apt_1",
+            title = "Car Annual Service & Oil Change",
+            category = "Vehicle Servicing",
+            date = "25 Sep",
+            time = "10:30 AM",
+            locationOrProvider = "ABC Motors Workshop",
+            reminderNotice = "1 day before & 1 hour before",
+            isCompleted = false
+        ),
+        AppointmentItem(
+            id = "apt_2",
+            title = "Dr. Mehta Dental Consultation",
+            category = "Doctor",
+            date = "22 Sep",
+            time = "04:30 PM",
+            locationOrProvider = "SmileCare Clinic",
+            reminderNotice = "2 hours before",
+            isCompleted = false
+        ),
+        AppointmentItem(
+            id = "apt_3",
+            title = "HDFC Wealth & Portfolio Review",
+            category = "Banking",
+            date = "28 Sep",
+            time = "11:00 AM",
+            locationOrProvider = "Koramangala Branch",
+            reminderNotice = "1 day before",
+            isCompleted = false
+        )
+    )
+
+    fun getInitialHomeVehicleItems(): List<HomeVehicleItem> = listOf(
+        HomeVehicleItem(
+            id = "hv_1",
+            title = "Air Conditioner Annual Servicing",
+            category = "Home",
+            dueDate = "15 October",
+            detail = "Daikin Inverter AC • Filter deep cleaning & gas check",
+            statusTag = "Warranty Active",
+            costEstimate = "₹1,200"
+        ),
+        HomeVehicleItem(
+            id = "hv_2",
+            title = "Royal Enfield Periodic Maintenance",
+            category = "Vehicle",
+            dueDate = "12 November",
+            detail = "Next scheduled service • Chain lubing & brake pads",
+            statusTag = "Scheduled",
+            costEstimate = "₹2,450"
+        ),
+        HomeVehicleItem(
+            id = "hv_3",
+            title = "RO Water Purifier Candle Replacement",
+            category = "Appliance",
+            dueDate = "28 September",
+            detail = "Kent Grand+ RO membrane & carbon cartridge swap",
+            statusTag = "Due Soon",
+            costEstimate = "₹850"
+        ),
+        HomeVehicleItem(
+            id = "hv_4",
+            title = "Four-Wheeler Comprehensive Insurance Renewal",
+            category = "Vehicle",
+            dueDate = "05 November",
+            detail = "HDFC ERGO Zero Depreciation Policy #783921",
+            statusTag = "Pending Renewal",
+            costEstimate = "₹14,500"
+        )
+    )
 }
+

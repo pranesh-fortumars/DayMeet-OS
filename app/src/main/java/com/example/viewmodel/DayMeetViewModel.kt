@@ -204,6 +204,19 @@ class DayMeetViewModel : ViewModel() {
     private val _debts = MutableStateFlow(DayMeetRepository.getInitialDebts())
     val debts: StateFlow<List<DebtItem>> = _debts.asStateFlow()
 
+    // Projects Management (Section 9)
+    private val _projects = MutableStateFlow(DayMeetRepository.getInitialProjects())
+    val projects: StateFlow<List<ProjectItem>> = _projects.asStateFlow()
+
+    // Appointments (Section 11)
+    private val _appointments = MutableStateFlow(DayMeetRepository.getInitialAppointments())
+    val appointments: StateFlow<List<AppointmentItem>> = _appointments.asStateFlow()
+
+    // Home & Vehicle (Sections 28 & 29)
+    private val _homeVehicleItems = MutableStateFlow(DayMeetRepository.getInitialHomeVehicleItems())
+    val homeVehicleItems: StateFlow<List<HomeVehicleItem>> = _homeVehicleItems.asStateFlow()
+
+
     // Meeting Minutes state
     private val _minutesActions = MutableStateFlow(
         listOf(
@@ -354,6 +367,8 @@ class DayMeetViewModel : ViewModel() {
         _quickAddInitialTab.value = initialTab
         _showCreateSheet.value = true
     }
+
+    fun openQuickAdd(initialTab: String = "Task") = openCreateTask(initialTab)
 
     fun closeCreateTask() {
         _showCreateSheet.value = false
@@ -1198,12 +1213,193 @@ class DayMeetViewModel : ViewModel() {
                 _scheduledMessages.value = listOf(msg) + _scheduledMessages.value
                 showToast("Message scheduled for $title")
             }
+            "Project" -> {
+                addProject(title, detail, extraValue.ifBlank { "₹50,000" }, "End of Month")
+            }
+            "Appointment" -> {
+                addAppointment(title, category.ifBlank { "General" }, "Upcoming", extraValue.ifBlank { "10:00 AM" }, detail.ifBlank { "Scheduled Location" })
+            }
+            "Home & Vehicle" -> {
+                addHomeVehicleItem(title, category.ifBlank { "Home" }, extraValue.ifBlank { "Next Month" }, detail)
+            }
             else -> {
                 saveNewTask(title, detail, Priority.MEDIUM, "General", emptyList())
             }
         }
         _showCreateSheet.value = false
     }
+
+    // Projects Management (Section 9)
+    fun addProject(title: String, description: String, budget: String = "₹50,000", deadline: String = "30 September") {
+        val newProj = ProjectItem(
+            id = "proj_${System.currentTimeMillis()}",
+            title = title.ifBlank { "New Project" },
+            description = description.ifBlank { "Project deliverables, tasks and milestone tracker" },
+            progressPercent = 15,
+            tasksCount = 6,
+            completedTasks = 1,
+            meetingsCount = 2,
+            filesCount = 3,
+            budget = budget,
+            deadline = deadline,
+            colorHex = "#673AB7",
+            status = "In Progress"
+        )
+        _projects.value = listOf(newProj) + _projects.value
+        addCrossStreamItem("Project: ${newProj.title}", "Deadline: $deadline • Budget: $budget", "Project", "priority")
+        showToast("Project created: ${newProj.title} 🚀")
+    }
+
+    fun toggleProjectProgress(id: String) {
+        _projects.value = _projects.value.map { proj ->
+            if (proj.id == id) {
+                val nextPercent = if (proj.progressPercent >= 100) 25 else (proj.progressPercent + 25).coerceAtMost(100)
+                val completed = ((nextPercent / 100f) * proj.tasksCount).toInt()
+                proj.copy(progressPercent = nextPercent, completedTasks = completed)
+            } else proj
+        }
+    }
+
+    fun deleteProject(id: String) {
+        _projects.value = _projects.value.filterNot { it.id == id }
+        showToast("Project removed")
+    }
+
+    // Appointments (Section 11)
+    fun addAppointment(title: String, category: String, date: String, time: String, location: String) {
+        val newApt = AppointmentItem(
+            id = "apt_${System.currentTimeMillis()}",
+            title = title.ifBlank { "Appointment" },
+            category = category,
+            date = date.ifBlank { "Upcoming" },
+            time = time.ifBlank { "10:00 AM" },
+            locationOrProvider = location.ifBlank { "Scheduled Location" },
+            reminderNotice = "1 day before & 1 hour before"
+        )
+        _appointments.value = listOf(newApt) + _appointments.value
+        addCrossStreamItem("Appointment: ${newApt.title}", "${newApt.date} $time • $location", "Appointment", "meeting")
+        showToast("Appointment scheduled: ${newApt.title} 🩺")
+    }
+
+    fun toggleAppointmentCompleted(id: String) {
+        _appointments.value = _appointments.value.map {
+            if (it.id == id) it.copy(isCompleted = !it.isCompleted) else it
+        }
+    }
+
+    fun deleteAppointment(id: String) {
+        _appointments.value = _appointments.value.filterNot { it.id == id }
+        showToast("Appointment cancelled")
+    }
+
+    // Home & Vehicle (Sections 28 & 29)
+    fun addHomeVehicleItem(title: String, category: String, dueDate: String, detail: String, cost: String? = null) {
+        val newItem = HomeVehicleItem(
+            id = "hv_${System.currentTimeMillis()}",
+            title = title.ifBlank { "Maintenance Item" },
+            category = category,
+            dueDate = dueDate.ifBlank { "Next Month" },
+            detail = detail.ifBlank { "Periodic service and inspection" },
+            statusTag = "Scheduled",
+            costEstimate = cost
+        )
+        _homeVehicleItems.value = listOf(newItem) + _homeVehicleItems.value
+        showToast("Logged $category maintenance: $title 🔧")
+    }
+
+    fun toggleHomeVehicleItem(id: String) {
+        _homeVehicleItems.value = _homeVehicleItems.value.map {
+            if (it.id == id) {
+                val nextStatus = if (it.statusTag == "Completed") "Scheduled" else "Completed"
+                it.copy(statusTag = nextStatus)
+            } else it
+        }
+    }
+
+    fun deleteHomeVehicleItem(id: String) {
+        _homeVehicleItems.value = _homeVehicleItems.value.filterNot { it.id == id }
+        showToast("Maintenance entry removed")
+    }
+
+    // Universal Quick Capture Natural Language Parsing (Section 5)
+    data class ParsedCapture(
+        val type: String,
+        val title: String,
+        val detail: String,
+        val extra: String,
+        val explanation: String
+    )
+
+    fun parseNaturalLanguage(input: String): ParsedCapture {
+        val trimmed = input.trim()
+        val lower = trimmed.lowercase()
+        return when {
+            lower.contains("call") || lower.contains("remind") -> {
+                val time = if (lower.contains("5")) "Tomorrow, 05:00 PM" else if (lower.contains("tomorrow")) "Tomorrow, 09:00 AM" else "Today, 06:00 PM"
+                val name = trimmed.substringAfter("call", "").substringAfter("remind", "").substringBefore("tomorrow").substringBefore("at").trim()
+                val title = if (name.isNotBlank()) "Call ${name.replaceFirstChar { it.uppercase() }}" else trimmed
+                ParsedCapture("Reminder", title, "Time-based intelligent reminder", time, "Action: $title • Date/Time: $time • Type: Reminder")
+            }
+            lower.contains("buy") || lower.contains("milk") || lower.contains("grocery") || lower.contains("shopping") -> {
+                val item = trimmed.substringAfter("buy", "").substringBefore("when").substringBefore("from").trim()
+                val title = if (item.isNotBlank()) item.replaceFirstChar { it.uppercase() } else "Grocery Item"
+                ParsedCapture("Shopping", title, "Groceries & Household (Location reminder at home)", "₹120", "Shopping item + location reminder: $title")
+            }
+            lower.contains("bill") || lower.contains("pay") || lower.contains("₹") -> {
+                val amount = Regex("""(?:₹|rs\.?|inr)?\s*([0-9,]+)""", RegexOption.IGNORE_CASE).find(trimmed)?.groupValues?.get(1) ?: "1,500"
+                val title = if (lower.contains("electricity")) "Electricity Bill" else if (lower.contains("internet") || lower.contains("wifi")) "Internet Bill" else "Utility Bill Payment"
+                ParsedCapture("Bill", title, "Finance entry + reminder", "₹$amount", "Bill: $title • Amount: ₹$amount • Reminder: Due 25th")
+            }
+            lower.contains("meet") || lower.contains("sync") || lower.contains("meeting") -> {
+                val who = trimmed.substringAfter("meet", "").substringBefore("next").substringBefore("at").substringBefore("tomorrow").trim()
+                val title = if (who.isNotBlank()) "Meeting with ${who.replaceFirstChar { it.uppercase() }}" else "Scheduled Sync"
+                ParsedCapture("Meeting", title, "Smart Scheduling Suggestion", "Next Tuesday, 03:00 PM", "Meeting: $title • Slot: Next Tuesday afternoon")
+            }
+            lower.contains("doctor") || lower.contains("service") || lower.contains("salon") || lower.contains("appointment") -> {
+                ParsedCapture("Appointment", trimmed, "Appointment card with reminder", "Upcoming Slot", "Appointment: $trimmed • Alerts: 1 day & 1 hr before")
+            }
+            lower.contains("project") || lower.contains("launch") -> {
+                ParsedCapture("Project", trimmed, "Project dashboard tracker", "₹50,000", "Project: $trimmed • Grouping tasks, meetings & budget")
+            }
+            else -> {
+                ParsedCapture("Task", trimmed, "Task prioritized for DayMeet Command Center", "Today 05:00 PM", "Task: $trimmed • Synced to Personal Timeline")
+            }
+        }
+    }
+
+    fun executeNaturalLanguageCapture(input: String) {
+        val parsed = parseNaturalLanguage(input)
+        when (parsed.type) {
+            "Reminder" -> {
+                val newRem = SmartReminder("rem_${System.currentTimeMillis()}", parsed.title, "Time-based", parsed.extra)
+                _reminders.value = listOf(newRem) + _reminders.value
+                addCrossStreamItem(parsed.title, parsed.extra, "Reminder", "priority")
+            }
+            "Shopping" -> {
+                addShoppingItem(parsed.title, "1 item", 120.0, "Groceries")
+            }
+            "Bill" -> {
+                val amount = parsed.extra.replace("₹", "").replace(",", "").toDoubleOrNull() ?: 1500.0
+                val bill = UpcomingBill("b_${System.currentTimeMillis()}", parsed.title, "25th of Month", "Due soon", "Utilities", amount)
+                _upcomingBills.value = listOf(bill) + _upcomingBills.value
+                addCrossStreamItem(parsed.title, "₹$amount due on 25th", "Bill", "autopay")
+            }
+            "Meeting" -> {
+                scheduleMeetingFromHub(parsed.title, listOf("Alex Chen"), parsed.extra)
+            }
+            "Appointment" -> {
+                addAppointment(parsed.title, "General", "Next Week", "10:30 AM", "Scheduled Location")
+            }
+            "Project" -> {
+                addProject(parsed.title, parsed.detail, parsed.extra)
+            }
+            else -> {
+                saveNewTask(parsed.title, parsed.detail, Priority.HIGH, "General", emptyList())
+            }
+        }
+        showToast("✓ Captured: ${parsed.title} (${parsed.type})")
+    }
+
 
     // Home feed & filter actions
     fun setFeedFilter(filter: FeedCategory) {

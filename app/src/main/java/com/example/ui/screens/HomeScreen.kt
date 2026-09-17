@@ -13,6 +13,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -424,6 +425,105 @@ fun HomeScreen(
                             fontWeight = FontWeight.Medium
                         )
                     )
+                }
+            }
+        }
+
+        // Super-App Quick Ecosystem Carousel (Section 3: Personal OS Modules)
+        item {
+            val projects by viewModel.projects.collectAsState()
+            val appointments by viewModel.appointments.collectAsState()
+            val homeVehicle by viewModel.homeVehicleItems.collectAsState()
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Projects quick pill
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLowest,
+                    border = BorderStroke(1.dp, SurfaceContainerHigh),
+                    modifier = Modifier.clickable { viewModel.openSubScreen("projects") }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(22.dp).clip(CircleShape).background(PrimaryFixed),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Folder, contentDescription = null, tint = Primary, modifier = Modifier.size(13.dp))
+                        }
+                        Text("Projects", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface))
+                        Text("(${projects.size})", style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontWeight = FontWeight.Bold))
+                    }
+                }
+
+                // Appointments quick pill
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLowest,
+                    border = BorderStroke(1.dp, SurfaceContainerHigh),
+                    modifier = Modifier.clickable { viewModel.openSubScreen("appointments") }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFE0F2F1)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.EventAvailable, contentDescription = null, tint = Color(0xFF00897B), modifier = Modifier.size(13.dp))
+                        }
+                        Text("Appointments", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface))
+                        Text("(${appointments.size})", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF00897B), fontWeight = FontWeight.Bold))
+                    }
+                }
+
+                // Home & Vehicle care pill
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SurfaceContainerLowest,
+                    border = BorderStroke(1.dp, SurfaceContainerHigh),
+                    modifier = Modifier.clickable { viewModel.openSubScreen("home_vehicle") }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(22.dp).clip(CircleShape).background(Color(0xFFFFF3E0)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Build, contentDescription = null, tint = AmberWarning, modifier = Modifier.size(13.dp))
+                        }
+                        Text("Home & Vehicle", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface))
+                        Text("(${homeVehicle.count { !it.isCompleted }})", style = MaterialTheme.typography.labelSmall.copy(color = AmberWarning, fontWeight = FontWeight.Bold))
+                    }
+                }
+
+                // Smart NLP Quick Capture
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = PrimaryFixed,
+                    modifier = Modifier.clickable { viewModel.openQuickAdd("Task") }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Primary, modifier = Modifier.size(14.dp))
+                        Text("Smart Quick-Add", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Primary))
+                    }
                 }
             }
         }
