@@ -383,3 +383,30 @@ data class HomeVehicleItem(
     val estimatedCost: String? get() = costEstimate
 }
 
+enum class AppLaunchStep {
+    SPLASH,
+    INITIALIZING,
+    READY
+}
+
+data class PendingDeletion(
+    val id: String,
+    val title: String,
+    val module: String,
+    val execute: () -> Unit
+)
+
+data class ScheduleConflict(
+    val existingTitle: String,
+    val existingTime: String,
+    val newTitle: String,
+    val newTime: String,
+    val conflictDuration: String = "30 mins"
+)
+
+data class DraftRecoveryItem(
+    val type: String,
+    val title: String,
+    val content: String
+)
+

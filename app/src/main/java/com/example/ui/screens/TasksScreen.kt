@@ -636,8 +636,22 @@ fun TasksScreen(
         }
 
         // Task Items with layout animation for smooth position transitions when auto-sorting by priority
-        items(displayedTasks, key = { it.id }) { task ->
-            AnimatedTaskItemRow(
+        if (displayedTasks.isEmpty()) {
+            item {
+                com.example.ui.components.ModuleEmptyState(
+                    icon = Icons.Default.Checklist,
+                    title = if (searchQuery.isNotEmpty()) "No tasks match \"$searchQuery\"" else "No tasks yet",
+                    description = if (searchQuery.isNotEmpty()) "Try clearing your search query or switching filter tabs." else "Capture your first task, set a deadline, or schedule focus time to keep your day organized.",
+                    primaryActionLabel = "Create Task",
+                    onPrimaryAction = { viewModel.openCreateTask() },
+                    secondaryActionLabel = if (tasksOnly.isEmpty()) "Load Sample Day" else null,
+                    onSecondaryAction = if (tasksOnly.isEmpty()) { { viewModel.useSampleDay() } } else null,
+                    testTagPrefix = "tasks"
+                )
+            }
+        } else {
+            items(displayedTasks, key = { it.id }) { task ->
+                AnimatedTaskItemRow(
                 task = task,
                 isSelectionMode = isSelectionMode,
                 isSelected = selectedTaskIds.contains(task.id),
@@ -679,6 +693,7 @@ fun TasksScreen(
                     )
                 )
             )
+        }
         }
     }
 

@@ -28,6 +28,19 @@ import com.example.ui.components.DayMeetHeader
 import com.example.ui.components.InAppUpdateDialog
 import com.example.ui.components.ConfettiOverlay
 import com.example.ui.components.LanguageSelectorSheet
+import com.example.ui.components.GlobalSyncOfflineBanner
+import com.example.ui.components.NetworkErrorDialog
+import com.example.ui.components.ServerErrorDialog
+import com.example.ui.components.DeleteConfirmationDialog
+import com.example.ui.components.UndoActionSnackbar
+import com.example.ui.components.ScheduleConflictDialog
+import com.example.ui.components.RescheduleSheet
+import com.example.ui.components.BiometricLockScreen
+import com.example.ui.components.SessionExpiredDialog
+import com.example.ui.components.LogoutConfirmationDialog
+import com.example.ui.components.DraftRecoveryDialog
+import com.example.ui.components.ExperienceFeedbackDialog
+import com.example.model.AppLaunchStep
 import com.example.localization.AppLanguage
 import com.example.localization.LocalAppLanguage
 import com.example.localization.LocalAppStrings
@@ -86,6 +99,27 @@ class MainActivity : ComponentActivity() {
 fun DayMeetApp(
     viewModel: DayMeetViewModel = viewModel()
 ) {
+    val appLaunchStep by viewModel.appLaunchStep.collectAsStateWithLifecycle()
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
+    val hasSyncIssue by viewModel.hasSyncIssue.collectAsStateWithLifecycle()
+    val unsyncedCount by viewModel.unsyncedChangesCount.collectAsStateWithLifecycle()
+    val showNetworkError by viewModel.showNetworkError.collectAsStateWithLifecycle()
+    val showServerError by viewModel.showServerError.collectAsStateWithLifecycle()
+    val isAppLocked by viewModel.isAppLocked.collectAsStateWithLifecycle()
+    val isSessionExpired by viewModel.isSessionExpired.collectAsStateWithLifecycle()
+    val showLogoutDialog by viewModel.showLogoutDialog.collectAsStateWithLifecycle()
+    val pendingDeletion by viewModel.pendingDeletion.collectAsStateWithLifecycle()
+    val showUndoSnackbar by viewModel.showUndoSnackbar.collectAsStateWithLifecycle()
+    val lastDeletedMessage by viewModel.lastDeletedMessage.collectAsStateWithLifecycle()
+    val activeConflict by viewModel.activeConflict.collectAsStateWithLifecycle()
+    val rescheduleItemTitle by viewModel.rescheduleItemTitle.collectAsStateWithLifecycle()
+    val activeDraft by viewModel.activeDraft.collectAsStateWithLifecycle()
+    val showIntegrationCenter by viewModel.showIntegrationCenter.collectAsStateWithLifecycle()
+    val showImportExport by viewModel.showImportExport.collectAsStateWithLifecycle()
+    val isExportMode by viewModel.isExportMode.collectAsStateWithLifecycle()
+    val showFeedback by viewModel.showFeedback.collectAsStateWithLifecycle()
+    val activePermissionRequest by viewModel.activePermissionRequest.collectAsStateWithLifecycle()
+
     val currentScreen by viewModel.currentScreen.collectAsStateWithLifecycle()
     val subScreen by viewModel.subScreen.collectAsStateWithLifecycle()
     val showMeetingMinutes by viewModel.showMeetingMinutes.collectAsStateWithLifecycle()
@@ -115,6 +149,17 @@ fun DayMeetApp(
         viewModel.checkForAppUpdates(context = context, manual = false)
     }
 
+    // Handle App Launch Screens (Splash & Initialization)
+    if (appLaunchStep == AppLaunchStep.SPLASH) {
+        DayMeetSplashScreen(onSplashFinished = { viewModel.finishSplash() })
+        return
+    }
+
+    if (appLaunchStep == AppLaunchStep.INITIALIZING) {
+        DayMeetInitializationScreen(onInitializationComplete = { viewModel.finishInitialization() })
+        return
+    }
+
     // Handle back button on sub-screens
     BackHandler(enabled = showLanguageDialog || showScheduleMeetingModal || isFocusModeActive || subScreen != null || showMeetingMinutes || showAiAssistant || showSearchOverlay || showDailyBriefing || showUpdateDialog) {
         if (showLanguageDialog) viewModel.closeLanguageSelector()
@@ -140,37 +185,48 @@ fun DayMeetApp(
             contentColor = MaterialTheme.colorScheme.onBackground,
             topBar = {
                 if (!isFullscreenOverlay) {
-                    DayMeetHeader(
-                        isSyncing = isSyncing,
-                        lastSyncedText = lastSyncedTime,
-                        isFocusModeActive = isFocusModeActive,
-                        currentLanguage = currentLanguage,
-                        onLanguageClick = {
-                            viewModel.openLanguageSelector()
-                        },
-                        onFocusClick = {
-                            viewModel.toggleFocusMode()
-                        },
-                        onSyncClick = {
-                            viewModel.triggerManualSync()
-                        },
-                        onSearchClick = {
-                            viewModel.openSearch()
-                        },
-                        onNotificationsClick = {
-                            if (isFocusModeActive) {
-                                viewModel.showToast("🤫 Notifications muted: 12 non-urgent alerts silenced in Focus Mode")
-                            } else {
-                                viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        DayMeetHeader(
+                            isSyncing = isSyncing,
+                            lastSyncedText = lastSyncedTime,
+                            isFocusModeActive = isFocusModeActive,
+                            currentLanguage = currentLanguage,
+                            onLanguageClick = {
+                                viewModel.openLanguageSelector()
+                            },
+                            onFocusClick = {
+                                viewModel.toggleFocusMode()
+                            },
+                            onSyncClick = {
+                                viewModel.triggerManualSync()
+                            },
+                            onSearchClick = {
+                                viewModel.openSearch()
+                            },
+                            onNotificationsClick = {
+                                if (isFocusModeActive) {
+                                    viewModel.showToast("🤫 Notifications muted: 12 non-urgent alerts silenced in Focus Mode")
+                                } else {
+                                    viewModel.showToast("All systems synced: Calendar, Health, Tasks & Budget")
+                                }
+                            },
+                            onProfileClick = {
+                                viewModel.showToast("Alex Chen • Product Lead (DayMeet Pro)")
+                            },
+                            onAiClick = {
+                                viewModel.openAiAssistant()
                             }
-                        },
-                        onProfileClick = {
-                            viewModel.showToast("Alex Chen • Product Lead (DayMeet Pro)")
-                        },
-                        onAiClick = {
-                            viewModel.openAiAssistant()
-                        }
-                    )
+                        )
+
+                        GlobalSyncOfflineBanner(
+                            isOffline = isOffline,
+                            isSyncing = isSyncing,
+                            hasSyncIssue = hasSyncIssue,
+                            unsyncedCount = unsyncedCount,
+                            onRetrySync = { viewModel.resolveSyncIssue() },
+                            onViewSyncDetails = { viewModel.showToast("Sync queue: $unsyncedCount offline operations ready") }
+                        )
+                    }
                 }
             },
         bottomBar = {
@@ -356,6 +412,156 @@ fun DayMeetApp(
                     onDismissRequest = {
                         viewModel.closeLanguageSelector()
                     }
+                )
+            }
+
+            // Undo Action Floating Snackbar
+            if (showUndoSnackbar) {
+                UndoActionSnackbar(
+                    message = lastDeletedMessage,
+                    onUndo = { viewModel.performUndo() },
+                    onDismiss = { viewModel.dismissUndoSnackbar() },
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 76.dp)
+                )
+            }
+
+            // Network Error Dialog
+            if (showNetworkError) {
+                NetworkErrorDialog(
+                    onRetry = {
+                        viewModel.closeNetworkError()
+                        viewModel.triggerManualSync()
+                    },
+                    onContinueOffline = {
+                        viewModel.closeNetworkError()
+                        viewModel.toggleOfflineMode()
+                    },
+                    onDismiss = { viewModel.closeNetworkError() }
+                )
+            }
+
+            // Server Error Dialog
+            if (showServerError) {
+                ServerErrorDialog(
+                    referenceId = "ERR-9428",
+                    onRetry = {
+                        viewModel.closeServerError()
+                        viewModel.triggerManualSync()
+                    },
+                    onGoBack = { viewModel.closeServerError() }
+                )
+            }
+
+            // Destructive / Bulk Delete Confirmation Dialog
+            pendingDeletion?.let { del ->
+                DeleteConfirmationDialog(
+                    title = "Delete ${del.module}?",
+                    message = "Are you sure you want to delete \"${del.title}\"? This action can be undone briefly.",
+                    onConfirm = { viewModel.confirmPendingDeletion() },
+                    onDismiss = { viewModel.cancelPendingDeletion() }
+                )
+            }
+
+            // Schedule Conflict Detection Dialog
+            activeConflict?.let { conflict ->
+                ScheduleConflictDialog(
+                    existingMeetingTitle = conflict.existingTitle,
+                    existingMeetingTime = conflict.existingTime,
+                    newMeetingTitle = conflict.newTitle,
+                    newMeetingTime = conflict.newTime,
+                    conflictDuration = conflict.conflictDuration,
+                    onChooseAnotherTime = {
+                        viewModel.closeScheduleConflict()
+                        viewModel.openRescheduleSheet(conflict.newTitle)
+                    },
+                    onScheduleAnyway = {
+                        viewModel.closeScheduleConflict()
+                        viewModel.showToast("Scheduled anyway (Overlap acknowledged)")
+                    },
+                    onCancel = { viewModel.closeScheduleConflict() }
+                )
+            }
+
+            // Reschedule Flow Sheet
+            rescheduleItemTitle?.let { title ->
+                RescheduleSheet(
+                    itemTitle = title,
+                    onReschedule = { newSlot -> viewModel.applyReschedule(newSlot) },
+                    onDismiss = { viewModel.closeRescheduleSheet() }
+                )
+            }
+
+            // Biometric / App Vault Lock Screen
+            if (isAppLocked) {
+                BiometricLockScreen(
+                    onUnlockSuccess = { viewModel.unlockVault() },
+                    onCancel = { viewModel.unlockVault() }
+                )
+            }
+
+            // Session Expired Dialog
+            if (isSessionExpired) {
+                SessionExpiredDialog(
+                    onSignInAgain = { viewModel.restoreSession() }
+                )
+            }
+
+            // Logout with Unsynced Changes Dialog
+            if (showLogoutDialog) {
+                LogoutConfirmationDialog(
+                    unsyncedCount = unsyncedCount,
+                    onSyncAndLogout = {
+                        viewModel.triggerManualSync()
+                        viewModel.performLogout()
+                    },
+                    onLogoutAnyway = { viewModel.performLogout() },
+                    onCancel = { viewModel.closeLogoutDialog() }
+                )
+            }
+
+            // Draft Recovery Dialog
+            activeDraft?.let { draft ->
+                DraftRecoveryDialog(
+                    draftType = draft.type,
+                    draftTitle = draft.title,
+                    onContinueDraft = { viewModel.restoreDraft() },
+                    onDiscardDraft = { viewModel.dismissDraft() }
+                )
+            }
+
+            // Experience Feedback Dialog
+            if (showFeedback) {
+                ExperienceFeedbackDialog(
+                    onSubmit = { rating, note -> viewModel.submitFeedback(rating, note) },
+                    onDismiss = { viewModel.closeFeedback() }
+                )
+            }
+
+            // Connected Apps & Integration Center
+            if (showIntegrationCenter) {
+                IntegrationCenterDialog(
+                    onDismiss = { viewModel.closeIntegrationCenter() },
+                    onToggleIntegration = { name -> viewModel.showToast("Updated integration: $name") }
+                )
+            }
+
+            // Data Import & Export Dialog
+            if (showImportExport) {
+                DataImportExportDialog(
+                    isExport = isExportMode,
+                    onDismiss = { viewModel.closeImportExport() },
+                    onExecute = { viewModel.showToast("Data operation finished successfully.") }
+                )
+            }
+
+            // Contextual Permission Onboarding Modal
+            activePermissionRequest?.let { reqType ->
+                ContextualPermissionDialog(
+                    permissionType = reqType,
+                    onAllow = { viewModel.grantPermission() },
+                    onNotNow = { viewModel.denyPermission() }
                 )
             }
         }

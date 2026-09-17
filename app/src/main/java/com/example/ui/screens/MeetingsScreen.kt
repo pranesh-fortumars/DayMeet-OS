@@ -200,14 +200,29 @@ fun MeetingsScreen(
         }
 
         // Meeting Cards
-        items(filteredMeetings, key = { it.id }) { meeting ->
-            MeetingCardItem(
-                meeting = meeting,
-                onJoin = { viewModel.openMeetingMinutes() },
-                onAgenda = { viewModel.openMeetingMinutes() },
-                onNotes = { viewModel.openMeetingMinutes() },
-                onReschedule = { viewModel.showToast("Reschedule requested for ${meeting.title}") }
-            )
+        if (filteredMeetings.isEmpty()) {
+            item {
+                com.example.ui.components.ModuleEmptyState(
+                    icon = Icons.Default.Videocam,
+                    title = if (searchQuery.isNotBlank()) "No meetings found" else "No meetings scheduled",
+                    description = if (searchQuery.isNotBlank()) "No upcoming calendar events match \"$searchQuery\"." else "You have a clear schedule. Schedule a call, synced 1-on-1, or video sync.",
+                    primaryActionLabel = "Schedule Meeting",
+                    onPrimaryAction = { viewModel.openScheduleMeeting() },
+                    secondaryActionLabel = if (meetings.isEmpty()) "Load Sample Day" else null,
+                    onSecondaryAction = if (meetings.isEmpty()) { { viewModel.useSampleDay() } } else null,
+                    testTagPrefix = "meetings"
+                )
+            }
+        } else {
+            items(filteredMeetings, key = { it.id }) { meeting ->
+                MeetingCardItem(
+                    meeting = meeting,
+                    onJoin = { viewModel.openMeetingMinutes() },
+                    onAgenda = { viewModel.openMeetingMinutes() },
+                    onNotes = { viewModel.openMeetingMinutes() },
+                    onReschedule = { viewModel.openRescheduleSheet(meeting.title) }
+                )
+            }
         }
 
         // Minutes & Summaries Callout Banner

@@ -639,6 +639,15 @@ fun MoreScreen(
         item {
             AppUpdatesCard(viewModel = viewModel)
         }
+
+        // 9. System Resiliency, Security & Diagnostics (Master UX Flow)
+        item {
+            SectionHeader("SYSTEM RESILIENCY, SECURITY & UX FLOWS")
+        }
+
+        item {
+            SystemDiagnosticsAndSecurityCard(viewModel = viewModel)
+        }
     }
 }
 
@@ -961,6 +970,294 @@ private fun AppUpdatesCard(viewModel: DayMeetViewModel) {
                         text = if (updateInfo?.isUpdateAvailable == true) "Update Now" else "Update Details",
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SystemDiagnosticsAndSecurityCard(viewModel: DayMeetViewModel) {
+    val isOffline by viewModel.isOffline.collectAsStateWithLifecycle()
+    val hasSyncIssue by viewModel.hasSyncIssue.collectAsStateWithLifecycle()
+    val unsyncedCount by viewModel.unsyncedChangesCount.collectAsStateWithLifecycle()
+
+    Card(
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .testTag("system_diagnostics_security_card")
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(PrimaryFixed),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Security,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Column {
+                    Text(
+                        text = "System Resiliency & UX Engine",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                    Text(
+                        text = "Real-time state transitions, offline cache & security flows",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+
+            HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+            // 1. Offline Mode Simulation Switch
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SurfaceContainerHigh.copy(alpha = 0.4f))
+                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(
+                            text = "Simulate Offline Mode",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = OnSurface
+                            )
+                        )
+                        if (isOffline) {
+                            Text(
+                                text = "OFFLINE",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFE65100),
+                                    fontSize = 9.sp
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFFFFF3E0))
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = if (isOffline) "All mutations queued locally ($unsyncedCount pending). Tap to reconnect." else "Device online. Operations instantly synced to cloud.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = OnSurfaceVariant,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+                Switch(
+                    checked = isOffline,
+                    onCheckedChange = { viewModel.toggleOfflineMode() },
+                    modifier = Modifier.testTag("toggle_offline_mode")
+                )
+            }
+
+            // 2. Action buttons grid for testing master flows
+            Text(
+                text = "INTERACTIVE SYSTEM FLOWS",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = OnSurfaceVariant,
+                    fontSize = 10.sp,
+                    letterSpacing = 0.5.sp
+                )
+            )
+
+            // Flow Buttons
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Row 1: App Launch & Permissions
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.resetLaunchSequence() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_test_splash_launch"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.RocketLaunch, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Replay Splash", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.openPermissionRequest("notifications") },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_test_permissions"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Permission Flow", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                // Row 2: Errors & Conflicts
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.openNetworkError() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_test_network_error"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.WifiOff, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Network Error", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.simulateConflict() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_test_schedule_conflict"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.WarningAmber, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Schedule Conflict", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                // Row 3: Vault Lock & Session Expire
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.lockVault() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_test_lock_vault"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Biometric Lock", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.simulateSessionExpiry() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_test_session_expire"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.HourglassBottom, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Expire Session", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                // Row 4: Connected Apps & Data Backup
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.openIntegrationCenter() },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_open_integrations"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Hub, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Integrations", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    Button(
+                        onClick = { viewModel.openImportExport(isExport = true) },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceContainerHigh, contentColor = OnSurface),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_open_import_export"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Data Backup", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                // Row 5: Feedback & Logout
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.openFeedback() },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_open_feedback"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.RateReview, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Give Feedback", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+
+                    OutlinedButton(
+                        onClick = { viewModel.openLogoutDialog() },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("btn_trigger_logout"),
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Logout, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Sign Out Flow", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }

@@ -83,6 +83,8 @@ fun HomeScreen(
     val syncPulseKey by viewModel.syncPulseKey.collectAsState()
     val isFocusRunning by viewModel.isFocusRunning.collectAsState()
     val focusTimerRemaining by viewModel.focusTimerRemaining.collectAsState()
+    val showFirstDataBanner by viewModel.showFirstDataBanner.collectAsState()
+    val isSampleDataActive by viewModel.isSampleDataActive.collectAsState()
 
     val electricityBill = upcomingBills.firstOrNull { it.id == "b1" }
     val nextMeeting = meetings.firstOrNull()
@@ -109,6 +111,46 @@ fun HomeScreen(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 120.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // First Data Experience Banner
+        if (showFirstDataBanner) {
+            item {
+                FirstDataExperienceBanner(
+                    onUseSampleData = { viewModel.useSampleDay() },
+                    onStartScratch = { viewModel.clearSampleDay(); viewModel.dismissFirstDataBanner() },
+                    onDismiss = { viewModel.dismissFirstDataBanner() }
+                )
+            }
+        }
+
+        // Active Sample Day indicator pill
+        if (isSampleDataActive) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = PrimaryFixed,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Info, contentDescription = null, tint = Primary, modifier = Modifier.size(16.dp))
+                            Text("Sample Day Active • Explore features freely", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Primary))
+                        }
+                        TextButton(
+                            onClick = { viewModel.clearSampleDay() },
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(26.dp)
+                        ) {
+                            Text("Clear", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)))
+                        }
+                    }
+                }
+            }
+        }
+
         // 0. Manual Dashboard Sync Refresh Banner
         item {
             AnimatedVisibility(

@@ -617,8 +617,23 @@ fun FinanceScreen(
                 )
             }
 
-            items(transactions, key = { it.id }) { tx ->
-                TransactionRowItem(tx = tx)
+            if (transactions.isEmpty()) {
+                item {
+                    com.example.ui.components.ModuleEmptyState(
+                        icon = Icons.Default.AccountBalanceWallet,
+                        title = "No transactions recorded",
+                        description = "Log your daily expenses and income to analyze budget trends and cash flow.",
+                        primaryActionLabel = "Log Expense",
+                        onPrimaryAction = { viewModel.openCreateTask("Expense") },
+                        secondaryActionLabel = "Load Sample Day",
+                        onSecondaryAction = { viewModel.useSampleDay() },
+                        testTagPrefix = "finance"
+                    )
+                }
+            } else {
+                items(transactions, key = { it.id }) { tx ->
+                    TransactionRowItem(tx = tx)
+                }
             }
         } else if (selectedTab == "EMIs & Loans") {
             item {

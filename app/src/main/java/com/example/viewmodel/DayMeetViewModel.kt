@@ -267,6 +267,258 @@ class DayMeetViewModel : ViewModel() {
     private val _syncDeviceCalendarAlerts = MutableStateFlow(true)
     val syncDeviceCalendarAlerts: StateFlow<Boolean> = _syncDeviceCalendarAlerts.asStateFlow()
 
+    // App Launch, Initialization & Recovery State
+    private val _appLaunchStep = MutableStateFlow(AppLaunchStep.READY)
+    val appLaunchStep: StateFlow<AppLaunchStep> = _appLaunchStep.asStateFlow()
+
+    fun finishSplash() { _appLaunchStep.value = AppLaunchStep.INITIALIZING }
+    fun finishInitialization() { _appLaunchStep.value = AppLaunchStep.READY }
+    fun triggerSplashLaunch() { _appLaunchStep.value = AppLaunchStep.SPLASH }
+
+    // Offline & Sync System
+    private val _isOffline = MutableStateFlow(false)
+    val isOffline: StateFlow<Boolean> = _isOffline.asStateFlow()
+
+    private val _hasSyncIssue = MutableStateFlow(false)
+    val hasSyncIssue: StateFlow<Boolean> = _hasSyncIssue.asStateFlow()
+
+    private val _unsyncedChangesCount = MutableStateFlow(0)
+    val unsyncedChangesCount: StateFlow<Int> = _unsyncedChangesCount.asStateFlow()
+
+    fun toggleOfflineMode() {
+        val next = !_isOffline.value
+        _isOffline.value = next
+        if (next) {
+            _unsyncedChangesCount.value = 3
+            showToast("Offline Mode active — 3 changes queued locally")
+        } else {
+            showToast("Back online — syncing queued changes…")
+            _unsyncedChangesCount.value = 0
+            triggerManualSync()
+        }
+    }
+
+    fun triggerSyncIssue() {
+        _hasSyncIssue.value = true
+        showToast("⚠️ Sync issue simulated: Cloud endpoint unreachable")
+    }
+
+    fun resolveSyncIssue() {
+        _hasSyncIssue.value = false
+        triggerManualSync()
+    }
+
+    // Error Handling Dialogs
+    private val _showNetworkError = MutableStateFlow(false)
+    val showNetworkError: StateFlow<Boolean> = _showNetworkError.asStateFlow()
+
+    private val _showServerError = MutableStateFlow(false)
+    val showServerError: StateFlow<Boolean> = _showServerError.asStateFlow()
+
+    fun openNetworkError() { _showNetworkError.value = true }
+    fun closeNetworkError() { _showNetworkError.value = false }
+    fun openServerError() { _showServerError.value = true }
+    fun closeServerError() { _showServerError.value = false }
+
+    // Security & Biometric Lock
+    private val _isAppLocked = MutableStateFlow(false)
+    val isAppLocked: StateFlow<Boolean> = _isAppLocked.asStateFlow()
+
+    private val _isSessionExpired = MutableStateFlow(false)
+    val isSessionExpired: StateFlow<Boolean> = _isSessionExpired.asStateFlow()
+
+    private val _showLogoutDialog = MutableStateFlow(false)
+    val showLogoutDialog: StateFlow<Boolean> = _showLogoutDialog.asStateFlow()
+
+    fun lockVault() { _isAppLocked.value = true }
+    fun unlockVault() {
+        _isAppLocked.value = false
+        showToast("✓ Vault Unlocked with Biometrics")
+    }
+
+    fun triggerSessionExpired() { _isSessionExpired.value = true }
+    fun restoreSession() {
+        _isSessionExpired.value = false
+        showToast("✓ Session Restored. Unsaved drafts preserved.")
+    }
+
+    fun openLogoutDialog() { _showLogoutDialog.value = true }
+    fun closeLogoutDialog() { _showLogoutDialog.value = false }
+    fun performLogout() {
+        _showLogoutDialog.value = false
+        showToast("Logged out successfully.")
+    }
+
+    // Undo & Destructive Deletion
+    private val _pendingDeletion = MutableStateFlow<PendingDeletion?>(null)
+    val pendingDeletion: StateFlow<PendingDeletion?> = _pendingDeletion.asStateFlow()
+
+    private val _showUndoSnackbar = MutableStateFlow(false)
+    val showUndoSnackbar: StateFlow<Boolean> = _showUndoSnackbar.asStateFlow()
+
+    private val _lastDeletedMessage = MutableStateFlow("")
+    val lastDeletedMessage: StateFlow<String> = _lastDeletedMessage.asStateFlow()
+
+    private var lastUndoAction: (() -> Unit)? = null
+
+    fun requestDeleteConfirmation(title: String, module: String = "Item", onExecute: () -> Unit, undoAction: (() -> Unit)? = null) {
+        _pendingDeletion.value = PendingDeletion(
+            id = "del_${System.currentTimeMillis()}",
+            title = title,
+            module = module
+        ) {
+            onExecute()
+            _lastDeletedMessage.value = "$module \"$title\" deleted"
+            lastUndoAction = undoAction
+            _showUndoSnackbar.value = true
+            viewModelScope.launch {
+                delay(5000)
+                _showUndoSnackbar.value = false
+            }
+        }
+    }
+
+    fun confirmPendingDeletion() {
+        _pendingDeletion.value?.execute?.invoke()
+        _pendingDeletion.value = null
+    }
+
+    fun cancelPendingDeletion() {
+        _pendingDeletion.value = null
+    }
+
+    fun performUndo() {
+        lastUndoAction?.invoke()
+        _showUndoSnackbar.value = false
+        showToast("✓ Action Undone")
+    }
+
+    fun dismissUndoSnackbar() {
+        _showUndoSnackbar.value = false
+    }
+
+    // Schedule Conflict, Reschedule & Drafts
+    private val _activeConflict = MutableStateFlow<ScheduleConflict?>(null)
+    val activeConflict: StateFlow<ScheduleConflict?> = _activeConflict.asStateFlow()
+
+    private val _rescheduleItemTitle = MutableStateFlow<String?>(null)
+    val rescheduleItemTitle: StateFlow<String?> = _rescheduleItemTitle.asStateFlow()
+
+    private val _activeDraft = MutableStateFlow<DraftRecoveryItem?>(null)
+    val activeDraft: StateFlow<DraftRecoveryItem?> = _activeDraft.asStateFlow()
+
+    fun triggerScheduleConflict(existingTitle: String, existingTime: String, newTitle: String, newTime: String) {
+        _activeConflict.value = ScheduleConflict(existingTitle, existingTime, newTitle, newTime)
+    }
+
+    fun closeScheduleConflict() { _activeConflict.value = null }
+
+    fun openRescheduleSheet(title: String) { _rescheduleItemTitle.value = title }
+    fun closeRescheduleSheet() { _rescheduleItemTitle.value = null }
+
+    fun applyReschedule(newSlot: String) {
+        val title = _rescheduleItemTitle.value ?: "Item"
+        _rescheduleItemTitle.value = null
+        showToast("✓ Rescheduled \"$title\" to $newSlot")
+    }
+
+    fun dismissDraft() {
+        _activeDraft.value = null
+        showToast("Draft discarded")
+    }
+
+    fun restoreDraft() {
+        val draft = _activeDraft.value
+        _activeDraft.value = null
+        showToast("Restored draft: ${draft?.title}")
+        openQuickAdd(draft?.type ?: "Task")
+    }
+
+    // First Data Experience & Sample Day
+    private val _showFirstDataBanner = MutableStateFlow(true)
+    val showFirstDataBanner: StateFlow<Boolean> = _showFirstDataBanner.asStateFlow()
+
+    private val _isSampleDataActive = MutableStateFlow(false)
+    val isSampleDataActive: StateFlow<Boolean> = _isSampleDataActive.asStateFlow()
+
+    fun dismissFirstDataBanner() { _showFirstDataBanner.value = false }
+
+    fun useSampleDay() {
+        _isSampleDataActive.value = true
+        _showFirstDataBanner.value = false
+        showToast("✓ Guided Sample Day loaded (5 activities)")
+    }
+
+    fun clearSampleDay() {
+        _isSampleDataActive.value = false
+        showToast("✓ Sample data removed. Clean slate ready.")
+    }
+
+    // Integration Center, Import/Export & Feedback
+    private val _showIntegrationCenter = MutableStateFlow(false)
+    val showIntegrationCenter: StateFlow<Boolean> = _showIntegrationCenter.asStateFlow()
+
+    private val _showImportExport = MutableStateFlow(false)
+    val showImportExport: StateFlow<Boolean> = _showImportExport.asStateFlow()
+
+    private val _isExportMode = MutableStateFlow(true)
+    val isExportMode: StateFlow<Boolean> = _isExportMode.asStateFlow()
+
+    private val _showFeedback = MutableStateFlow(false)
+    val showFeedback: StateFlow<Boolean> = _showFeedback.asStateFlow()
+
+    fun openIntegrationCenter() { _showIntegrationCenter.value = true }
+    fun closeIntegrationCenter() { _showIntegrationCenter.value = false }
+
+    fun openExportData() { _isExportMode.value = true; _showImportExport.value = true }
+    fun openImportData() { _isExportMode.value = false; _showImportExport.value = true }
+    fun closeImportExport() { _showImportExport.value = false }
+
+    fun openFeedback() { _showFeedback.value = true }
+    fun closeFeedback() { _showFeedback.value = false }
+    fun submitFeedback(rating: String, text: String) {
+        _showFeedback.value = false
+        showToast("Thank you for your feedback! ($rating)")
+    }
+
+    fun resetLaunchSequence() { _appLaunchStep.value = AppLaunchStep.SPLASH }
+    fun simulateConflict() {
+        triggerScheduleConflict("Quarterly Review", "Today, 02:00 PM", "Client Onboarding", "Today, 02:15 PM")
+    }
+    fun simulateSessionExpiry() { triggerSessionExpired() }
+    fun simulateSyncIssue() { triggerSyncIssue() }
+    fun openImportExport(isExport: Boolean) {
+        if (isExport) openExportData() else openImportData()
+    }
+    fun openPermissionRequest(typeString: String = "notifications") {
+        _activePermissionRequest.value = when (typeString.lowercase()) {
+            "calendar" -> com.example.ui.screens.PermissionFlowType.CALENDAR
+            "location" -> com.example.ui.screens.PermissionFlowType.LOCATION
+            "health" -> com.example.ui.screens.PermissionFlowType.HEALTH
+            else -> com.example.ui.screens.PermissionFlowType.NOTIFICATIONS
+        }
+    }
+
+    // Contextual Permission Flow
+    private val _activePermissionRequest = MutableStateFlow<com.example.ui.screens.PermissionFlowType?>(null)
+    val activePermissionRequest: StateFlow<com.example.ui.screens.PermissionFlowType?> = _activePermissionRequest.asStateFlow()
+
+    fun requestPermission(type: com.example.ui.screens.PermissionFlowType) {
+        _activePermissionRequest.value = type
+    }
+
+    fun grantPermission() {
+        val type = _activePermissionRequest.value
+        _activePermissionRequest.value = null
+        showToast("✓ $type permission granted")
+    }
+
+    fun denyPermission() {
+        val type = _activePermissionRequest.value
+        _activePermissionRequest.value = null
+        showToast("$type was not granted. App adapted.")
+    }
+
     // Manual Dashboard & All Widgets Network Sync state
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing.asStateFlow()
