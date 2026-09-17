@@ -34,8 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.FinanceTransaction
-import com.example.model.UpcomingBill
+import com.example.model.*
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 import kotlin.math.roundToInt
@@ -48,6 +47,11 @@ fun FinanceScreen(
     val context = LocalContext.current
     val transactions by viewModel.transactions.collectAsState()
     val upcomingBills by viewModel.upcomingBills.collectAsState()
+    val emis by viewModel.emis.collectAsState()
+    val debts by viewModel.debts.collectAsState()
+    val subscriptions by viewModel.subscriptions.collectAsState()
+
+    var selectedTab by remember { mutableStateOf("Overview") }
 
     val dailyLimit = 5000.0
     val spentToday = remember(transactions) {
@@ -56,6 +60,11 @@ fun FinanceScreen(
     val leftToday = (dailyLimit - spentToday).coerceAtLeast(0.0)
     val spentPercent = ((spentToday / dailyLimit) * 100).coerceIn(0.0, 100.0).toInt()
     val sweepAngle = (360f * (spentToday / dailyLimit).toFloat()).coerceIn(0f, 360f)
+
+    val totalEmiMonthly = remember(emis) { emis.filter { it.remainingMonths > 0 }.sumOf { it.monthlyAmount } }
+    val totalOwedToMe = remember(debts) { debts.filter { it.isOwedToMe && !it.isSettled }.sumOf { it.amount } }
+    val totalIOwe = remember(debts) { debts.filter { !it.isOwedToMe && !it.isSettled }.sumOf { it.amount } }
+    val totalSubsMonthly = remember(subscriptions) { subscriptions.sumOf { it.monthlyCost } }
 
     LazyColumn(
         modifier = modifier
@@ -148,350 +157,619 @@ fun FinanceScreen(
             }
         }
 
-        // Hero Card: Available Daily Allowance
+        // Finance Navigation Filter Chips
         item {
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth().testTag("daily_allowance_card")
+            val tabs = listOf("Overview", "Expenses", "EMIs & Loans", "Debts & Splits", "Subscriptions", "Bills")
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "AVAILABLE DAILY ALLOWANCE",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = OnSurfaceVariant,
-                                fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.6.sp
-                            )
-                        )
-                        Text(
-                            text = "+12.4% vs last week",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                color = Tertiary,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
+                tabs.forEach { tab ->
+                    val isSelected = selectedTab == tab
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedTab = tab },
+                        label = {
                             Text(
-                                text = "₹${String.format("%.0f", leftToday)} left",
-                                style = MaterialTheme.typography.headlineLarge.copy(
+                                text = tab,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                            )
+                        },
+                        shape = RoundedCornerShape(99.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Primary,
+                            selectedLabelColor = Color.White,
+                            containerColor = SurfaceContainerLowest,
+                            labelColor = OnSurfaceVariant
+                        )
+                    )
+                }
+            }
+        }
+
+        if (selectedTab == "Overview") {
+            // Hero Card: Available Daily Allowance
+            item {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("daily_allowance_card")
+                ) {
+                    Column(modifier = Modifier.padding(18.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "AVAILABLE DAILY ALLOWANCE",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = OnSurfaceVariant,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 28.sp,
-                                    color = OnSurface
+                                    letterSpacing = 0.6.sp
                                 )
                             )
                             Text(
-                                text = "of ₹${String.format("%.0f", dailyLimit)} daily budget limit",
-                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                                text = "+12.4% vs last week",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    color = Tertiary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             )
                         }
 
-                        // Circular Spent Gauge
-                        Box(
-                            modifier = Modifier.size(54.dp),
-                            contentAlignment = Alignment.Center
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Canvas(modifier = Modifier.size(54.dp)) {
-                                val stroke = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
-                                drawCircle(
-                                    color = SurfaceContainerHigh,
-                                    radius = size.minDimension / 2 - 2.dp.toPx(),
-                                    style = stroke
-                                )
-                                drawArc(
-                                    color = if (spentToday <= dailyLimit) Primary else Color(0xFFD32F2F),
-                                    startAngle = -90f,
-                                    sweepAngle = sweepAngle,
-                                    useCenter = false,
-                                    style = stroke
-                                )
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column {
                                 Text(
-                                    text = "$spentPercent%",
-                                    style = MaterialTheme.typography.labelSmall.copy(
+                                    text = "₹${String.format("%.0f", leftToday)} left",
+                                    style = MaterialTheme.typography.headlineLarge.copy(
                                         fontWeight = FontWeight.Bold,
+                                        fontSize = 28.sp,
                                         color = OnSurface
                                     )
                                 )
                                 Text(
-                                    text = "spent",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontSize = 8.sp,
-                                        color = OnSurfaceVariant
+                                    text = "of ₹${String.format("%.0f", dailyLimit)} daily budget limit",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                                )
+                            }
+
+                            // Circular Spent Gauge
+                            Box(
+                                modifier = Modifier.size(54.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Canvas(modifier = Modifier.size(54.dp)) {
+                                    val stroke = Stroke(width = 5.dp.toPx(), cap = StrokeCap.Round)
+                                    drawCircle(
+                                        color = SurfaceContainerHigh,
+                                        radius = size.minDimension / 2 - 2.dp.toPx(),
+                                        style = stroke
+                                    )
+                                    drawArc(
+                                        color = if (spentToday <= dailyLimit) Primary else Color(0xFFD32F2F),
+                                        startAngle = -90f,
+                                        sweepAngle = sweepAngle,
+                                        useCenter = false,
+                                        style = stroke
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        text = "$spentPercent%",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnSurface
+                                        )
+                                    )
+                                    Text(
+                                        text = "spent",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontSize = 8.sp,
+                                            color = OnSurfaceVariant
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        // Linear breakdown bar
+                        val progressRatio = (spentToday / dailyLimit).toFloat().coerceIn(0.01f, 1f)
+                        val remainingRatio = (1f - progressRatio).coerceAtLeast(0.01f)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape)
+                        ) {
+                            Box(modifier = Modifier.weight(progressRatio).fillMaxHeight().background(if (spentToday <= dailyLimit) Primary else Color(0xFFD32F2F)))
+                            Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color.White))
+                            Box(modifier = Modifier.weight(remainingRatio).fillMaxHeight().background(SurfaceContainerHigh))
+                        }
+
+                        Spacer(modifier = Modifier.height(14.dp))
+                        Divider(color = SurfaceContainer, thickness = 1.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Stats Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = "Spent Today",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                                )
+                                Text(
+                                    text = "₹${String.format("%.0f", spentToday)}",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Month-to-Date",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                                )
+                                Text(
+                                    text = "₹28,450",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Proj. Savings",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                                )
+                                Text(
+                                    text = "+₹16,550",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Tertiary
                                     )
                                 )
                             }
                         }
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+            // Quick Snapshot Cards: EMIs, Debts, Subscriptions
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                        modifier = Modifier.weight(1f).clickable { selectedTab = "EMIs & Loans" }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Active EMIs", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+                            Text("₹${String.format("%.0f", totalEmiMonthly)}/mo", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = OnSurface))
+                            Text("${emis.count { it.remainingMonths > 0 }} loans", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = Primary))
+                        }
+                    }
 
-                    // Linear breakdown bar
-                    val progressRatio = (spentToday / dailyLimit).toFloat().coerceIn(0.01f, 1f)
-                    val remainingRatio = (1f - progressRatio).coerceAtLeast(0.01f)
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                        modifier = Modifier.weight(1f).clickable { selectedTab = "Debts & Splits" }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Debts & Splits", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+                            Text("₹${String.format("%.0f", totalOwedToMe)}", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32)))
+                            Text("₹${String.format("%.0f", totalIOwe)} you owe", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = Color(0xFFD32F2F)))
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                        modifier = Modifier.weight(1f).clickable { selectedTab = "Subscriptions" }
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Recurring", style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant))
+                            Text("₹${String.format("%.0f", totalSubsMonthly)}/mo", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = OnSurface))
+                            Text("${subscriptions.size} active", style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp, color = Tertiary))
+                        }
+                    }
+                }
+            }
+
+            // Smart Budget Spark AI Insight Card
+            item {
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape)
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.Top
                     ) {
-                        Box(modifier = Modifier.weight(progressRatio).fillMaxHeight().background(if (spentToday <= dailyLimit) Primary else Color(0xFFD32F2F)))
-                        Box(modifier = Modifier.width(2.dp).fillMaxHeight().background(Color.White))
-                        Box(modifier = Modifier.weight(remainingRatio).fillMaxHeight().background(SurfaceContainerHigh))
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-                    Divider(color = SurfaceContainer, thickness = 1.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Stats Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column {
-                            Text(
-                                text = "Spent Today",
-                                style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(PrimaryFixed),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(18.dp)
                             )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "₹${String.format("%.0f", spentToday)}",
+                                text = "Smart Budget Spark",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = OnSurface
                                 )
                             )
-                        }
-                        Column {
                             Text(
-                                text = "Month-to-Date",
-                                style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
-                            )
-                            Text(
-                                text = "$1,420",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnSurface
-                                )
-                            )
-                        }
-                        Column {
-                            Text(
-                                text = "Proj. Savings",
-                                style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
-                            )
-                            Text(
-                                text = "+$850",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Tertiary
-                                )
+                                text = "Pro Tip: You are on track to save +₹1,200 extra this week by keeping lunch under ₹300. Good job keeping to your goals!",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = OnSurfaceVariant,
+                                    lineHeight = 18.sp
+                                ),
+                                modifier = Modifier.padding(top = 2.dp)
                             )
                         }
                     }
                 }
             }
-        }
 
-        // Smart Budget Spark AI Insight Card
-        item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLow),
-                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // Action Buttons Row
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.openCreateTask("Expense") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
+                        modifier = Modifier.weight(1f).height(44.dp).testTag("log_expense_btn")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Log Expense",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                        )
+                    }
+
+                    Button(
+                        onClick = { viewModel.openCreateTask("Income") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = SurfaceContainerLowest,
+                            contentColor = OnSurface
+                        ),
+                        modifier = Modifier.weight(1f).height(44.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AttachMoney,
+                            contentDescription = null,
+                            tint = Tertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Add Income",
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.showToast("Receipt Scanner activated") },
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SurfaceContainerLowest)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ReceiptLong,
+                            contentDescription = "Scan Receipt",
+                            tint = OnSurfaceVariant,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
+
+            // Spending Analytics: Weekly Bar Chart & 30-Day Interactive Line Trend
+            item {
+                SpendingTrendsAnalyticsCard(
+                    todaySpend = spentToday,
+                    dailyCeiling = dailyLimit,
+                    onDownloadReport = { viewModel.downloadWeeklyFinanceReport(context) }
+                )
+            }
+
+            // Today's Transactions
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Today's Transactions",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                    Text(
+                        text = "View All (${transactions.size})",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Primary,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier.clickable { selectedTab = "Expenses" }
+                    )
+                }
+            }
+
+            items(transactions.take(4), key = { it.id }) { tx ->
+                TransactionRowItem(tx = tx)
+            }
+
+            // Upcoming Bills & Dues
+            item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.Top
+                        .padding(top = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(PrimaryFixed),
-                        contentAlignment = Alignment.Center
+                    Text(
+                        text = "Upcoming Bills & Dues",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                    Text(
+                        text = "Auto-Pay Active",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Tertiary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+
+            items(upcomingBills, key = { it.id }) { bill ->
+                UpcomingBillRowItem(
+                    bill = bill,
+                    onPayEarly = { viewModel.payBill(bill.id) }
+                )
+            }
+        } else if (selectedTab == "Expenses") {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = { viewModel.openCreateTask("Expense") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                        modifier = Modifier.weight(1f).height(44.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = null,
-                            tint = Primary,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Log Expense", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                     }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Smart Budget Spark",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = OnSurface
-                            )
-                        )
-                        Text(
-                            text = "Pro Tip: You are on track to save +$120 extra this week by keeping lunch under $30. Good job keeping to your goals!",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = OnSurfaceVariant,
-                                lineHeight = 18.sp
-                            ),
-                            modifier = Modifier.padding(top = 2.dp)
-                        )
+                    Button(
+                        onClick = { viewModel.openCreateTask("Income") },
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SurfaceContainerLowest, contentColor = OnSurface),
+                        modifier = Modifier.weight(1f).height(44.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.AttachMoney, contentDescription = null, tint = Tertiary, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Add Income", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold))
                     }
                 }
             }
-        }
 
-        // Action Buttons Row
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            item {
+                Text(
+                    text = "ALL LOGGED TRANSACTIONS (${transactions.size})",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant, letterSpacing = 0.6.sp)
+                )
+            }
+
+            items(transactions, key = { it.id }) { tx ->
+                TransactionRowItem(tx = tx)
+            }
+        } else if (selectedTab == "EMIs & Loans") {
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "TOTAL MONTHLY EMI COMMITMENT",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant)
+                        )
+                        Text(
+                            text = "₹${String.format("%.0f", totalEmiMonthly)} / month",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, color = Primary)
+                        )
+                        Text(
+                            text = "${emis.count { it.remainingMonths > 0 }} active loans being tracked",
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                        )
+                    }
+                }
+            }
+
+            item {
                 Button(
-                    onClick = { viewModel.openCreateTask("Expense") },
+                    onClick = { viewModel.openCreateTask("EMI") },
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer),
-                    modifier = Modifier.weight(1f).height(44.dp).testTag("log_expense_btn")
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Log Expense",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                    )
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Add New EMI / Loan", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                 }
+            }
 
+            items(emis, key = { it.id }) { emi ->
+                EmiCardItem(
+                    emi = emi,
+                    onPayInstallment = { viewModel.payEmiInstallment(emi.id) }
+                )
+            }
+        } else if (selectedTab == "Debts & Splits") {
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text("Owed to You", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold))
+                            Text("₹${String.format("%.0f", totalOwedToMe)}", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32)))
+                        }
+                    }
+
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text("You Owe", style = MaterialTheme.typography.labelSmall.copy(color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold))
+                            Text("₹${String.format("%.0f", totalIOwe)}", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)))
+                        }
+                    }
+                }
+            }
+
+            item {
                 Button(
-                    onClick = { viewModel.openCreateTask("Income") },
+                    onClick = { viewModel.openCreateTask("Debt") },
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = SurfaceContainerLowest,
-                        contentColor = OnSurface
-                    ),
-                    modifier = Modifier.weight(1f).height(44.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.AttachMoney,
-                        contentDescription = null,
-                        tint = Tertiary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Add Income",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-                    )
-                }
-
-                IconButton(
-                    onClick = { viewModel.showToast("Receipt Scanner activated") },
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(SurfaceContainerLowest)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ReceiptLong,
-                        contentDescription = "Scan Receipt",
-                        tint = OnSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Add Debt / Split Expense", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
                 }
             }
-        }
 
-        // Spending Analytics: Weekly Bar Chart & 30-Day Interactive Line Trend
-        item {
-            SpendingTrendsAnalyticsCard(
-                todaySpend = spentToday,
-                dailyCeiling = dailyLimit,
-                onDownloadReport = { viewModel.downloadWeeklyFinanceReport(context) }
-            )
-        }
-
-        // Today's Transactions
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Today's Transactions",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurface
-                    )
-                )
-                Text(
-                    text = "View All (8)",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Primary,
-                        fontWeight = FontWeight.Bold
-                    ),
-                    modifier = Modifier.clickable { viewModel.showToast("All transactions ledger") }
+            items(debts, key = { it.id }) { debt ->
+                DebtCardItem(
+                    debt = debt,
+                    onSettle = { viewModel.settleDebt(debt.id) }
                 )
             }
-        }
+        } else if (selectedTab == "Subscriptions") {
+            item {
+                Card(
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryFixed),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "MONTHLY SUBSCRIPTION LIABILITY",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant)
+                        )
+                        Text(
+                            text = "₹${String.format("%.0f", totalSubsMonthly)} / month",
+                            style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, color = Primary)
+                        )
+                        Text(
+                            text = "${subscriptions.size} active memberships monitored",
+                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                        )
+                    }
+                }
+            }
 
-        items(transactions, key = { it.id }) { tx ->
-            TransactionRowItem(tx = tx)
-        }
+            item {
+                Button(
+                    onClick = { viewModel.openCreateTask("Subscription") },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                    modifier = Modifier.fillMaxWidth().height(44.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Add Subscription", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                }
+            }
 
-        // Upcoming Bills & Dues
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Upcoming Bills & Dues",
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = OnSurface
-                    )
-                )
-                Text(
-                    text = "Auto-Pay Active",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = Tertiary,
-                        fontWeight = FontWeight.SemiBold
-                    )
+            items(subscriptions, key = { it.id }) { sub ->
+                SubscriptionFinanceCardItem(
+                    sub = sub,
+                    onToggle = { viewModel.showToast("Subscription settings for ${sub.name}") }
                 )
             }
-        }
+        } else if (selectedTab == "Bills") {
+            item {
+                Text(
+                    text = "UPCOMING BILL REMINDERS & UTILITIES",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant, letterSpacing = 0.6.sp)
+                )
+            }
 
-        items(upcomingBills, key = { it.id }) { bill ->
-            UpcomingBillRowItem(
-                bill = bill,
-                onPayEarly = { viewModel.payBill(bill.id) }
-            )
+            items(upcomingBills, key = { it.id }) { bill ->
+                UpcomingBillRowItem(
+                    bill = bill,
+                    onPayEarly = { viewModel.payBill(bill.id) }
+                )
+            }
         }
     }
 }
@@ -559,7 +837,7 @@ private fun TransactionRowItem(tx: FinanceTransaction) {
                 }
 
                 Text(
-                    text = if (tx.amount < 0) "-$${String.format("%.2f", -tx.amount)}" else "+$${String.format("%.2f", tx.amount)}",
+                    text = if (tx.amount < 0) "-₹${String.format("%.0f", -tx.amount)}" else "+₹${String.format("%.0f", tx.amount)}",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = OnSurface
@@ -671,7 +949,7 @@ private fun UpcomingBillRowItem(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "$${String.format("%.2f", bill.amount)}",
+                    text = "₹${String.format("%.0f", bill.amount)}",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = OnSurface
@@ -700,6 +978,270 @@ private fun UpcomingBillRowItem(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EmiCardItem(
+    emi: EmiItem,
+    onPayInstallment: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = emi.title,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                    )
+                    Text(
+                        text = "${emi.lender} • Due day ${emi.dueDayOfMonth} of month",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "₹${String.format("%.0f", emi.monthlyAmount)}",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = Primary)
+                    )
+                    Text(
+                        text = "per month",
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Progress Bar
+            val paidMonths = emi.totalTenureMonths - emi.remainingMonths
+            val progress = (paidMonths.toFloat() / emi.totalTenureMonths.toFloat()).coerceIn(0f, 1f)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "$paidMonths paid / ${emi.totalTenureMonths} total months",
+                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                )
+                Text(
+                    text = "${emi.remainingMonths} remaining",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(CircleShape),
+                color = Primary,
+                trackColor = SurfaceContainerHigh
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Total Loan: ₹${String.format("%.0f", emi.totalAmount)}",
+                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                )
+
+                if (emi.remainingMonths > 0) {
+                    Button(
+                        onClick = onPayInstallment,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryContainer, contentColor = Primary),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text("Pay Installment", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                    }
+                } else {
+                    Text(
+                        text = "Loan Fully Paid! 🎉",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Tertiary)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DebtCardItem(
+    debt: DebtItem,
+    onSettle: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (debt.isOwedToMe) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (debt.isOwedToMe) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                        contentDescription = null,
+                        tint = if (debt.isOwedToMe) Color(0xFF2E7D32) else Color(0xFFD32F2F),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Column {
+                    Text(
+                        text = debt.personName,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                    )
+                    Text(
+                        text = "${debt.note} • Due ${debt.dueDate}",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                    )
+                    Text(
+                        text = if (debt.isOwedToMe) "Owes you" else "You owe",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = if (debt.isOwedToMe) Color(0xFF2E7D32) else Color(0xFFD32F2F),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "₹${String.format("%.0f", debt.amount)}",
+                    style = MaterialTheme.typography.titleMedium.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = if (debt.isSettled) OnSurfaceVariant else if (debt.isOwedToMe) Color(0xFF2E7D32) else Color(0xFFD32F2F)
+                    )
+                )
+
+                if (debt.isSettled) {
+                    Text(
+                        text = "Settled",
+                        style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant)
+                    )
+                } else {
+                    Text(
+                        text = "Settle Up",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            color = Primary,
+                            fontWeight = FontWeight.Bold
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(PrimaryFixed)
+                            .clickable { onSettle() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubscriptionFinanceCardItem(
+    sub: SubscriptionItem,
+    onToggle: () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(PrimaryFixed),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Subscriptions,
+                        contentDescription = null,
+                        tint = Primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Column {
+                    Text(
+                        text = sub.name,
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                    )
+                    Text(
+                        text = "${sub.category} • Renews ${sub.renewalDate}",
+                        style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
+                    )
+                    Text(
+                        text = sub.billingCycle,
+                        style = MaterialTheme.typography.labelSmall.copy(color = Primary, fontWeight = FontWeight.SemiBold)
+                    )
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "₹${String.format("%.0f", sub.amount)}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = OnSurface)
+                )
+                Text(
+                    text = if (sub.isActive) "Active" else "Paused",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        color = if (sub.isActive) Tertiary else OnSurfaceVariant,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    modifier = Modifier.clickable { onToggle() }
+                )
             }
         }
     }

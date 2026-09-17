@@ -198,6 +198,12 @@ class DayMeetViewModel : ViewModel() {
     private val _upcomingBills = MutableStateFlow(DayMeetRepository.getInitialUpcomingBills())
     val upcomingBills: StateFlow<List<UpcomingBill>> = _upcomingBills.asStateFlow()
 
+    private val _emis = MutableStateFlow(DayMeetRepository.getInitialEmis())
+    val emis: StateFlow<List<EmiItem>> = _emis.asStateFlow()
+
+    private val _debts = MutableStateFlow(DayMeetRepository.getInitialDebts())
+    val debts: StateFlow<List<DebtItem>> = _debts.asStateFlow()
+
     // Meeting Minutes state
     private val _minutesActions = MutableStateFlow(
         listOf(
@@ -546,6 +552,94 @@ class DayMeetViewModel : ViewModel() {
         showToast("Bedtime Guard & DND ${if (!current) "armed" else "off"}")
     }
 
+    fun toggleWellnessReminder(type: String) {
+        val current = _healthMetrics.value
+        val updated = when (type.lowercase()) {
+            "water" -> current.copy(waterReminderOn = !current.waterReminderOn)
+            "walk" -> current.copy(walkReminderOn = !current.walkReminderOn)
+            "exercise" -> current.copy(exerciseReminderOn = !current.exerciseReminderOn)
+            "sleep" -> current.copy(sleepReminderOn = !current.sleepReminderOn)
+            "meditation" -> current.copy(meditationReminderOn = !current.meditationReminderOn)
+            "posture" -> current.copy(postureReminderOn = !current.postureReminderOn)
+            else -> current
+        }
+        _healthMetrics.value = updated
+        val state = when (type.lowercase()) {
+            "water" -> updated.waterReminderOn
+            "walk" -> updated.walkReminderOn
+            "exercise" -> updated.exerciseReminderOn
+            "sleep" -> updated.sleepReminderOn
+            "meditation" -> updated.meditationReminderOn
+            "posture" -> updated.postureReminderOn
+            else -> true
+        }
+        showToast("$type reminder ${if (state) "activated 🔔" else "paused 🔕"}")
+    }
+
+    fun logWorkoutMinutes(minutes: Int = 15) {
+        val current = _healthMetrics.value.exerciseMinutes
+        val target = _healthMetrics.value.exerciseTarget
+        val updated = current + minutes
+        _healthMetrics.value = _healthMetrics.value.copy(
+            exerciseMinutes = updated,
+            caloriesBurned = _healthMetrics.value.caloriesBurned + (minutes * 8)
+        )
+        showToast("Logged +${minutes}m workout! (${updated}m / ${target}m target)")
+        if (updated >= target) {
+            triggerConfetti("🏆 Daily Exercise Target Smashed!")
+        }
+    }
+
+    fun addCustomAutomation(
+        title: String,
+        category: String = "Productivity",
+        whenTrigger: String,
+        ifCondition: String,
+        thenAction: String
+    ) {
+        val newAuto = AutomationWorkflow(
+            id = "auto_${System.currentTimeMillis()}",
+            title = title.ifBlank { "Custom Automation" },
+            category = category,
+            statusTag = "Active • Just created",
+            whenTrigger = whenTrigger.ifBlank { "Trigger criteria met" },
+            ifCondition = ifCondition.ifBlank { "Condition verified" },
+            thenAction = thenAction.ifBlank { "Execute automated workflow" },
+            isEnabled = true,
+            statsText = "0 runs"
+        )
+        _automations.value = listOf(newAuto) + _automations.value
+        showToast("Created automation: $title ✨")
+    }
+
+    fun updateAutomation(
+        id: String,
+        title: String,
+        category: String,
+        whenTrigger: String,
+        ifCondition: String,
+        thenAction: String
+    ) {
+        _automations.value = _automations.value.map { auto ->
+            if (auto.id == id) {
+                auto.copy(
+                    title = title.ifBlank { auto.title },
+                    category = category.ifBlank { auto.category },
+                    whenTrigger = whenTrigger.ifBlank { auto.whenTrigger },
+                    ifCondition = ifCondition.ifBlank { auto.ifCondition },
+                    thenAction = thenAction.ifBlank { auto.thenAction },
+                    statusTag = "Updated"
+                )
+            } else auto
+        }
+        showToast("Updated rule: $title ✓")
+    }
+
+    fun deleteAutomation(id: String) {
+        _automations.value = _automations.value.filterNot { it.id == id }
+        showToast("Automation rule removed")
+    }
+
     // Habits & Goals Actions
     fun triggerConfetti(milestone: String? = null) {
         _confettiMilestone.value = milestone
@@ -827,12 +921,32 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
-    fun checkAndLogExpense(title: String, amount: Double, category: String = "General"): Boolean {
+    fun checkAndLogExpense(
+        title: String,
+        amount: Double,
+        category: String = "General",
+        method: String = "UPI",
+        receiptNote: String? = null,
+        isSplit: Boolean = false
+    ): Boolean {
         val currentSpent = _transactions.value.filter { it.amount < 0 }.sumOf { -it.amount }
         val dailyCeiling = 5000.0
         val safeAmount = Math.abs(amount)
         val projectedSpent = currentSpent + safeAmount
         val isCeilingExceeded = projectedSpent > dailyCeiling
+
+        val icon = when (category.lowercase()) {
+            "food" -> "restaurant"
+            "travel" -> "subway"
+            "fuel" -> "local_gas_station"
+            "shopping" -> "shopping_bag"
+            "bills" -> "receipt_long"
+            "rent" -> "home"
+            "education" -> "school"
+            "healthcare" -> "medical_services"
+            "entertainment" -> "movie"
+            else -> "account_balance_wallet"
+        }
 
         val newTx = FinanceTransaction(
             id = "tx_${System.currentTimeMillis()}",
@@ -840,8 +954,10 @@ class DayMeetViewModel : ViewModel() {
             category = category.ifBlank { "General" },
             time = "Just now",
             amount = -safeAmount,
-            method = "UPI / Card",
-            iconType = "restaurant"
+            method = method,
+            iconType = icon,
+            receiptNote = receiptNote,
+            isSplit = isSplit
         )
         _transactions.value = listOf(newTx) + _transactions.value
 
@@ -850,27 +966,110 @@ class DayMeetViewModel : ViewModel() {
             showToast("⚠️ Budget Alert: Expense of ₹${String.format("%.0f", safeAmount)} exceeds ₹5,000 daily budget! (Projected: ₹${String.format("%.0f", projectedSpent)}, Over by ₹${String.format("%.0f", overBy)})")
         } else {
             val remaining = dailyCeiling - projectedSpent
-            showToast("Logged expense: ₹${String.format("%.0f", safeAmount)} for $title (₹${String.format("%.0f", remaining)} buffer left)")
+            showToast("Logged expense: ₹${String.format("%.0f", safeAmount)} for $title ($method)")
         }
         return isCeilingExceeded
     }
 
-    fun logExpense(title: String, amount: Double, category: String = "General") {
-        checkAndLogExpense(title, amount, category)
+    fun logExpense(
+        title: String,
+        amount: Double,
+        category: String = "General",
+        method: String = "UPI",
+        receiptNote: String? = null,
+        isSplit: Boolean = false
+    ) {
+        checkAndLogExpense(title, amount, category, method, receiptNote, isSplit)
     }
 
-    fun logIncome(title: String, amount: Double) {
+    fun logIncome(title: String, amount: Double, method: String = "Bank") {
         val newTx = FinanceTransaction(
             id = "tx_${System.currentTimeMillis()}",
             title = title,
             category = "Income",
             time = "Just now",
             amount = Math.abs(amount),
-            method = "Direct Deposit",
-            iconType = "subway"
+            method = method,
+            iconType = "account_balance"
         )
         _transactions.value = listOf(newTx) + _transactions.value
-        showToast("Added income: +₹${String.format("%.0f", amount)}")
+        showToast("Added income: +₹${String.format("%.0f", amount)} ($method)")
+    }
+
+    fun addEmi(title: String, amount: Double, totalMonths: Int, nextDue: String, category: String = "Loan") {
+        val newEmi = EmiItem(
+            id = "emi_${System.currentTimeMillis()}",
+            title = title,
+            monthlyAmount = amount,
+            totalMonths = totalMonths,
+            remainingMonths = totalMonths,
+            nextDueDate = nextDue,
+            category = category
+        )
+        _emis.value = listOf(newEmi) + _emis.value
+        showToast("Added EMI plan: $title (₹${String.format("%.0f", amount)}/mo)")
+    }
+
+    fun payEmiInstallment(id: String) {
+        val item = _emis.value.firstOrNull { it.id == id } ?: return
+        if (item.remainingMonths <= 0) {
+            showToast("EMI for ${item.title} is already completed! 🎉")
+            return
+        }
+        val updated = item.copy(remainingMonths = item.remainingMonths - 1)
+        _emis.value = _emis.value.map { if (it.id == id) updated else it }
+        logExpense("EMI: ${item.title}", item.monthlyAmount, "Bills", "Auto-Debit")
+        showToast("Paid EMI of ₹${String.format("%.0f", item.monthlyAmount)} (${updated.remainingMonths} months left)")
+        if (updated.remainingMonths == 0) {
+            triggerConfetti("🎉 EMI Completed: ${item.title} fully paid off!")
+        }
+    }
+
+    fun addDebt(person: String, amount: Double, isOwedToMe: Boolean, dueDate: String, note: String) {
+        val newDebt = DebtItem(
+            id = "debt_${System.currentTimeMillis()}",
+            personOrSource = person,
+            amount = amount,
+            isOwedToMe = isOwedToMe,
+            dueDate = dueDate.ifBlank { "Flexible" },
+            note = note
+        )
+        _debts.value = listOf(newDebt) + _debts.value
+        val label = if (isOwedToMe) "owes you" else "you owe"
+        showToast("Logged debt: $person $label ₹${String.format("%.0f", amount)}")
+    }
+
+    fun settleDebt(id: String) {
+        val item = _debts.value.firstOrNull { it.id == id } ?: return
+        _debts.value = _debts.value.filterNot { it.id == id }
+        if (item.isOwedToMe) {
+            logIncome("Settlement from ${item.personOrSource}", item.amount, "UPI")
+            showToast("Received ₹${String.format("%.0f", item.amount)} from ${item.personOrSource} (Settled) ✓")
+        } else {
+            logExpense("Settlement to ${item.personOrSource}", item.amount, "Other", "UPI")
+            showToast("Paid ₹${String.format("%.0f", item.amount)} to ${item.personOrSource} (Settled) ✓")
+        }
+    }
+
+    fun addSubscription(name: String, cost: Double, date: String, category: String, autoPay: Boolean) {
+        val newSub = SubscriptionItem(
+            id = "sub_${System.currentTimeMillis()}",
+            name = name,
+            monthlyCost = cost,
+            renewalDate = date,
+            iconType = when (category.lowercase()) {
+                "ott", "entertainment" -> "movie"
+                "internet", "broadband" -> "wifi"
+                "electricity", "utility" -> "bolt"
+                "gym", "fitness" -> "fitness"
+                "insurance" -> "health"
+                else -> "receipt"
+            },
+            category = category,
+            autoPay = autoPay
+        )
+        _subscriptions.value = listOf(newSub) + _subscriptions.value
+        showToast("Added subscription: $name (₹${String.format("%.0f", cost)}/mo)")
     }
 
     fun updateMonthlyBudgetTarget(newTarget: Double) {
@@ -913,11 +1112,28 @@ class DayMeetViewModel : ViewModel() {
             }
             "Expense" -> {
                 val amount = extraValue.toDoubleOrNull() ?: 150.0
-                checkAndLogExpense(title.ifBlank { "Expense" }, amount, detail.ifBlank { "General" })
+                val cat = if (category.isNotBlank() && category != "Work") category else (if (detail.isNotBlank()) detail else "Food")
+                checkAndLogExpense(title.ifBlank { "Quick Expense" }, amount, cat, "UPI")
             }
             "Income" -> {
                 val amount = extraValue.toDoubleOrNull() ?: 1000.0
-                logIncome(title.ifBlank { "Payment" }, amount)
+                logIncome(title.ifBlank { "Payment" }, amount, "Bank")
+            }
+            "Shopping" -> {
+                val price = extraValue.toDoubleOrNull() ?: 250.0
+                addShoppingItem(title.ifBlank { "Item" }, detail.ifBlank { "1 unit" }, price, category.ifBlank { "General" })
+            }
+            "Subscription" -> {
+                val cost = extraValue.toDoubleOrNull() ?: 499.0
+                addSubscription(title.ifBlank { "Subscription" }, cost, "End of Month", category.ifBlank { "Entertainment" }, true)
+            }
+            "Debt" -> {
+                val amount = extraValue.toDoubleOrNull() ?: 500.0
+                addDebt(title.ifBlank { "Contact" }, amount, true, "Next Week", detail)
+            }
+            "EMI" -> {
+                val amount = extraValue.toDoubleOrNull() ?: 2000.0
+                addEmi(title.ifBlank { "New EMI" }, amount, 12, "Oct 10", category.ifBlank { "Loan" })
             }
             "Note" -> {
                 val newNote = NoteItem(
@@ -1264,14 +1480,129 @@ class DayMeetViewModel : ViewModel() {
         _chatMessages.value = _chatMessages.value + userMsg
 
         viewModelScope.launch {
-            delay(1200)
+            delay(600)
+            val lower = text.lowercase()
+            val (replyText, proposal) = when {
+                lower.contains("plan") && (lower.contains("tomorrow") || lower.contains("day")) -> {
+                    val planText = buildString {
+                        appendLine("✨ **TOMORROW'S OPTIMIZED PLAN**")
+                        appendLine("")
+                        appendLine("📅 09:00 AM – Team Sprint Standup & Alignment")
+                        appendLine("💻 10:30 AM – Deep Work: Architecture Spec (Focus Block)")
+                        appendLine("🍽️ 12:30 PM – Healthy Lunch & Quick Walk")
+                        appendLine("📞 02:00 PM – Client Strategy Review (Google Meet)")
+                        appendLine("⚡ 04:00 PM – Wrap-up, Inbox Zero & Review")
+                        appendLine("")
+                        appendLine("💡 You have 2 pending tasks from today. Tapping below will auto-schedule them into your 10:30 AM focus block.")
+                    }
+                    val prop = ScheduleProposal(
+                        rescheduled = ProposalItem("Reschedule", "Move 2 overdue tasks to 10:30 AM tomorrow", "Auto-inserts buffer", "Recommended"),
+                        addedBlock = ProposalItem("Deep Work", "Add 90m Architecture Focus block", "Mutes notifications", "Optimal"),
+                        autoReminder = ProposalItem("Health", "12:30 PM Hydration & 15m Walk Alert", "Vital routine", "Scheduled")
+                    )
+                    Pair(planText, prop)
+                }
+                lower.contains("spend") || lower.contains("expense") || lower.contains("budget") -> {
+                    val totalExpenses = _transactions.value.filter { it.amount < 0 }.sumOf { -it.amount }
+                    val reply = buildString {
+                        appendLine("💰 **WEEKLY & MONTHLY SPENDING REPORT**")
+                        appendLine("")
+                        appendLine("• Total Expenses: ₹${String.format("%,.0f", totalExpenses)}")
+                        appendLine("• Monthly Budget Limit: ₹${String.format("%,.0f", _monthlyBudgetTarget.value)}")
+                        appendLine("• Remaining Buffer: ₹${String.format("%,.0f", (_monthlyBudgetTarget.value - totalExpenses).coerceAtLeast(0.0))}")
+                        appendLine("")
+                        appendLine("Top Categories:")
+                        val grouped = _transactions.value.filter { it.amount < 0 }.groupBy { it.category }
+                        grouped.forEach { (cat, list) ->
+                            val sum = list.sumOf { -it.amount }
+                            appendLine("  • $cat: ₹${String.format("%,.0f", sum)}")
+                        }
+                        appendLine("")
+                        appendLine("Status: Healthy! You are within your target threshold.")
+                    }
+                    Pair(reply, null)
+                }
+                lower.contains("meeting") && (lower.contains("tomorrow") || lower.contains("next") || lower.contains("have")) -> {
+                    val count = _meetings.value.size
+                    val reply = buildString {
+                        appendLine("📅 **SCHEDULED MEETINGS ($count Active)**")
+                        appendLine("")
+                        _meetings.value.take(4).forEachIndexed { i, m ->
+                            appendLine("${i + 1}. **${m.title}** • ${m.time}")
+                            appendLine("   Platform: ${m.platform} (${m.attendeesCount} attendees)")
+                        }
+                    }
+                    Pair(reply, null)
+                }
+                lower.contains("remind") && (lower.contains("bill") || lower.contains("pay") || lower.contains("electricity")) -> {
+                    val newRem = SmartReminder(
+                        id = "rem_${System.currentTimeMillis()}",
+                        title = "⚡ Pay Electricity Bill (Tata Power ₹1,840)",
+                        triggerType = "Bill Due",
+                        scheduledTime = "Friday, 09:00 AM",
+                        isCompleted = false
+                    )
+                    _reminders.value = listOf(newRem) + _reminders.value
+                    val reply = "⚡ **Reminder Confirmed:** I've scheduled an alert for **Friday 09:00 AM** to pay your Electricity Bill (Tata Power ₹1,840) with a 1-tap UPI payment button."
+                    Pair(reply, null)
+                }
+                lower.contains("task") && (lower.contains("meeting") || lower.contains("action")) -> {
+                    saveNewTask("Finalize client deliverables from Sprint Review", "Derived from Sprint Review meeting notes", Priority.HIGH, "Work", emptyList())
+                    saveNewTask("Share updated Figma design system tokens", "David & Elena requested spec", Priority.MEDIUM, "Design", emptyList())
+                    val reply = "✅ **Created 2 actionable follow-up tasks** from today's meeting notes and added them to your Planner backlog with high priority."
+                    Pair(reply, null)
+                }
+                lower.contains("overdue") -> {
+                    val pendingTasks = _feedItems.value.filter { !it.isCompleted }
+                    val reply = buildString {
+                        appendLine("⚠️ **TASK STATUS OVERVIEW**")
+                        appendLine("")
+                        appendLine("You have **${pendingTasks.size} tasks** pending today:")
+                        pendingTasks.take(3).forEach { t ->
+                            appendLine("• ${t.title} [${t.priority?.label ?: "Normal"}]")
+                        }
+                        appendLine("")
+                        appendLine("Would you like me to auto-reschedule them to tomorrow morning?")
+                    }
+                    Pair(reply, null)
+                }
+                lower.contains("sub") || lower.contains("subscription") -> {
+                    val total = _subscriptions.value.sumOf { it.monthlyCost }
+                    val reply = buildString {
+                        appendLine("💳 **ACTIVE SUBSCRIPTIONS (₹${String.format("%,.0f", total)}/mo)**")
+                        appendLine("")
+                        _subscriptions.value.forEach { s ->
+                            appendLine("• ${s.name}: ₹${String.format("%.0f", s.monthlyCost)} (Renews ${s.renewalDate})")
+                        }
+                    }
+                    Pair(reply, null)
+                }
+                else -> {
+                    val reply = "DayMeet AI Assistant: I've processed your request. Your calendar, daily timeline, budget limits, and wellness routines are synchronized."
+                    Pair(reply, null)
+                }
+            }
+
             val aiMsg = ChatMessage(
                 id = "ai_${System.currentTimeMillis()}",
                 isUser = false,
-                text = "DayMeet Super App Intelligence: I've updated your schedule, adjusted the cross-stream timeline, and validated your ₹5,000 daily budget.",
-                timestamp = "Just now"
+                text = replyText,
+                timestamp = "Just now",
+                proposal = proposal
             )
             _chatMessages.value = _chatMessages.value + aiMsg
+        }
+    }
+
+    fun executeAiAction(actionType: String) {
+        when (actionType) {
+            "plan_tomorrow" -> sendChatMessage("Plan my tomorrow")
+            "check_spending" -> sendChatMessage("How much did I spend this week?")
+            "check_meetings" -> sendChatMessage("What meetings do I have tomorrow?")
+            "check_overdue" -> sendChatMessage("How many tasks are overdue?")
+            "create_meeting_tasks" -> sendChatMessage("Create tasks from today's meetings")
+            "check_subs" -> sendChatMessage("Show my upcoming subscriptions")
+            else -> sendChatMessage(actionType)
         }
     }
 

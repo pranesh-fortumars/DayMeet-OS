@@ -341,61 +341,121 @@ object DayMeetRepository {
         FinanceTransaction(
             id = "tx1",
             title = "Artisan Cafe Bistro",
-            category = "Food & Dining",
+            category = "Food",
             time = "12:30 PM",
             amount = -450.00,
-            method = "UPI / Card",
+            method = "UPI",
             iconType = "restaurant",
-            linkedEvent = "Lunch with Dev Team (12:30 PM)"
+            linkedEvent = "Lunch with Dev Team",
+            tags = listOf("Dining", "Team")
         ),
         FinanceTransaction(
             id = "tx2",
             title = "Metro Smart Transit",
-            category = "Commute & Transit",
+            category = "Travel",
             time = "08:45 AM",
             amount = -80.00,
-            method = "Tap to Pay",
-            iconType = "subway"
+            method = "Card",
+            iconType = "subway",
+            tags = listOf("Commute")
         ),
         FinanceTransaction(
             id = "tx3",
-            title = "Adobe Creative Cloud",
-            category = "Work Subscriptions",
-            time = "Recurring Monthly",
-            amount = -720.00,
-            method = "Auto-Debit",
-            iconType = "software",
-            tags = listOf("Work", "Tax Deductible")
+            title = "Shell Fuel Station",
+            category = "Fuel",
+            time = "Yesterday",
+            amount = -1500.00,
+            method = "Card",
+            iconType = "local_gas_station",
+            tags = listOf("Vehicle", "Petrol")
+        ),
+        FinanceTransaction(
+            id = "tx4",
+            title = "Fresh Mart Groceries",
+            category = "Food",
+            time = "Yesterday",
+            amount = -1850.00,
+            method = "UPI",
+            iconType = "shopping_cart",
+            receiptNote = "Weekly pantry essentials"
+        ),
+        FinanceTransaction(
+            id = "tx5",
+            title = "Airtel Fiber Internet",
+            category = "Bills",
+            time = "2 Days Ago",
+            amount = -999.00,
+            method = "Bank",
+            iconType = "wifi",
+            tags = listOf("Broadband", "Recurring")
+        ),
+        FinanceTransaction(
+            id = "tx6",
+            title = "ZARA Apparel Shopping",
+            category = "Shopping",
+            time = "3 Days Ago",
+            amount = -3200.00,
+            method = "Card",
+            iconType = "checkroom",
+            tags = listOf("Clothing")
+        ),
+        FinanceTransaction(
+            id = "tx7",
+            title = "Monthly Tech Retainer",
+            category = "Income",
+            time = "1st of Month",
+            amount = 45000.00,
+            method = "Bank",
+            iconType = "account_balance",
+            tags = listOf("Salary", "Direct Deposit")
         )
     )
 
     fun getInitialUpcomingBills(): List<UpcomingBill> = listOf(
         UpcomingBill(
             id = "b1",
-            name = "Electricity Bill Due Tomorrow",
+            name = "Electricity Bill (Tata Power)",
             scheduleDate = "Due Tomorrow",
             daysLeft = "1d left",
-            department = "Tata Power",
-            amount = 2400.00,
+            department = "Electricity",
+            amount = 1840.00,
             autoPay = false
         ),
         UpcomingBill(
             id = "b2",
-            name = "Airtel Xstream Fiber",
-            scheduleDate = "Scheduled for Oct 29",
-            daysLeft = "5d left",
-            department = "Home Broadband",
-            amount = 1179.00,
+            name = "Airtel Fiber Internet",
+            scheduleDate = "Sep 25",
+            daysLeft = "3d left",
+            department = "Internet",
+            amount = 999.00,
             autoPay = true
         ),
         UpcomingBill(
             id = "b3",
-            name = "Figma Professional Team",
-            scheduleDate = "Scheduled for Oct 27",
-            daysLeft = "3d left",
-            department = "Workspace Team",
-            amount = 1250.00,
+            name = "Netflix Ultra 4K",
+            scheduleDate = "Sep 23",
+            daysLeft = "Today",
+            department = "OTT",
+            amount = 649.00,
+            autoPay = true
+        ),
+        UpcomingBill(
+            id = "b4",
+            name = "Gym Membership Renewal",
+            scheduleDate = "Sep 30",
+            daysLeft = "7d left",
+            department = "Gym",
+            amount = 1500.00,
             autoPay = false
+        ),
+        UpcomingBill(
+            id = "b5",
+            name = "Health Insurance Premium",
+            scheduleDate = "Oct 05",
+            daysLeft = "12d left",
+            department = "Insurance",
+            amount = 3200.00,
+            autoPay = true
         )
     )
 
@@ -424,58 +484,69 @@ object DayMeetRepository {
     fun getInitialAutomations(): List<AutomationWorkflow> = listOf(
         AutomationWorkflow(
             id = "a1",
+            title = "Pre-Meeting Alert",
+            category = "Productivity",
+            statusTag = "Active • Triggers in 15m",
+            whenTrigger = "Meeting starts in 15 minutes",
+            ifCondition = "Has video link or in-person location",
+            thenAction = "Send priority notification & open meeting briefing card",
+            isEnabled = true,
+            statsText = "34 runs this month"
+        ),
+        AutomationWorkflow(
+            id = "a2",
+            title = "Overdue Task Follow-up",
+            category = "Productivity",
+            statusTag = "Active • 2 tasks monitored",
+            whenTrigger = "Task becomes overdue",
+            ifCondition = "Priority is High or Urgent",
+            thenAction = "Remind me again in 2 hours & reschedule time block",
+            isEnabled = true,
+            statsText = "Prevented 8 deadline delays"
+        ),
+        AutomationWorkflow(
+            id = "a3",
+            title = "Monthly Budget Threshold",
+            category = "Finance",
+            statusTag = "Tracking against ₹20,000 limit",
+            whenTrigger = "Monthly spending exceeds ₹20,000",
+            ifCondition = "Category is Dining, Shopping or Entertainment",
+            thenAction = "Send budget alert notification & suggest remaining daily cap",
+            isEnabled = true,
+            statsText = "Keeps month-end on budget"
+        ),
+        AutomationWorkflow(
+            id = "a4",
             title = "Meeting Follow-up Orchestrator",
             category = "Productivity",
-            statusTag = "Triggered 2h ago • 98% success",
+            statusTag = "Triggered 2h ago",
             whenTrigger = "Calendar meeting ends",
-            ifCondition = "Organizer is Alex & action items detected",
-            thenAction = "Auto-create tasks in workspace & draft follow-up Slack ping",
+            ifCondition = "Meeting notes have action items",
+            thenAction = "Create follow-up task in DayMeet & ping organizer",
             isEnabled = true,
             statsText = "28 runs this month"
         ),
         AutomationWorkflow(
-            id = "a2",
-            title = "Daily Expense Safeguard",
-            category = "Finance",
-            statusTag = "Threshold tracking active",
-            whenTrigger = "Daily expense ledger exceeds ₹3,500",
-            ifCondition = "Category is Dining or Shopping",
-            thenAction = "Send high-priority push alert & pause non-essential auto-debits",
-            isEnabled = true,
-            statsText = "Saved ₹8,400 past 30 days"
-        ),
-        AutomationWorkflow(
-            id = "a3",
-            title = "Deep Work Health Sanctuary",
-            category = "Health",
-            statusTag = "Scheduled next at 2:00 PM",
-            whenTrigger = "Deep Work block starts",
-            ifCondition = "Scheduled on Calendar",
-            thenAction = "Activate DND, set Slack status to \"In Focus\", & queue posture check",
-            isEnabled = true,
-            statsText = "14 focus sessions protected"
-        ),
-        AutomationWorkflow(
-            id = "a4",
-            title = "Critical Bill Early Warning",
-            category = "Deadlines",
-            statusTag = "Rent due in 3 days",
-            whenTrigger = "Recurring bill is due in < 48 hours",
-            ifCondition = "Category is Rent or Electricity",
-            thenAction = "Pin sticky banner to Home Dashboard & schedule calendar payment buffer",
-            isEnabled = true,
-            statsText = "Zero overdue penalties since setup"
-        ),
-        AutomationWorkflow(
             id = "a5",
-            title = "Network Birthday Concierge",
-            category = "Social",
-            statusTag = "2 upcoming in next 7 days",
-            whenTrigger = "Participant birthday arrives (09:00 AM)",
-            ifCondition = "Contact has WhatsApp or SMS linked",
-            thenAction = "Draft personalized warm greeting & queue for 1-tap review",
+            title = "Bill Due Reminder",
+            category = "Finance",
+            statusTag = "Next: Electricity Bill",
+            whenTrigger = "Bill is due tomorrow",
+            ifCondition = "Amount > ₹500 & not auto-debited",
+            thenAction = "Send notification with 1-tap UPI payment shortcut",
             isEnabled = true,
-            statsText = "Review queue: 0 pending"
+            statsText = "Zero late fees recorded"
+        ),
+        AutomationWorkflow(
+            id = "a6",
+            title = "Location Arrive at Work",
+            category = "Productivity",
+            statusTag = "Geofence ready: Tech Hub",
+            whenTrigger = "I arrive at work",
+            ifCondition = "Time is between 08:30 AM – 10:30 AM",
+            thenAction = "Show today's work tasks & switch phone profile to focus",
+            isEnabled = true,
+            statsText = "19 morning syncs"
         )
     )
 
@@ -624,10 +695,22 @@ object DayMeetRepository {
     )
 
     fun getInitialSubscriptions(): List<SubscriptionItem> = listOf(
-        SubscriptionItem("sub1", "Airtel Xstream Fiber", 1179.0, "Oct 29", "wifi"),
-        SubscriptionItem("sub2", "Netflix Ultra 4K", 649.0, "Nov 05", "movie"),
-        SubscriptionItem("sub3", "Figma Professional", 1250.0, "Oct 27", "design"),
-        SubscriptionItem("sub4", "Spotify Premium Duo", 149.0, "Nov 12", "music")
+        SubscriptionItem("sub1", "Netflix Ultra 4K", 649.0, "23 Sep", "movie", "OTT", true),
+        SubscriptionItem("sub2", "Airtel Fiber Internet", 999.0, "25 Sep", "wifi", "Internet", true),
+        SubscriptionItem("sub3", "Electricity Board (State)", 1840.0, "28 Sep", "bolt", "Electricity", false),
+        SubscriptionItem("sub4", "Gold's Gym Membership", 1500.0, "30 Sep", "fitness", "Gym", false),
+        SubscriptionItem("sub5", "Health Insurance Policy", 3200.0, "05 Oct", "health", "Insurance", true),
+        SubscriptionItem("sub6", "Spotify Family Duo", 179.0, "12 Oct", "music", "OTT", true)
+    )
+
+    fun getInitialEmis(): List<EmiItem> = listOf(
+        EmiItem("emi1", "MacBook Pro M3 Max", 3200.0, 12, 4, "Oct 05", "Electronics"),
+        EmiItem("emi2", "HDFC Auto Car Loan", 8500.0, 36, 18, "Oct 10", "Automobile")
+    )
+
+    fun getInitialDebts(): List<DebtItem> = listOf(
+        DebtItem("deb1", "Rahul Sharma", 650.0, true, "This Friday", "Split weekend dining bill"),
+        DebtItem("deb2", "Ananya Verma", 400.0, false, "Tomorrow", "Team coffee & lunch share")
     )
 
     fun getInitialReminders(): List<SmartReminder> = listOf(

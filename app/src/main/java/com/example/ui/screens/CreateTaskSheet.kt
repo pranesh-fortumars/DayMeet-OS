@@ -39,8 +39,11 @@ fun CreateTaskSheet(
     var selectedPriority by remember { mutableStateOf(Priority.HIGH) }
     var selectedCategory by remember { mutableStateOf("Work") }
     var selectedReminderTime by remember { mutableStateOf<String?>("Today 05:00 PM") }
+    var paymentMethod by remember { mutableStateOf("UPI") }
+    var hasReceiptAttached by remember { mutableStateOf(false) }
+    var isDebtOwedToMe by remember { mutableStateOf(true) }
 
-    val types = listOf("Task", "Meeting", "Expense", "Reminder", "Note", "Habit", "Goal", "Bill", "Message")
+    val types = listOf("Task", "Expense", "Income", "EMI", "Debt", "Subscription", "Bill", "Meeting", "Reminder", "Habit", "Goal", "Note", "Shopping", "Message")
 
     LaunchedEffect(initialTab) {
         selectedType = initialTab
@@ -52,8 +55,33 @@ fun CreateTaskSheet(
             }
             "Expense" -> {
                 title = "Coffee & Bakery"
-                detail = "Food & Dining"
+                detail = "Food"
                 extraValue = "240"
+                selectedCategory = "Food"
+            }
+            "Income" -> {
+                title = "Client Consulting Retainer"
+                detail = "Bank"
+                extraValue = "45000"
+                selectedCategory = "Salary"
+            }
+            "EMI" -> {
+                title = "MacBook Pro EMI"
+                detail = "HDFC Bank"
+                extraValue = "4250"
+                selectedCategory = "Gadgets"
+            }
+            "Debt" -> {
+                title = "Rahul Verma"
+                detail = "Dinner split share"
+                extraValue = "850"
+                isDebtOwedToMe = true
+            }
+            "Subscription" -> {
+                title = "Netflix Premium 4K"
+                detail = "Entertainment"
+                extraValue = "649"
+                selectedCategory = "Entertainment"
             }
             "Reminder" -> {
                 title = "Review quarterly presentation"
@@ -79,6 +107,11 @@ fun CreateTaskSheet(
                 title = "Internet Fiber Bill"
                 detail = "Airtel Broadband"
                 extraValue = "1179"
+            }
+            "Shopping" -> {
+                title = "Organic Almond Milk"
+                detail = "2 cartons"
+                extraValue = "360"
             }
             "Message" -> {
                 title = "Alex Chen"
@@ -259,14 +292,17 @@ fun CreateTaskSheet(
             )
 
             // Optional 3rd parameter input (e.g., Amount, Time, Target Value)
-            if (selectedType in listOf("Expense", "Income", "Meeting", "Reminder", "Bill", "Goal", "Message")) {
+            if (selectedType in listOf("Expense", "Income", "Meeting", "Reminder", "Bill", "Goal", "Message", "EMI", "Debt", "Subscription", "Shopping")) {
                 OutlinedTextField(
                     value = extraValue,
                     onValueChange = { extraValue = it },
                     label = {
                         Text(
                             when (selectedType) {
-                                "Expense", "Income", "Bill" -> "Amount (₹)"
+                                "Expense", "Income", "Bill", "Shopping" -> "Amount (₹)"
+                                "EMI" -> "Monthly EMI Installment (₹)"
+                                "Debt" -> "Debt / Share Amount (₹)"
+                                "Subscription" -> "Monthly Subscription Fee (₹)"
                                 "Meeting", "Reminder", "Message" -> "Scheduled Date & Time"
                                 "Goal" -> "Target Metric"
                                 else -> "Value"
@@ -279,8 +315,181 @@ fun CreateTaskSheet(
                         focusedBorderColor = Primary,
                         unfocusedBorderColor = SurfaceContainerHigh
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testTag("quick_add_amount_input")
                 )
+            }
+
+            // Debt Direction Selector
+            if (selectedType == "Debt") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Debt Type",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isDebtOwedToMe) Color(0xFFE8F5E9) else SurfaceContainerLow,
+                            border = if (isDebtOwedToMe) androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF2E7D32)) else null,
+                            modifier = Modifier.weight(1f).clickable { isDebtOwedToMe = true }
+                        ) {
+                            Text(
+                                text = "They Owe Me (To Receive)",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isDebtOwedToMe) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isDebtOwedToMe) Color(0xFF2E7D32) else OnSurfaceVariant
+                                ),
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (!isDebtOwedToMe) Color(0xFFFFEBEE) else SurfaceContainerLow,
+                            border = if (!isDebtOwedToMe) androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFD32F2F)) else null,
+                            modifier = Modifier.weight(1f).clickable { isDebtOwedToMe = false }
+                        ) {
+                            Text(
+                                text = "I Owe Them (To Pay)",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (!isDebtOwedToMe) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (!isDebtOwedToMe) Color(0xFFD32F2F) else OnSurfaceVariant
+                                ),
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Payment Mode Selector for Expense & Income
+            if (selectedType in listOf("Expense", "Income")) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Payment Mode",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("UPI", "Credit / Debit Card", "Cash", "Bank Transfer").forEach { mode ->
+                            val isSelected = paymentMethod == mode
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = { paymentMethod = mode },
+                                label = { Text(mode, style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)) },
+                                shape = RoundedCornerShape(99.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = SurfaceContainerLow,
+                                    labelColor = OnSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Receipt Attachment Action
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (hasReceiptAttached) PrimaryFixed else SurfaceContainerLow,
+                    modifier = Modifier.fillMaxWidth().clickable {
+                        hasReceiptAttached = !hasReceiptAttached
+                        viewModel.showToast(if (hasReceiptAttached) "Receipt photo attached 📎" else "Receipt removed")
+                    }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (hasReceiptAttached) Icons.Default.ReceiptLong else Icons.Default.AddAPhoto,
+                                contentDescription = null,
+                                tint = if (hasReceiptAttached) Primary else OnSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = if (hasReceiptAttached) "Receipt Attached (receipt_scan_01.jpg)" else "Attach Receipt / Bill Photo (Camera)",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (hasReceiptAttached) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (hasReceiptAttached) Primary else OnSurfaceVariant
+                                )
+                            )
+                        }
+
+                        if (hasReceiptAttached) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Category Selector for Expenses & Incomes
+            if (selectedType == "Expense") {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Expense Category",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = OnSurfaceVariant)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            "Food" to "🍔",
+                            "Travel" to "🚗",
+                            "Shopping" to "🛍️",
+                            "Bills" to "💡",
+                            "Rent" to "🏠",
+                            "Education" to "📚",
+                            "Healthcare" to "💊",
+                            "Entertainment" to "🎬",
+                            "Fuel" to "⛽",
+                            "Other" to "🏷️"
+                        ).forEach { (cat, emoji) ->
+                            val isSelected = selectedCategory == cat
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedCategory = cat
+                                    detail = cat
+                                },
+                                label = { Text("$emoji $cat", style = MaterialTheme.typography.labelMedium.copy(fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium)) },
+                                shape = RoundedCornerShape(99.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = SurfaceContainerLow,
+                                    labelColor = OnSurfaceVariant
+                                )
+                            )
+                        }
+                    }
+                }
             }
 
             // Priority Selector for Tasks
@@ -476,15 +685,69 @@ fun CreateTaskSheet(
 
                 Button(
                     onClick = {
-                        viewModel.universalQuickAdd(
-                            type = selectedType,
-                            title = title,
-                            detail = detail,
-                            extraValue = extraValue,
-                            priority = selectedPriority,
-                            category = selectedCategory,
-                            reminderTime = selectedReminderTime
-                        )
+                        when (selectedType) {
+                            "Expense" -> {
+                                val amt = extraValue.toDoubleOrNull() ?: 150.0
+                                viewModel.checkAndLogExpense(
+                                    title = title.ifBlank { "Expense" },
+                                    amount = amt,
+                                    category = selectedCategory,
+                                    method = paymentMethod,
+                                    receiptNote = if (hasReceiptAttached) "receipt_scan_01.jpg" else null
+                                )
+                                onDismiss()
+                            }
+                            "Income" -> {
+                                val amt = extraValue.toDoubleOrNull() ?: 1000.0
+                                viewModel.logIncome(title.ifBlank { "Income" }, amt, paymentMethod)
+                                onDismiss()
+                            }
+                            "Debt" -> {
+                                val amt = extraValue.toDoubleOrNull() ?: 500.0
+                                viewModel.addDebt(
+                                    person = title.ifBlank { "Contact" },
+                                    amount = amt,
+                                    isOwedToMe = isDebtOwedToMe,
+                                    dueDate = "Next Week",
+                                    note = detail.ifBlank { "Split share" }
+                                )
+                                onDismiss()
+                            }
+                            "EMI" -> {
+                                val amt = extraValue.toDoubleOrNull() ?: 2500.0
+                                viewModel.addEmi(
+                                    title = title.ifBlank { "New EMI" },
+                                    amount = amt,
+                                    totalMonths = 12,
+                                    nextDue = "5th of next month",
+                                    category = selectedCategory.ifBlank { "Personal" }
+                                )
+                                onDismiss()
+                            }
+                            "Subscription" -> {
+                                val cost = extraValue.toDoubleOrNull() ?: 499.0
+                                viewModel.addSubscription(
+                                    name = title.ifBlank { "Subscription" },
+                                    cost = cost,
+                                    date = "End of Month",
+                                    category = selectedCategory.ifBlank { "Entertainment" },
+                                    autoPay = true
+                                )
+                                onDismiss()
+                            }
+                            else -> {
+                                viewModel.universalQuickAdd(
+                                    type = selectedType,
+                                    title = title,
+                                    detail = detail,
+                                    extraValue = extraValue,
+                                    priority = selectedPriority,
+                                    category = selectedCategory,
+                                    reminderTime = selectedReminderTime
+                                )
+                                onDismiss()
+                            }
+                        }
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Primary),

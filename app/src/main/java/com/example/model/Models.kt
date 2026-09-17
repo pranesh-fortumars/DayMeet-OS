@@ -97,7 +97,9 @@ data class FinanceTransaction(
     val method: String,
     val iconType: String,
     val linkedEvent: String? = null,
-    val tags: List<String> = emptyList()
+    val tags: List<String> = emptyList(),
+    val receiptNote: String? = null,
+    val isSplit: Boolean = false
 )
 
 data class UpcomingBill(
@@ -149,22 +151,31 @@ data class CrossStreamItem(
 data class HealthMetrics(
     val score: Int = 88,
     val scoreLabel: String = "Optimal",
-    val sleepDuration: String = "7h 20m",
+    val sleepDuration: String = "7h 24m",
     val sleepQuality: String = "85% Qual",
     val sleepDeep: String = "1h 45m",
-    val steps: Int = 7845,
+    val steps: Int = 7842,
     val stepsTarget: Int = 10000,
     val stepsDistance: String = "3.8 km",
     val hydration: Float = 1.8f,
     val hydrationTarget: Float = 2.5f,
     val caloriesBurned: Int = 480,
     val caloriesTarget: Int = 600,
+    val exerciseMinutes: Int = 32,
+    val exerciseTarget: Int = 45,
+    val completedRoutines: Int = 4,
+    val totalRoutines: Int = 5,
     val heartRateBpm: Int = 68,
     val heartRateRange: String = "54 - 118",
     val mentalState: String = "Happy",
     val postureReminderOn: Boolean = true,
     val vitaminLogged: Boolean = true,
     val bedtimeDndOn: Boolean = true,
+    val waterReminderOn: Boolean = true,
+    val walkReminderOn: Boolean = true,
+    val exerciseReminderOn: Boolean = true,
+    val sleepReminderOn: Boolean = true,
+    val meditationReminderOn: Boolean = true,
     val wearableStatus: String = "Oura Ring Gen 3 • 84% Bat"
 )
 
@@ -273,8 +284,41 @@ data class SubscriptionItem(
     val name: String,
     val monthlyCost: Double,
     val renewalDate: String,
-    val iconType: String
-)
+    val iconType: String,
+    val category: String = "Entertainment",
+    val autoPay: Boolean = true,
+    val billingCycle: String = "Monthly",
+    val isActive: Boolean = true
+) {
+    val amount: Double get() = monthlyCost
+}
+
+data class DebtItem(
+    val id: String,
+    val personOrSource: String,
+    val amount: Double,
+    val isOwedToMe: Boolean, // true if someone owes user, false if user owes
+    val dueDate: String,
+    val note: String,
+    val isSettled: Boolean = false
+) {
+    val personName: String get() = personOrSource
+}
+
+data class EmiItem(
+    val id: String,
+    val title: String,
+    val monthlyAmount: Double,
+    val totalMonths: Int,
+    val remainingMonths: Int,
+    val nextDueDate: String,
+    val category: String = "Loan",
+    val totalAmount: Double = monthlyAmount * totalMonths,
+    val lender: String = "Bank",
+    val dueDayOfMonth: String = "5th"
+) {
+    val totalTenureMonths: Int get() = totalMonths
+}
 
 data class SmartReminder(
     val id: String,
