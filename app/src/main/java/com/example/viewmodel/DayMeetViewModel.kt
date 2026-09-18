@@ -1353,11 +1353,12 @@ class DayMeetViewModel : ViewModel() {
         extraValue: String = "",
         priority: Priority = Priority.HIGH,
         category: String = "Work",
-        reminderTime: String? = null
+        reminderTime: String? = null,
+        dueDate: String? = null
     ) {
         when (type) {
             "Task" -> {
-                saveNewTask(title, detail, priority, category, emptyList(), reminderTime)
+                saveNewTask(title, detail, priority, category, emptyList(), reminderTime, dueDate)
             }
             "Meeting" -> {
                 val participants = if (detail.isNotBlank()) detail.split(",").map { it.trim() } else listOf("Alex Chen")
@@ -1961,14 +1962,22 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
-    fun toggleSubtask(eventId: String, subtaskId: String) {
+    fun toggleSubtask(id: String, subtaskId: String) {
         _timelineEvents.value = _timelineEvents.value.map { event ->
-            if (event.id == eventId) {
+            if (event.id == id) {
                 val updatedSubs = event.subtasks.map { sub ->
                     if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
                 }
                 event.copy(subtasks = updatedSubs)
             } else event
+        }
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == id) {
+                val updatedSubtasks = item.subtasks.map { sub ->
+                    if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
+                }
+                item.copy(subtasks = updatedSubtasks)
+            } else item
         }
     }
 
@@ -2144,16 +2153,20 @@ class DayMeetViewModel : ViewModel() {
         notes: String,
         priority: Priority,
         space: String,
-        subtasks: List<String>,
-        reminderTime: String? = null
+        subtasks: List<String> = emptyList(),
+        reminderTime: String? = null,
+        dueDate: String? = null
     ) {
         val taskId = "task_${System.currentTimeMillis()}"
         val taskTitle = title.ifBlank { "New Task" }
         val categoryTag = if (space.isNotBlank()) space else "Work"
         val taskSubtitle = if (notes.isNotBlank()) notes else "$categoryTag • Priority: ${priority.label}"
+        val subtaskList = subtasks.filter { it.isNotBlank() }.mapIndexed { idx, sub ->
+            Subtask(id = "sub_${System.currentTimeMillis()}_$idx", title = sub.trim(), isCompleted = false)
+        }
         val newTask = FeedItem(
             id = taskId,
-            time = "05:00 PM",
+            time = if (!dueDate.isNullOrBlank()) dueDate else "05:00 PM",
             title = taskTitle,
             subtitle = taskSubtitle,
             category = FeedCategory.TASK,
@@ -2161,14 +2174,16 @@ class DayMeetViewModel : ViewModel() {
             statusTag = categoryTag,
             isCompleted = false,
             reminderTime = reminderTime,
-            notes = notes.ifBlank { null }
+            notes = notes.ifBlank { null },
+            dueDate = dueDate,
+            subtasks = subtaskList
         )
         _feedItems.value = listOf(newTask) + _feedItems.value
 
         // Also add to Cross-Module Stream so it appears with entrance animation
         val newStreamItem = CrossStreamItem(
             id = "cs_${System.currentTimeMillis()}",
-            time = "05:00 PM",
+            time = if (!dueDate.isNullOrBlank()) dueDate else "05:00 PM",
             title = taskTitle,
             subtitle = taskSubtitle,
             tag = "Task",
@@ -2179,6 +2194,44 @@ class DayMeetViewModel : ViewModel() {
 
         _showCreateSheet.value = false
         showToast("Task created: $taskTitle")
+    }
+
+    fun addSubtask(taskId: String, subtaskTitle: String) {
+        if (subtaskTitle.isBlank()) return
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                val newSub = Subtask(
+                    id = "sub_${System.currentTimeMillis()}_${(100..999).random()}",
+                    title = subtaskTitle.trim(),
+                    isCompleted = false
+                )
+                item.copy(subtasks = item.subtasks + newSub)
+            } else {
+                item
+            }
+        }
+        showToast("Subtask added")
+    }
+
+    fun deleteSubtask(taskId: String, subtaskId: String) {
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                item.copy(subtasks = item.subtasks.filter { it.id != subtaskId })
+            } else {
+                item
+            }
+        }
+    }
+
+    fun updateTaskDueDate(taskId: String, dueDate: String?) {
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                item.copy(dueDate = dueDate)
+            } else {
+                item
+            }
+        }
+        showToast("Due date updated")
     }
 
     fun showToast(msg: String) {

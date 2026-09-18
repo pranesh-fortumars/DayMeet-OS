@@ -39,7 +39,9 @@ data class FeedItem(
     val habitProgress: Float? = null,
     val detail: String? = null,
     val reminderTime: String? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    val dueDate: String? = null,
+    val subtasks: List<Subtask> = emptyList()
 )
 
 data class Subtask(

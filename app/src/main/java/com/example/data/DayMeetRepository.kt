@@ -30,7 +30,13 @@ object DayMeetRepository {
             priority = Priority.HIGH,
             isCompleted = false,
             reminderTime = "Today 10:15 AM",
-            notes = "Perform full verification of all semantic color tokens, typography scales, and corner radii against Figma specs. Verify Dark Mode parity across all Compose components."
+            notes = "Perform full verification of all semantic color tokens, typography scales, and corner radii against Figma specs. Verify Dark Mode parity across all Compose components.",
+            dueDate = "Today",
+            subtasks = listOf(
+                Subtask("sub_f2_1", "Audit semantic color tokens", isCompleted = true),
+                Subtask("sub_f2_2", "Verify typography and corner radii", isCompleted = true),
+                Subtask("sub_f2_3", "Dark Mode parity check across screens", isCompleted = false)
+            )
         ),
         FeedItem(
             id = "f3",
@@ -62,7 +68,12 @@ object DayMeetRepository {
             priority = Priority.HIGH,
             isCompleted = false,
             reminderTime = "Today 02:15 PM",
-            notes = "Review input field sanitization, verify zero plain-text secret logging, and inspect all Android notification channel configurations."
+            notes = "Review input field sanitization, verify zero plain-text secret logging, and inspect all Android notification channel configurations.",
+            dueDate = "Tomorrow",
+            subtasks = listOf(
+                Subtask("sub_f4_2_1", "Input field sanitization audit", isCompleted = false),
+                Subtask("sub_f4_2_2", "Inspect notification channel permissions", isCompleted = true)
+            )
         ),
         FeedItem(
             id = "f4_3",
@@ -96,7 +107,13 @@ object DayMeetRepository {
             priority = Priority.HIGH,
             isCompleted = false,
             reminderTime = "Today 05:15 PM",
-            notes = "Include architecture diagrams, live notification demo walkthrough, and performance metrics from the recent Robolectric test run."
+            notes = "Include architecture diagrams, live notification demo walkthrough, and performance metrics from the recent Robolectric test run.",
+            dueDate = "Sep 22, 2026",
+            subtasks = listOf(
+                Subtask("sub_f4_5_1", "Compile architecture diagrams", isCompleted = true),
+                Subtask("sub_f4_5_2", "Record live notification walkthrough", isCompleted = false),
+                Subtask("sub_f4_5_3", "Export Robolectric test metrics", isCompleted = false)
+            )
         ),
         FeedItem(
             id = "f4_6",

@@ -41,6 +41,8 @@ fun CreateTaskSheet(
     var selectedPriority by remember { mutableStateOf(Priority.HIGH) }
     var selectedCategory by remember { mutableStateOf("Work") }
     var selectedReminderTime by remember { mutableStateOf<String?>("Today 05:00 PM") }
+    var selectedDueDate by remember { mutableStateOf<String?>("Today") }
+    var showDatePickerDialog by remember { mutableStateOf(false) }
     var paymentMethod by remember { mutableStateOf("UPI") }
     var hasReceiptAttached by remember { mutableStateOf(false) }
     var isDebtOwedToMe by remember { mutableStateOf(true) }
@@ -846,6 +848,143 @@ fun CreateTaskSheet(
                 }
             }
 
+            // Due Date Section for Tasks
+            if (selectedType == "Task") {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("quick_add_due_date_section"),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Event,
+                                contentDescription = null,
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Due Date",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurfaceVariant
+                                )
+                            )
+                        }
+
+                        if (selectedDueDate != null) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Primary.copy(alpha = 0.12f),
+                                modifier = Modifier.testTag("quick_add_due_date_display")
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = selectedDueDate ?: "",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Primary
+                                        )
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Clear Due Date",
+                                        tint = Primary,
+                                        modifier = Modifier
+                                            .size(14.dp)
+                                            .clickable { selectedDueDate = null }
+                                            .testTag("quick_add_due_date_clear")
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        listOf(
+                            "Today" to "Today",
+                            "Tomorrow" to "Tomorrow",
+                            "This Weekend" to "This Weekend",
+                            "Next Monday" to "Next Monday"
+                        ).forEach { (label, preset) ->
+                            val isSelected = selectedDueDate == preset
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    selectedDueDate = if (isSelected) null else preset
+                                },
+                                label = {
+                                    Text(
+                                        text = label,
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                        )
+                                    )
+                                },
+                                shape = RoundedCornerShape(99.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = Primary,
+                                    selectedLabelColor = Color.White,
+                                    containerColor = SurfaceContainerLow,
+                                    labelColor = OnSurfaceVariant
+                                ),
+                                modifier = Modifier.testTag("quick_add_due_date_${label.lowercase().replace(' ', '_')}")
+                            )
+                        }
+
+                        // Pick specific date button
+                        AssistChip(
+                            onClick = { showDatePickerDialog = true },
+                            label = {
+                                Text(
+                                    text = if (selectedDueDate != null && selectedDueDate !in listOf("Today", "Tomorrow", "This Weekend", "Next Monday")) {
+                                        selectedDueDate ?: "Pick Date"
+                                    } else {
+                                        "Pick Date..."
+                                    },
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.EditCalendar,
+                                    contentDescription = "Pick specific date",
+                                    tint = Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            },
+                            shape = RoundedCornerShape(99.dp),
+                            border = BorderStroke(1.dp, Primary.copy(alpha = 0.5f)),
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = Primary.copy(alpha = 0.08f)
+                            ),
+                            modifier = Modifier.testTag("quick_add_due_date_pick_btn")
+                        )
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(6.dp))
 
             // Action Buttons
@@ -921,7 +1060,8 @@ fun CreateTaskSheet(
                                     extraValue = extraValue,
                                     priority = selectedPriority,
                                     category = selectedCategory,
-                                    reminderTime = selectedReminderTime
+                                    reminderTime = selectedReminderTime,
+                                    dueDate = if (selectedType == "Task") selectedDueDate else null
                                 )
                                 onDismiss()
                             }
@@ -945,6 +1085,41 @@ fun CreateTaskSheet(
             }
 
             Spacer(modifier = Modifier.height(10.dp))
+        }
+    }
+
+    if (showDatePickerDialog) {
+        val datePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = System.currentTimeMillis()
+        )
+        DatePickerDialog(
+            onDismissRequest = { showDatePickerDialog = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { millis ->
+                            val instant = java.time.Instant.ofEpochMilli(millis)
+                            val date = instant.atZone(java.time.ZoneId.of("UTC")).toLocalDate()
+                            val formatter = java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy")
+                            selectedDueDate = date.format(formatter)
+                        }
+                        showDatePickerDialog = false
+                    },
+                    modifier = Modifier.testTag("date_picker_confirm_btn")
+                ) {
+                    Text("Select", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDatePickerDialog = false },
+                    modifier = Modifier.testTag("date_picker_cancel_btn")
+                ) {
+                    Text("Cancel")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
