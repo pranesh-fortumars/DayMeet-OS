@@ -127,4 +127,34 @@ class ExampleRobolectricTest {
     org.junit.Assert.assertFalse(com.example.util.TimeUtils.isDueToday(null))
     org.junit.Assert.assertFalse(com.example.util.TimeUtils.isDueToday("Next Week"))
   }
+
+  @Test
+  fun `crossStreamItems subtask addition and toggling works as expected`() {
+    val viewModel = DayMeetViewModel()
+    val streamItems = viewModel.crossStreamItems.value
+    assertTrue("Should have crossStreamItems", streamItems.isNotEmpty())
+
+    val targetItem = streamItems.first { it.id == "cs2" }
+    val initialSubtaskCount = targetItem.subtasks.size
+    assertTrue("cs2 should start with initial subtasks", initialSubtaskCount >= 1)
+
+    // Add new subtask
+    viewModel.addCrossStreamSubtask("cs2", "Verify security checklist")
+    val updatedItem = viewModel.crossStreamItems.value.first { it.id == "cs2" }
+    assertEquals(initialSubtaskCount + 1, updatedItem.subtasks.size)
+    val addedSubtask = updatedItem.subtasks.last()
+    assertEquals("Verify security checklist", addedSubtask.title)
+    org.junit.Assert.assertFalse(addedSubtask.isCompleted)
+
+    // Toggle newly added subtask
+    viewModel.toggleCrossStreamSubtask("cs2", addedSubtask.id)
+    val toggledItem = viewModel.crossStreamItems.value.first { it.id == "cs2" }
+    val toggledSubtask = toggledItem.subtasks.first { it.id == addedSubtask.id }
+    assertTrue("Toggled subtask should now be completed", toggledSubtask.isCompleted)
+
+    // Delete subtask
+    viewModel.deleteCrossStreamSubtask("cs2", addedSubtask.id)
+    val finalItem = viewModel.crossStreamItems.value.first { it.id == "cs2" }
+    assertEquals(initialSubtaskCount, finalItem.subtasks.size)
+  }
 }

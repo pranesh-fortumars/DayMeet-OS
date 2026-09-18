@@ -979,6 +979,9 @@ fun HomeScreen(
                 onStart25MinPomodoro = { viewModel.start25MinPomodoroSession() },
                 onToggleDone = { viewModel.toggleCrossStreamDone(streamItem.id) },
                 onRemove = { viewModel.removeCrossStreamItem(streamItem.id) },
+                onAddSubtask = { subtaskTitle -> viewModel.addCrossStreamSubtask(streamItem.id, subtaskTitle) },
+                onToggleSubtask = { subtaskId -> viewModel.toggleCrossStreamSubtask(streamItem.id, subtaskId) },
+                onDeleteSubtask = { subtaskId -> viewModel.deleteCrossStreamSubtask(streamItem.id, subtaskId) },
                 onItemClick = {
                     when (streamItem.tagType) {
                         "meeting" -> viewModel.navigateTo("meetings")
@@ -1232,6 +1235,9 @@ private fun CrossStreamRowItem(
     onStart25MinPomodoro: () -> Unit = {},
     onToggleDone: () -> Unit,
     onRemove: () -> Unit,
+    onAddSubtask: (String) -> Unit = {},
+    onToggleSubtask: (String) -> Unit = {},
+    onDeleteSubtask: (String) -> Unit = {},
     onItemClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -1239,6 +1245,7 @@ private fun CrossStreamRowItem(
     var isToggledState by remember(item.isCompleted) { mutableStateOf(item.isCompleted) }
     var isVisible by remember { mutableStateOf(true) }
     var isAnimatingOut by remember { mutableStateOf(false) }
+    var isSubtasksExpanded by remember { mutableStateOf(false) }
 
     // Entrance animation for newly added/mounted items
     val enterAlpha = remember { Animatable(0f) }
@@ -1470,216 +1477,478 @@ private fun CrossStreamRowItem(
                             }
                         )
                     }
-                    .clickable { onItemClick() }
+                    .clickable {
+                        // Clicking task row toggles expandable subtasks view
+                        isSubtasksExpanded = !isSubtasksExpanded
+                    }
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f)
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // Time column
-                        Text(
-                            text = item.time,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                color = Primary,
-                                fontSize = 11.sp
-                            ),
-                            modifier = Modifier.width(54.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            // Time column
+                            Text(
+                                text = item.time,
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary,
+                                    fontSize = 11.sp
+                                ),
+                                modifier = Modifier.width(54.dp)
+                            )
 
-                        // Vertical indicator line
-                        Box(
-                            modifier = Modifier
-                                .width(2.dp)
-                                .height(32.dp)
-                                .background(
-                                    when (item.tagType) {
-                                        "priority" -> Color(0xFFE53935)
-                                        "expense" -> Color(0xFF2E7D32)
-                                        "focus" -> Primary
-                                        "wellness" -> SkyBlue
-                                        "autopay" -> Tertiary
-                                        "travel" -> Color(0xFF5C6BC0)
-                                        else -> Primary
+                            // Vertical indicator line
+                            Box(
+                                modifier = Modifier
+                                    .width(2.dp)
+                                    .height(32.dp)
+                                    .background(
+                                        when (item.tagType) {
+                                            "priority" -> Color(0xFFE53935)
+                                            "expense" -> Color(0xFF2E7D32)
+                                            "focus" -> Primary
+                                            "wellness" -> SkyBlue
+                                            "autopay" -> Tertiary
+                                            "travel" -> Color(0xFF5C6BC0)
+                                            else -> Primary
+                                        }
+                                    )
+                            )
+
+                            // Interactive check button
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isToggledState) EmeraldSuccess else SurfaceContainerHigh)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isToggledState) EmeraldSuccess else OutlineVariant,
+                                        shape = RoundedCornerShape(6.dp)
+                                    )
+                                    .clickable { triggerToggle() }
+                                    .testTag("cross_stream_check_${item.id}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (isToggledState) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Completed",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            // Text details
+                            Column(modifier = Modifier.weight(1f)) {
+                                val textColor = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.55f) else OnSurface
+                                Text(
+                                    text = item.title,
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = textColor
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.drawWithContent {
+                                        drawContent()
+                                        if (strikeProgress.value > 0f) {
+                                            val strokeW = 1.8.dp.toPx()
+                                            val y = size.height * 0.54f
+                                            drawLine(
+                                                color = OnSurfaceVariant,
+                                                start = Offset(0f, y),
+                                                end = Offset(size.width * strikeProgress.value, y),
+                                                strokeWidth = strokeW,
+                                                cap = StrokeCap.Round
+                                            )
+                                        }
                                     }
                                 )
-                        )
-
-                        // Interactive check button
-                        Box(
-                            modifier = Modifier
-                                .size(24.dp)
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isToggledState) EmeraldSuccess else SurfaceContainerHigh)
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isToggledState) EmeraldSuccess else OutlineVariant,
-                                    shape = RoundedCornerShape(6.dp)
-                                )
-                                .clickable { triggerToggle() }
-                                .testTag("cross_stream_check_${item.id}"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isToggledState) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Completed",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
+                                Text(
+                                    text = item.subtitle,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant,
+                                        fontSize = 11.sp
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
 
-                        // Text details
-                        Column(modifier = Modifier.weight(1f)) {
-                            val textColor = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.55f) else OnSurface
-                            Text(
-                                text = item.title,
-                                style = MaterialTheme.typography.titleSmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = textColor
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.drawWithContent {
-                                    drawContent()
-                                    if (strikeProgress.value > 0f) {
-                                        val strokeW = 1.8.dp.toPx()
-                                        val y = size.height * 0.54f
-                                        drawLine(
-                                            color = OnSurfaceVariant,
-                                            start = Offset(0f, y),
-                                            end = Offset(size.width * strikeProgress.value, y),
-                                            strokeWidth = strokeW,
-                                            cap = StrokeCap.Round
-                                        )
-                                    }
-                                }
-                            )
-                            Text(
-                                text = item.subtitle,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    color = if (isToggledState) OnSurfaceVariant.copy(alpha = 0.45f) else OnSurfaceVariant,
-                                    fontSize = 11.sp
-                                ),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
+                        Spacer(modifier = Modifier.width(8.dp))
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Tag pill
-                    val (tagBg, tagColor) = when (item.tagType) {
-                        "meeting" -> Color(0xFFEDE7F6) to Color(0xFF673AB7)
-                        "priority" -> Color(0xFFFFEBEE) to Color(0xFFE53935)
-                        "expense" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
-                        "focus" -> Color(0xFFEDE7F6) to Primary
-                        "wellness" -> Color(0xFFE1F5FE) to Color(0xFF0288D1)
-                        "autopay" -> Color(0xFFECEFF1) to Color(0xFF455A64)
-                        "travel" -> Color(0xFFE8EAF6) to Color(0xFF3949AB)
-                        else -> SurfaceContainerHigh to OnSurfaceVariant
-                    }
-
-                    Text(
-                        text = item.tag,
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = tagColor,
-                            fontSize = 10.sp
-                        ),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(tagBg)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-
-                // Integrated Pomodoro Focus Timer for Deep Work Stream Items
-                val isDeepWorkItem = item.tagType == "focus" || item.tag == "Focus" || item.title.contains("Deep Work", ignoreCase = true)
-                if (isDeepWorkItem) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    val mins = focusTimerRemaining / 60
-                    val secs = focusTimerRemaining % 60
-                    val timeString = String.format("%02d:%02d", mins, secs)
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(PrimaryContainer.copy(alpha = 0.45f))
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Timer,
-                                contentDescription = null,
-                                tint = Primary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = "Pomodoro Focus:",
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnSurface
-                                )
-                            )
-                            Text(
-                                text = timeString,
-                                style = MaterialTheme.typography.labelLarge.copy(
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = Primary,
-                                    fontSize = 14.sp
-                                )
-                            )
-                        }
+                            // Tag pill
+                            val (tagBg, tagColor) = when (item.tagType) {
+                                "meeting" -> Color(0xFFEDE7F6) to Color(0xFF673AB7)
+                                "priority" -> Color(0xFFFFEBEE) to Color(0xFFE53935)
+                                "expense" -> Color(0xFFE8F5E9) to Color(0xFF2E7D32)
+                                "focus" -> Color(0xFFEDE7F6) to Primary
+                                "wellness" -> Color(0xFFE1F5FE) to Color(0xFF0288D1)
+                                "autopay" -> Color(0xFFECEFF1) to Color(0xFF455A64)
+                                "travel" -> Color(0xFFE8EAF6) to Color(0xFF3949AB)
+                                else -> SurfaceContainerHigh to OnSurfaceVariant
+                            }
 
-                        Button(
-                            onClick = {
-                                if (!isFocusRunning && focusTimerRemaining == 1500) {
-                                    onStart25MinPomodoro()
-                                } else {
-                                    onToggleFocusTimer()
-                                }
-                            },
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isFocusRunning) Color(0xFFD32F2F) else Primary
-                            ),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            modifier = Modifier
-                                .testTag("start_deep_work_pomodoro_${item.id}")
-                                .testTag("deep_work_pomodoro_timer_button")
-                        ) {
-                            Icon(
-                                imageVector = if (isFocusRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isFocusRunning) "Pause" else "Start 25m Focus",
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = if (isFocusRunning) "Pause" else if (focusTimerRemaining < 1500) "Resume" else "25m Focus",
+                                text = item.tag,
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontSize = 11.sp
-                                )
+                                    color = tagColor,
+                                    fontSize = 10.sp
+                                ),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(tagBg)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
                             )
+
+                            // Chevron indicator to toggle subtasks
+                            IconButton(
+                                onClick = { isSubtasksExpanded = !isSubtasksExpanded },
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .testTag("toggle_subtasks_${item.id}")
+                            ) {
+                                Icon(
+                                    imageVector = if (isSubtasksExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = if (isSubtasksExpanded) "Collapse Subtasks" else "Expand Subtasks",
+                                    tint = OnSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    // Expandable Subtasks View
+                    AnimatedVisibility(
+                        visible = isSubtasksExpanded,
+                        enter = expandVertically(animationSpec = tween(250)) + fadeIn(animationSpec = tween(250)),
+                        exit = shrinkVertically(animationSpec = tween(200)) + fadeOut(animationSpec = tween(200))
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 14.dp, end = 14.dp, bottom = 12.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SurfaceContainerLow.copy(alpha = 0.75f))
+                                .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
+                                .padding(12.dp)
+                                .testTag("cross_stream_subtasks_section_${item.id}")
+                        ) {
+                            val subtaskCount = item.subtasks.size
+                            val completedCount = item.subtasks.count { it.isCompleted }
+
+                            // Subtasks Section Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Checklist,
+                                        contentDescription = null,
+                                        tint = Primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = "Subtasks",
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = OnSurface
+                                        )
+                                    )
+                                    if (subtaskCount > 0) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (completedCount == subtaskCount) EmeraldSuccess.copy(alpha = 0.15f) else Primary.copy(alpha = 0.1f),
+                                            modifier = Modifier.padding(start = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "$completedCount/$subtaskCount completed",
+                                                style = MaterialTheme.typography.labelSmall.copy(
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (completedCount == subtaskCount) EmeraldSuccess else Primary,
+                                                    fontSize = 10.sp
+                                                ),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                if (subtaskCount > 0) {
+                                    val progress = if (subtaskCount > 0) completedCount.toFloat() / subtaskCount.toFloat() else 0f
+                                    Text(
+                                        text = "${(progress * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (completedCount == subtaskCount) EmeraldSuccess else Primary
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (subtaskCount > 0) {
+                                val progress = completedCount.toFloat() / subtaskCount.toFloat()
+                                Spacer(modifier = Modifier.height(6.dp))
+                                LinearProgressIndicator(
+                                    progress = { progress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(4.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = if (completedCount == subtaskCount) EmeraldSuccess else Primary,
+                                    trackColor = SurfaceContainerHigh
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                // Subtask items list
+                                Column(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    item.subtasks.forEach { subtask ->
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(SurfaceContainerLowest)
+                                                .border(
+                                                    width = 0.5.dp,
+                                                    color = if (subtask.isCompleted) OutlineVariant.copy(alpha = 0.3f) else OutlineVariant.copy(alpha = 0.5f),
+                                                    shape = RoundedCornerShape(8.dp)
+                                                )
+                                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                                                .testTag("cross_stream_subtask_item_${subtask.id}"),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            // Subtask checkbox
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(20.dp)
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(if (subtask.isCompleted) EmeraldSuccess else SurfaceContainerHigh)
+                                                    .clickable { onToggleSubtask(subtask.id) }
+                                                    .testTag("cross_stream_subtask_check_${subtask.id}"),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (subtask.isCompleted) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Check,
+                                                        contentDescription = "Completed",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            // Subtask title
+                                            Text(
+                                                text = subtask.title,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    color = if (subtask.isCompleted) OnSurfaceVariant.copy(alpha = 0.5f) else OnSurface,
+                                                    textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
+                                                    fontWeight = if (subtask.isCompleted) FontWeight.Normal else FontWeight.Medium
+                                                ),
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clickable { onToggleSubtask(subtask.id) }
+                                            )
+
+                                            // Delete subtask button
+                                            IconButton(
+                                                onClick = { onDeleteSubtask(subtask.id) },
+                                                modifier = Modifier
+                                                    .size(22.dp)
+                                                    .testTag("cross_stream_delete_subtask_${subtask.id}")
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Delete subtask",
+                                                    tint = OnSurfaceVariant.copy(alpha = 0.5f),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "No subtasks yet. Add steps below to break down this item.",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = OnSurfaceVariant.copy(alpha = 0.7f),
+                                        fontSize = 11.5.sp
+                                    )
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Add Subtask input inside expandable view
+                            var newSubtaskInput by remember { mutableStateOf("") }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = newSubtaskInput,
+                                    onValueChange = { newSubtaskInput = it },
+                                    placeholder = {
+                                        Text(
+                                            "Add a subtask...",
+                                            style = MaterialTheme.typography.bodySmall.copy(
+                                                color = OnSurfaceVariant.copy(alpha = 0.6f),
+                                                fontSize = 12.sp
+                                            )
+                                        )
+                                    },
+                                    singleLine = true,
+                                    shape = RoundedCornerShape(8.dp),
+                                    textStyle = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedContainerColor = SurfaceContainerLowest,
+                                        unfocusedContainerColor = SurfaceContainerLowest,
+                                        focusedBorderColor = Primary,
+                                        unfocusedBorderColor = OutlineVariant
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .testTag("cross_stream_add_subtask_input_${item.id}")
+                                )
+
+                                Button(
+                                    onClick = {
+                                        if (newSubtaskInput.isNotBlank()) {
+                                            onAddSubtask(newSubtaskInput.trim())
+                                            newSubtaskInput = ""
+                                        }
+                                    },
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    modifier = Modifier
+                                        .height(38.dp)
+                                        .testTag("cross_stream_add_subtask_btn_${item.id}")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Add subtask",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "Add",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Integrated Pomodoro Focus Timer for Deep Work Stream Items
+                    val isDeepWorkItem = item.tagType == "focus" || item.tag == "Focus" || item.title.contains("Deep Work", ignoreCase = true)
+                    if (isDeepWorkItem) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        val mins = focusTimerRemaining / 60
+                        val secs = focusTimerRemaining % 60
+                        val timeString = String.format("%02d:%02d", mins, secs)
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(PrimaryContainer.copy(alpha = 0.45f))
+                                .padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "Pomodoro Focus:",
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnSurface
+                                    )
+                                )
+                                Text(
+                                    text = timeString,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Primary,
+                                        fontSize = 14.sp
+                                    )
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    if (!isFocusRunning && focusTimerRemaining == 1500) {
+                                        onStart25MinPomodoro()
+                                    } else {
+                                        onToggleFocusTimer()
+                                    }
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isFocusRunning) Color(0xFFD32F2F) else Primary
+                                ),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier
+                                    .testTag("start_deep_work_pomodoro_${item.id}")
+                                    .testTag("deep_work_pomodoro_timer_button")
+                            ) {
+                                Icon(
+                                    imageVector = if (isFocusRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = if (isFocusRunning) "Pause" else "Start 25m Focus",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (isFocusRunning) "Pause" else if (focusTimerRemaining < 1500) "Resume" else "25m Focus",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 11.sp
+                                    )
+                                )
+                            }
                         }
                     }
                 }

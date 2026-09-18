@@ -147,7 +147,8 @@ data class CrossStreamItem(
     val subtitle: String,
     val tag: String,
     val tagType: String, // "meeting", "priority", "expense", "focus", "wellness", "autopay", "travel"
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val subtasks: List<Subtask> = emptyList()
 )
 
 data class HealthMetrics(

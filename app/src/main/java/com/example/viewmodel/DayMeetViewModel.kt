@@ -1863,6 +1863,59 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
+    fun addCrossStreamSubtask(streamItemId: String, subtaskTitle: String) {
+        if (subtaskTitle.isBlank()) return
+        val newSub = Subtask(
+            id = "sub_cs_${System.currentTimeMillis()}_${(100..999).random()}",
+            title = subtaskTitle.trim(),
+            isCompleted = false
+        )
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == streamItemId) {
+                item.copy(subtasks = item.subtasks + newSub)
+            } else item
+        }
+        // Also sync to feedItems if linked
+        _feedItems.value = _feedItems.value.map { task ->
+            if (task.id == streamItemId || task.title.equals(_crossStreamItems.value.firstOrNull { it.id == streamItemId }?.title, ignoreCase = true)) {
+                task.copy(subtasks = task.subtasks + newSub)
+            } else task
+        }
+        showToast("Subtask added")
+    }
+
+    fun toggleCrossStreamSubtask(streamItemId: String, subtaskId: String) {
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == streamItemId) {
+                val updated = item.subtasks.map { sub ->
+                    if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
+                }
+                item.copy(subtasks = updated)
+            } else item
+        }
+        _feedItems.value = _feedItems.value.map { task ->
+            if (task.id == streamItemId || task.title.equals(_crossStreamItems.value.firstOrNull { it.id == streamItemId }?.title, ignoreCase = true)) {
+                val updated = task.subtasks.map { sub ->
+                    if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
+                }
+                task.copy(subtasks = updated)
+            } else task
+        }
+    }
+
+    fun deleteCrossStreamSubtask(streamItemId: String, subtaskId: String) {
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == streamItemId) {
+                item.copy(subtasks = item.subtasks.filter { it.id != subtaskId })
+            } else item
+        }
+        _feedItems.value = _feedItems.value.map { task ->
+            if (task.id == streamItemId || task.title.equals(_crossStreamItems.value.firstOrNull { it.id == streamItemId }?.title, ignoreCase = true)) {
+                task.copy(subtasks = task.subtasks.filter { it.id != subtaskId })
+            } else task
+        }
+    }
+
     fun removeCrossStreamItem(id: String) {
         val item = _crossStreamItems.value.firstOrNull { it.id == id }
         _crossStreamItems.value = _crossStreamItems.value.filterNot { it.id == id }
@@ -1973,6 +2026,14 @@ class DayMeetViewModel : ViewModel() {
         }
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id == id) {
+                val updatedSubtasks = item.subtasks.map { sub ->
+                    if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
+                }
+                item.copy(subtasks = updatedSubtasks)
+            } else item
+        }
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == id || item.title.equals(_feedItems.value.firstOrNull { it.id == id }?.title, ignoreCase = true)) {
                 val updatedSubtasks = item.subtasks.map { sub ->
                     if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
                 }
@@ -2188,7 +2249,8 @@ class DayMeetViewModel : ViewModel() {
             subtitle = taskSubtitle,
             tag = "Task",
             tagType = "task",
-            isCompleted = false
+            isCompleted = false,
+            subtasks = subtaskList
         )
         _crossStreamItems.value = listOf(newStreamItem) + _crossStreamItems.value
 
@@ -2198,17 +2260,23 @@ class DayMeetViewModel : ViewModel() {
 
     fun addSubtask(taskId: String, subtaskTitle: String) {
         if (subtaskTitle.isBlank()) return
+        val newSub = Subtask(
+            id = "sub_${System.currentTimeMillis()}_${(100..999).random()}",
+            title = subtaskTitle.trim(),
+            isCompleted = false
+        )
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id == taskId) {
-                val newSub = Subtask(
-                    id = "sub_${System.currentTimeMillis()}_${(100..999).random()}",
-                    title = subtaskTitle.trim(),
-                    isCompleted = false
-                )
                 item.copy(subtasks = item.subtasks + newSub)
             } else {
                 item
             }
+        }
+        // Keep Cross-Module Stream items in sync
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == taskId || item.title.equals(_feedItems.value.firstOrNull { it.id == taskId }?.title, ignoreCase = true)) {
+                item.copy(subtasks = item.subtasks + newSub)
+            } else item
         }
         showToast("Subtask added")
     }
@@ -2220,6 +2288,11 @@ class DayMeetViewModel : ViewModel() {
             } else {
                 item
             }
+        }
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == taskId || item.title.equals(_feedItems.value.firstOrNull { it.id == taskId }?.title, ignoreCase = true)) {
+                item.copy(subtasks = item.subtasks.filter { it.id != subtaskId })
+            } else item
         }
     }
 

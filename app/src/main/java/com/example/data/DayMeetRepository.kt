@@ -162,7 +162,12 @@ object DayMeetRepository {
             title = "Submit Q4 Token Audit",
             subtitle = "Tasks Workspace • Final signoff required",
             tag = "Priority",
-            tagType = "priority"
+            tagType = "priority",
+            subtasks = listOf(
+                Subtask("sub_cs2_1", "Audit color tokens", isCompleted = true),
+                Subtask("sub_cs2_2", "Verify typography scale", isCompleted = true),
+                Subtask("sub_cs2_3", "Sign off final export spec", isCompleted = false)
+            )
         ),
         CrossStreamItem(
             id = "cs3",
