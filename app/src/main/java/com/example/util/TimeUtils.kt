@@ -72,4 +72,28 @@ object TimeUtils {
 
         return false
     }
+
+    /**
+     * Checks if a given due date string represents 'Today'.
+     * Handles string matching like "Today" or specific formatted dates (e.g. "MMM dd, yyyy").
+     */
+    fun isDueToday(dueDateStr: String?): Boolean {
+        if (dueDateStr.isNullOrBlank()) return false
+        val trimmed = dueDateStr.trim()
+        if (trimmed.equals("Today", ignoreCase = true)) return true
+
+        // Check if date formatted as "MMM dd, yyyy" matches today's date
+        try {
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.US)
+            val parsedDate = java.time.LocalDate.parse(trimmed, formatter)
+            if (parsedDate.isEqual(java.time.LocalDate.now())) {
+                return true
+            }
+        } catch (_: Exception) {}
+
+        // Also check if contains "Today" in strings like "Today 05:00 PM"
+        if (trimmed.startsWith("Today", ignoreCase = true)) return true
+
+        return false
+    }
 }

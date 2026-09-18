@@ -108,4 +108,23 @@ class ExampleRobolectricTest {
     assertEquals(2, updatedTasks.size)
     assertTrue("All target tasks should now be completed", updatedTasks.all { it.isCompleted })
   }
+
+  @Test
+  fun `timeUtils isDueToday correctly identifies today string and formatted dates`() {
+    assertTrue(com.example.util.TimeUtils.isDueToday("Today"))
+    assertTrue(com.example.util.TimeUtils.isDueToday("today"))
+    assertTrue(com.example.util.TimeUtils.isDueToday("Today 05:00 PM"))
+
+    val todayFormatted = java.time.LocalDate.now().format(
+      java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy", java.util.Locale.US)
+    )
+    assertTrue(com.example.util.TimeUtils.isDueToday(todayFormatted))
+
+    val tomorrowFormatted = java.time.LocalDate.now().plusDays(1).format(
+      java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy", java.util.Locale.US)
+    )
+    org.junit.Assert.assertFalse(com.example.util.TimeUtils.isDueToday(tomorrowFormatted))
+    org.junit.Assert.assertFalse(com.example.util.TimeUtils.isDueToday(null))
+    org.junit.Assert.assertFalse(com.example.util.TimeUtils.isDueToday("Next Week"))
+  }
 }

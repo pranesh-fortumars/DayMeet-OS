@@ -755,7 +755,9 @@ fun AnimatedTaskItemRow(
 
     val strikeProgress = remember { Animatable(if (task.isCompleted) 1f else 0f) }
     val isDueSoon = remember(task.time) { TimeUtils.isDueWithinNextTwoHours(task.time) }
+    val isDueToday = remember(task.dueDate) { TimeUtils.isDueToday(task.dueDate) }
     val isWarning = isDueSoon && !task.isCompleted && !isToggledState
+    val isDueTodayHighlight = isDueToday && !task.isCompleted && !isToggledState
 
     var showContextMenu by remember { mutableStateOf(false) }
     var showPrioritySubMenu by remember { mutableStateOf(false) }
@@ -866,10 +868,11 @@ fun AnimatedTaskItemRow(
                 containerColor = when {
                     isSelectionMode && isSelected -> PrimaryContainer.copy(alpha = 0.45f)
                     isWarning -> Color(0xFFFFF8F8)
+                    isDueTodayHighlight -> Color(0xFFFFFDF5)
                     else -> SurfaceContainerLowest
                 }
             ),
-            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning || (isSelectionMode && isSelected)) 2.dp else 1.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isWarning || isDueTodayHighlight || (isSelectionMode && isSelected)) 2.dp else 1.dp),
             modifier = modifier
                 .fillMaxWidth()
                 .then(
@@ -885,6 +888,13 @@ fun AnimatedTaskItemRow(
                             Modifier.border(
                                 width = 2.dp,
                                 color = Color(0xFFE53935),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                        }
+                        isDueTodayHighlight -> {
+                            Modifier.border(
+                                width = 1.5.dp,
+                                color = Color(0xFFF59E0B),
                                 shape = RoundedCornerShape(16.dp)
                             )
                         }
@@ -1145,26 +1155,31 @@ fun AnimatedTaskItemRow(
 
                             // Due Date Badge
                             if (!task.dueDate.isNullOrBlank()) {
+                                val isTodayDue = TimeUtils.isDueToday(task.dueDate)
+                                val badgeBg = if (isTodayDue) Color(0xFFFEF3C7) else Color(0xFFE8F5E9)
+                                val badgeTextColor = if (isTodayDue) Color(0xFFB45309) else Color(0xFF2E7D32)
+                                val badgeIcon = if (isTodayDue) Icons.Default.Today else Icons.Default.Event
+
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFE8F5E9))
+                                        .background(badgeBg)
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                         .testTag("task_due_date_badge_${task.id}")
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Event,
+                                        imageVector = badgeIcon,
                                         contentDescription = "Due Date",
-                                        tint = Color(0xFF2E7D32),
+                                        tint = badgeTextColor,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Text(
-                                        text = "Due: ${task.dueDate}",
+                                        text = if (isTodayDue) "Due: Today" else "Due: ${task.dueDate}",
                                         style = MaterialTheme.typography.labelSmall.copy(
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF2E7D32),
+                                            color = badgeTextColor,
                                             fontSize = 11.sp
                                         )
                                     )
@@ -1282,25 +1297,29 @@ fun AnimatedTaskItemRow(
 
                         // Right Column Due Date Badge
                         if (!task.dueDate.isNullOrBlank()) {
+                            val isTodayDue = TimeUtils.isDueToday(task.dueDate)
+                            val badgeBg = if (isTodayDue) Color(0xFFFEF3C7) else Color(0xFFE8F5E9)
+                            val badgeTextColor = if (isTodayDue) Color(0xFFB45309) else Color(0xFF2E7D32)
+
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0xFFE8F5E9))
+                                    .background(badgeBg)
                                     .padding(horizontal = 5.dp, vertical = 2.dp)
                                     .testTag("task_due_date_right_${task.id}")
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CalendarToday,
+                                    imageVector = if (isTodayDue) Icons.Default.Today else Icons.Default.CalendarToday,
                                     contentDescription = "Due Date",
-                                    tint = Color(0xFF2E7D32),
+                                    tint = badgeTextColor,
                                     modifier = Modifier.size(10.dp)
                                 )
                                 Text(
-                                    text = task.dueDate,
+                                    text = if (isTodayDue) "Today" else task.dueDate,
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        color = Color(0xFF2E7D32),
+                                        color = badgeTextColor,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 10.sp
                                     )
