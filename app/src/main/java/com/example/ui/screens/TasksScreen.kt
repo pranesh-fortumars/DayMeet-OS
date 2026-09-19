@@ -671,8 +671,11 @@ fun TasksScreen(
                 onUpdateNotes = { newNotes -> viewModel.updateTaskNotes(task.id, newNotes) },
                 onTriggerNotification = { viewModel.triggerTaskNotificationNow(context, task.id) },
                 onScheduleAlert = { viewModel.scheduleTaskNotification(context, task.id) },
-                onEditTask = { title, subtitle, priority, category, time, notes ->
-                    viewModel.editTask(task.id, title, subtitle, priority, category, time, notes)
+                onEditTask = { title, subtitle, priority, category, time, notes, progress ->
+                    viewModel.editTask(task.id, title, subtitle, priority, category, time, notes, progress)
+                },
+                onUpdateProgress = { progress ->
+                    viewModel.updateTaskProgress(task.id, progress)
                 },
                 onMoveToCalendar = { timeSlot ->
                     viewModel.moveTaskToCalendar(task.id, timeSlot)
@@ -723,6 +726,205 @@ fun TasksScreen(
     }
 }
 
+/**
+ * Mini circular progress ring displayed in the main task row for at-a-glance progress tracking.
+ * Features dynamic color coding based on progress percentage and an interactive tap target.
+ */
+@Composable
+fun TaskProgressRing(
+    progress: Int,
+    isCompleted: Boolean,
+    taskId: String,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val displayProgress = if (isCompleted) 100 else progress.coerceIn(0, 100)
+    val ringColor = when {
+        isCompleted || displayProgress == 100 -> EmeraldSuccess
+        displayProgress >= 75 -> Primary
+        displayProgress >= 50 -> Color(0xFF0288D1)
+        displayProgress > 0 -> Color(0xFFF57C00)
+        else -> OutlineVariant.copy(alpha = 0.5f)
+    }
+
+    Box(
+        modifier = modifier
+            .size(30.dp)
+            .clip(CircleShape)
+            .then(
+                if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier
+            )
+            .testTag("task_progress_ring_$taskId"),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator(
+            progress = { displayProgress / 100f },
+            modifier = Modifier.fillMaxSize(),
+            color = ringColor,
+            trackColor = SurfaceContainerHigh.copy(alpha = 0.6f),
+            strokeWidth = 2.5.dp,
+            strokeCap = StrokeCap.Round
+        )
+
+        if (isCompleted || displayProgress == 100) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = "Completed (100%)",
+                tint = EmeraldSuccess,
+                modifier = Modifier.size(13.dp)
+            )
+        } else {
+            Text(
+                text = "$displayProgress%",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontSize = if (displayProgress == 100) 7.sp else 8.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = if (displayProgress > 0) OnSurface else OnSurfaceVariant.copy(alpha = 0.6f)
+                ),
+                maxLines = 1
+            )
+        }
+    }
+}
+
+/**
+ * Interactive slider control for setting task progress (0-100%) inside the task detail view.
+ * Features live percentage feedback, colored tracks, and 5 quick-select preset pills.
+ */
+@Composable
+fun TaskProgressSliderControl(
+    progress: Int,
+    isCompleted: Boolean,
+    taskId: String,
+    onProgressChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var sliderValue by remember(progress, isCompleted) {
+        mutableFloatStateOf(if (isCompleted) 100f else progress.coerceIn(0, 100).toFloat())
+    }
+
+    val currentInt = sliderValue.toInt()
+    val activeColor = when {
+        currentInt == 100 -> EmeraldSuccess
+        currentInt >= 75 -> Primary
+        currentInt >= 50 -> Color(0xFF0288D1)
+        currentInt > 0 -> Color(0xFFF57C00)
+        else -> OnSurfaceVariant
+    }
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = SurfaceContainerLowest,
+        border = BorderStroke(1.dp, OutlineVariant.copy(alpha = 0.4f)),
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag("task_progress_slider_card_$taskId")
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = "Progress",
+                        tint = activeColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Task Progress",
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = OnSurface
+                        )
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = activeColor.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = if (currentInt == 100) "100% Completed" else "$currentInt% In Progress",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = activeColor,
+                            fontSize = 11.sp
+                        ),
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .testTag("task_progress_badge_text_$taskId")
+                    )
+                }
+            }
+
+            Slider(
+                value = sliderValue,
+                onValueChange = { newValue ->
+                    sliderValue = newValue
+                },
+                onValueChangeFinished = {
+                    onProgressChange(sliderValue.toInt())
+                },
+                valueRange = 0f..100f,
+                steps = 19,
+                colors = SliderDefaults.colors(
+                    thumbColor = activeColor,
+                    activeTrackColor = activeColor,
+                    inactiveTrackColor = SurfaceContainerHigh
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("task_progress_slider_$taskId")
+            )
+
+            // Preset Quick-Tap Buttons (0%, 25%, 50%, 75%, 100%)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(0, 25, 50, 75, 100).forEach { preset ->
+                    val isSelected = currentInt == preset
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isSelected) activeColor else SurfaceContainerHigh.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable {
+                                sliderValue = preset.toFloat()
+                                onProgressChange(preset)
+                            }
+                            .testTag("task_progress_preset_${preset}_$taskId")
+                    ) {
+                        Box(
+                            modifier = Modifier.padding(vertical = 4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (preset == 100) "100%" else "$preset%",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else OnSurfaceVariant,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AnimatedTaskItemRow(
@@ -735,7 +937,8 @@ fun AnimatedTaskItemRow(
     onUpdateNotes: (String) -> Unit = {},
     onTriggerNotification: () -> Unit = {},
     onScheduleAlert: () -> Unit = {},
-    onEditTask: (title: String, subtitle: String, priority: Priority, category: String, time: String, notes: String?) -> Unit = { _, _, _, _, _, _ -> },
+    onEditTask: (title: String, subtitle: String, priority: Priority, category: String, time: String, notes: String?, progress: Int?) -> Unit = { _, _, _, _, _, _, _ -> },
+    onUpdateProgress: (Int) -> Unit = {},
     onMoveToCalendar: (timeSlot: String) -> Unit = {},
     onSetReminder: (reminderTime: String) -> Unit = {},
     onAddSubtask: (String) -> Unit = {},
@@ -1238,8 +1441,16 @@ fun AnimatedTaskItemRow(
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
+                            // Mini circular progress ring for at-a-glance completion tracking
+                            TaskProgressRing(
+                                progress = task.progress,
+                                isCompleted = isToggledState,
+                                taskId = task.id,
+                                onClick = { isSubtasksExpanded = !isSubtasksExpanded }
+                            )
+
                             Text(
                                 text = "$catIcon $categoryName",
                                 style = MaterialTheme.typography.labelSmall.copy(
@@ -1481,7 +1692,7 @@ fun AnimatedTaskItemRow(
                     }
                 }
 
-                // Nested Subtasks Section (Revealed when task is tapped)
+                // Nested Task Detail & Subtasks Section (Revealed when task is tapped)
                 AnimatedVisibility(
                     visible = isSubtasksExpanded,
                     enter = expandVertically(animationSpec = tween(250)) + fadeIn(animationSpec = tween(250)),
@@ -1495,8 +1706,21 @@ fun AnimatedTaskItemRow(
                             .background(SurfaceContainerLow.copy(alpha = 0.75f))
                             .border(1.dp, SurfaceContainerHigh, RoundedCornerShape(12.dp))
                             .padding(12.dp)
+                            .testTag("task_detail_view_${task.id}")
                             .testTag("task_subtasks_section_${task.id}")
                     ) {
+                        // Task Progress Slider Control within Task Detail View
+                        TaskProgressSliderControl(
+                            progress = task.progress,
+                            isCompleted = isToggledState,
+                            taskId = task.id,
+                            onProgressChange = { newProgress ->
+                                onUpdateProgress(newProgress)
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
                         val subtaskCount = task.subtasks.size
                         val completedCount = task.subtasks.count { it.isCompleted }
 
@@ -2030,6 +2254,9 @@ fun AnimatedTaskItemRow(
         var editPriority by remember(task.priority) { mutableStateOf(effectivePriority) }
         var editCategory by remember(categoryName) { mutableStateOf(categoryName) }
         var editNotes by remember(task.notes) { mutableStateOf(task.notes ?: "") }
+        var editProgress by remember(task.progress, task.isCompleted) {
+            mutableFloatStateOf(if (task.isCompleted) 100f else task.progress.toFloat())
+        }
 
         AlertDialog(
             onDismissRequest = { showQuickEditDialog = false },
@@ -2211,6 +2438,98 @@ fun AnimatedTaskItemRow(
                         }
                     }
 
+                    // Task Progress (0 - 100%) Slider Control
+                    val dialogActiveColor = when {
+                        editProgress.toInt() == 100 -> EmeraldSuccess
+                        editProgress.toInt() >= 75 -> Primary
+                        editProgress.toInt() >= 50 -> Color(0xFF0288D1)
+                        editProgress.toInt() > 0 -> Color(0xFFF57C00)
+                        else -> OnSurfaceVariant
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(SurfaceContainerHigh.copy(alpha = 0.35f))
+                            .border(1.dp, OutlineVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Completion Progress",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = dialogActiveColor.copy(alpha = 0.12f)
+                            ) {
+                                Text(
+                                    text = "${editProgress.toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = dialogActiveColor,
+                                        fontSize = 11.sp
+                                    ),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
+
+                        Slider(
+                            value = editProgress,
+                            onValueChange = { editProgress = it },
+                            valueRange = 0f..100f,
+                            steps = 19,
+                            colors = SliderDefaults.colors(
+                                thumbColor = dialogActiveColor,
+                                activeTrackColor = dialogActiveColor,
+                                inactiveTrackColor = SurfaceContainerHigh
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("quick_edit_progress_slider_${task.id}")
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf(0, 25, 50, 75, 100).forEach { preset ->
+                                val isSelected = editProgress.toInt() == preset
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isSelected) dialogActiveColor else SurfaceContainerHigh.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .clickable { editProgress = preset.toFloat() }
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(vertical = 3.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "$preset%",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color.White else OnSurfaceVariant,
+                                                fontSize = 9.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Notes Input
                     OutlinedTextField(
                         value = editNotes,
@@ -2228,14 +2547,17 @@ fun AnimatedTaskItemRow(
             confirmButton = {
                 Button(
                     onClick = {
+                        val finalProgress = editProgress.toInt()
                         onEditTask(
                             editTitle.trim().ifBlank { task.title },
                             editSubtitle.trim().ifBlank { task.subtitle },
                             editPriority,
                             editCategory,
                             editTime.trim().ifBlank { task.time },
-                            editNotes.trim().ifBlank { null }
+                            editNotes.trim().ifBlank { null },
+                            finalProgress
                         )
+                        onUpdateProgress(finalProgress)
                         showQuickEditDialog = false
                     },
                     shape = RoundedCornerShape(12.dp),

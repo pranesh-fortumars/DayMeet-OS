@@ -1660,12 +1660,59 @@ class DayMeetViewModel : ViewModel() {
     }
 
     fun toggleFeedTaskDone(id: String) {
+        var newCompleted = false
+        var taskTitle: String? = null
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id == id) {
-                item.copy(isCompleted = !item.isCompleted)
+                newCompleted = !item.isCompleted
+                taskTitle = item.title
+                item.copy(
+                    isCompleted = newCompleted,
+                    progress = if (newCompleted) 100 else 0
+                )
             } else {
                 item
             }
+        }
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == id || (taskTitle != null && item.title.equals(taskTitle, ignoreCase = true))) {
+                item.copy(
+                    isCompleted = newCompleted,
+                    progress = if (newCompleted) 100 else 0
+                )
+            } else {
+                item
+            }
+        }
+    }
+
+    fun updateTaskProgress(id: String, progress: Int) {
+        val clamped = progress.coerceIn(0, 100)
+        val shouldComplete = clamped == 100
+        var taskTitle: String? = null
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == id) {
+                taskTitle = item.title
+                item.copy(
+                    progress = clamped,
+                    isCompleted = shouldComplete
+                )
+            } else {
+                item
+            }
+        }
+        _crossStreamItems.value = _crossStreamItems.value.map { item ->
+            if (item.id == id || (taskTitle != null && item.title.equals(taskTitle, ignoreCase = true))) {
+                item.copy(
+                    progress = clamped,
+                    isCompleted = shouldComplete
+                )
+            } else {
+                item
+            }
+        }
+        if (clamped == 100) {
+            triggerConfetti("🎉 Task completed (100%)!")
         }
     }
 
@@ -1674,7 +1721,7 @@ class DayMeetViewModel : ViewModel() {
         val count = ids.size
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id in ids) {
-                item.copy(isCompleted = true)
+                item.copy(isCompleted = true, progress = 100)
             } else {
                 item
             }
@@ -1831,9 +1878,11 @@ class DayMeetViewModel : ViewModel() {
         priority: Priority,
         category: String,
         time: String,
-        notes: String?
+        notes: String?,
+        progress: Int? = null
     ) {
         val task = _feedItems.value.firstOrNull { it.id == id } ?: return
+        val newProgress = (progress ?: task.progress).coerceIn(0, 100)
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id == id) {
                 item.copy(
@@ -1842,7 +1891,9 @@ class DayMeetViewModel : ViewModel() {
                     priority = priority,
                     statusTag = category,
                     time = time.ifBlank { item.time },
-                    notes = notes
+                    notes = notes,
+                    progress = newProgress,
+                    isCompleted = if (newProgress == 100) true else item.isCompleted
                 )
             } else item
         }

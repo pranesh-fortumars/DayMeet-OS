@@ -36,7 +36,8 @@ object DayMeetRepository {
                 Subtask("sub_f2_1", "Audit semantic color tokens", isCompleted = true),
                 Subtask("sub_f2_2", "Verify typography and corner radii", isCompleted = true),
                 Subtask("sub_f2_3", "Dark Mode parity check across screens", isCompleted = false)
-            )
+            ),
+            progress = 65
         ),
         FeedItem(
             id = "f3",
@@ -56,7 +57,8 @@ object DayMeetRepository {
             priority = Priority.MEDIUM,
             isCompleted = true,
             reminderTime = "Today 01:00 PM",
-            notes = "Cross-check user story estimates with the frontend lead. Prioritize the expandable notes and notification scheduler deliverables."
+            notes = "Cross-check user story estimates with the frontend lead. Prioritize the expandable notes and notification scheduler deliverables.",
+            progress = 100
         ),
         FeedItem(
             id = "f4_2",
@@ -73,7 +75,8 @@ object DayMeetRepository {
             subtasks = listOf(
                 Subtask("sub_f4_2_1", "Input field sanitization audit", isCompleted = false),
                 Subtask("sub_f4_2_2", "Inspect notification channel permissions", isCompleted = true)
-            )
+            ),
+            progress = 50
         ),
         FeedItem(
             id = "f4_3",
@@ -84,7 +87,8 @@ object DayMeetRepository {
             statusTag = "Documentation",
             priority = Priority.LOW,
             isCompleted = true,
-            notes = "Highlight the new local notification scheduler and expandable task notes features in the engineering release changelog."
+            notes = "Highlight the new local notification scheduler and expandable task notes features in the engineering release changelog.",
+            progress = 100
         ),
         FeedItem(
             id = "f4_4",
@@ -95,7 +99,8 @@ object DayMeetRepository {
             statusTag = "Documentation",
             priority = Priority.LOW,
             isCompleted = false,
-            notes = "Add troubleshooting steps for NotificationManager permissions and AlarmManager exact alarm behavior across API levels."
+            notes = "Add troubleshooting steps for NotificationManager permissions and AlarmManager exact alarm behavior across API levels.",
+            progress = 25
         ),
         FeedItem(
             id = "f4_5",
@@ -113,7 +118,8 @@ object DayMeetRepository {
                 Subtask("sub_f4_5_1", "Compile architecture diagrams", isCompleted = true),
                 Subtask("sub_f4_5_2", "Record live notification walkthrough", isCompleted = false),
                 Subtask("sub_f4_5_3", "Export Robolectric test metrics", isCompleted = false)
-            )
+            ),
+            progress = 35
         ),
         FeedItem(
             id = "f4_6",
@@ -124,7 +130,8 @@ object DayMeetRepository {
             statusTag = "Tech Debt",
             priority = Priority.MEDIUM,
             isCompleted = false,
-            notes = "Ensure all indices are explicitly declared on foreign keys and verify schema export matches current Entity definitions."
+            notes = "Ensure all indices are explicitly declared on foreign keys and verify schema export matches current Entity definitions.",
+            progress = 60
         ),
         FeedItem(
             id = "f5",
@@ -167,7 +174,8 @@ object DayMeetRepository {
                 Subtask("sub_cs2_1", "Audit color tokens", isCompleted = true),
                 Subtask("sub_cs2_2", "Verify typography scale", isCompleted = true),
                 Subtask("sub_cs2_3", "Sign off final export spec", isCompleted = false)
-            )
+            ),
+            progress = 67
         ),
         CrossStreamItem(
             id = "cs3",

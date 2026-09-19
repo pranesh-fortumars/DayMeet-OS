@@ -186,4 +186,50 @@ class ExampleRobolectricTest {
     val deletedTask = viewModel.feedItems.value.first { it.id == targetTask.id }
     assertEquals(initialSubtaskCount, deletedTask.subtasks.size)
   }
+
+  @Test
+  fun `updateTaskProgress updates progress percentage and auto marks task complete at 100 percent`() {
+    val viewModel = DayMeetViewModel()
+    val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK && !it.isCompleted }
+    assertTrue("Should have uncompleted task items", tasks.isNotEmpty())
+
+    val target = tasks.first()
+    // Update progress to 65%
+    viewModel.updateTaskProgress(target.id, 65)
+    val updated = viewModel.feedItems.value.first { it.id == target.id }
+    assertEquals(65, updated.progress)
+    org.junit.Assert.assertFalse(updated.isCompleted)
+
+    // Update progress to 100%
+    viewModel.updateTaskProgress(target.id, 100)
+    val completedTask = viewModel.feedItems.value.first { it.id == target.id }
+    assertEquals(100, completedTask.progress)
+    assertTrue("Task should automatically be marked complete at 100% progress", completedTask.isCompleted)
+
+    // Update progress below 100% resets completion
+    viewModel.updateTaskProgress(target.id, 40)
+    val reopenedTask = viewModel.feedItems.value.first { it.id == target.id }
+    assertEquals(40, reopenedTask.progress)
+    org.junit.Assert.assertFalse("Task should become incomplete when progress drops below 100%", reopenedTask.isCompleted)
+  }
+
+  @Test
+  fun `toggleFeedTaskDone synchronizes progress with completion state`() {
+    val viewModel = DayMeetViewModel()
+    val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK && !it.isCompleted }
+    assertTrue(tasks.isNotEmpty())
+
+    val target = tasks.first()
+    // Complete task
+    viewModel.toggleFeedTaskDone(target.id)
+    val completed = viewModel.feedItems.value.first { it.id == target.id }
+    assertTrue(completed.isCompleted)
+    assertEquals(100, completed.progress)
+
+    // Uncomplete task
+    viewModel.toggleFeedTaskDone(target.id)
+    val reopened = viewModel.feedItems.value.first { it.id == target.id }
+    org.junit.Assert.assertFalse(reopened.isCompleted)
+    assertEquals(0, reopened.progress)
+  }
 }

@@ -41,7 +41,8 @@ data class FeedItem(
     val reminderTime: String? = null,
     val notes: String? = null,
     val dueDate: String? = null,
-    val subtasks: List<Subtask> = emptyList()
+    val subtasks: List<Subtask> = emptyList(),
+    val progress: Int = 0
 )
 
 data class Subtask(
@@ -148,7 +149,8 @@ data class CrossStreamItem(
     val tag: String,
     val tagType: String, // "meeting", "priority", "expense", "focus", "wellness", "autopay", "travel"
     val isCompleted: Boolean = false,
-    val subtasks: List<Subtask> = emptyList()
+    val subtasks: List<Subtask> = emptyList(),
+    val progress: Int = 0
 )
 
 data class HealthMetrics(
