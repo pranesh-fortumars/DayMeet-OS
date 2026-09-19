@@ -55,6 +55,74 @@ import com.example.viewmodel.DayMeetViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+data class TaskCategoryMeta(
+    val name: String,
+    val icon: String,
+    val textColor: Color,
+    val backgroundColor: Color,
+    val borderColor: Color
+)
+
+fun getTaskCategoryMeta(categoryName: String?): TaskCategoryMeta {
+    return when (categoryName?.trim()?.lowercase()) {
+        "work" -> TaskCategoryMeta("Work", "💼", Color(0xFF1E40AF), Color(0xFFEFF6FF), Color(0xFFBFDBFE))
+        "personal" -> TaskCategoryMeta("Personal", "👤", Color(0xFF7E22CE), Color(0xFFFAF5FF), Color(0xFFE9D5FF))
+        "shopping" -> TaskCategoryMeta("Shopping", "🛒", Color(0xFF0F766E), Color(0xFFF0FDFA), Color(0xFF99F6E4))
+        "health" -> TaskCategoryMeta("Health", "🏥", Color(0xFF0369A1), Color(0xFFF0F9FF), Color(0xFFBAE6FD))
+        "urgent" -> TaskCategoryMeta("Urgent", "⚡", Color(0xFFB91C1C), Color(0xFFFEF2F2), Color(0xFFFECACA))
+        "finance" -> TaskCategoryMeta("Finance", "💰", Color(0xFF15803D), Color(0xFFF0FDF4), Color(0xFFBBF7D0))
+        "engineering" -> TaskCategoryMeta("Engineering", "⚙️", Color(0xFF512DA8), Color(0xFFEDE7F6), Color(0xFFD1C4E9))
+        "design" -> TaskCategoryMeta("Design", "🎨", Color(0xFFC2185B), Color(0xFFFCE4EC), Color(0xFFF8BBD0))
+        "security" -> TaskCategoryMeta("Security", "🔒", Color(0xFFE65100), Color(0xFFFFF3E0), Color(0xFFFFE0B2))
+        "documentation" -> TaskCategoryMeta("Documentation", "📝", Color(0xFF00796B), Color(0xFFE0F2F1), Color(0xFFB2DFDB))
+        "deliverable" -> TaskCategoryMeta("Deliverable", "🚀", Color(0xFF2E7D32), Color(0xFFE8F5E9), Color(0xFFC8E6C9))
+        "tech debt" -> TaskCategoryMeta("Tech Debt", "🔧", Color(0xFFD84315), Color(0xFFFBE9E7), Color(0xFFFFCCBC))
+        else -> {
+            val label = if (categoryName.isNullOrBlank()) "Work" else categoryName.trim()
+            TaskCategoryMeta(label, "📌", Color(0xFF374151), Color(0xFFF3F4F6), Color(0xFFE5E7EB))
+        }
+    }
+}
+
+@Composable
+fun TaskCategoryPill(
+    category: String,
+    modifier: Modifier = Modifier,
+    isSelected: Boolean = false,
+    onClick: (() -> Unit)? = null
+) {
+    val meta = getTaskCategoryMeta(category)
+    val shape = RoundedCornerShape(99.dp)
+    val bg = if (isSelected) meta.textColor else meta.backgroundColor
+    val fg = if (isSelected) Color.White else meta.textColor
+    val border = if (isSelected) meta.textColor else meta.borderColor
+
+    Surface(
+        shape = shape,
+        color = bg,
+        border = BorderStroke(1.dp, border),
+        modifier = modifier
+            .clip(shape)
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(meta.icon, fontSize = 11.sp)
+            Text(
+                text = meta.name,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = fg,
+                    fontSize = 11.sp
+                )
+            )
+        }
+    }
+}
+
 @Composable
 fun TasksScreen(
     viewModel: DayMeetViewModel,
@@ -116,18 +184,27 @@ fun TasksScreen(
     }
     var showStreakDialog by remember { mutableStateOf(false) }
 
-    var filterState by remember { mutableStateOf("All") } // "All", "High", "Medium", "Low", "Pending", "Completed"
+    var filterState by remember { mutableStateOf("All") } // "All", "Work", "Personal", "Shopping", "Health", "High", "Medium", "Low", "Pending", "Completed"
     var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+
+    // Quick Add state
+    var quickAddTitle by remember { mutableStateOf("") }
+    var quickAddCategory by remember { mutableStateOf("Work") }
 
     // Multi-select state
     var isSelectionMode by remember { mutableStateOf(false) }
     var selectedTaskIds by remember { mutableStateOf(emptySet<String>()) }
+    var showBulkDeleteConfirmDialog by remember { mutableStateOf(false) }
 
     val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled, searchQuery) {
         var base = when (filterState) {
             "Pending" -> tasksOnly.filter { !it.isCompleted }
             "Completed" -> tasksOnly.filter { it.isCompleted }
+            "Work" -> tasksOnly.filter { it.statusTag.equals("Work", ignoreCase = true) || it.subtitle.contains("Work", ignoreCase = true) }
+            "Personal" -> tasksOnly.filter { it.statusTag.equals("Personal", ignoreCase = true) || it.subtitle.contains("Personal", ignoreCase = true) }
+            "Shopping" -> tasksOnly.filter { it.statusTag.equals("Shopping", ignoreCase = true) || it.subtitle.contains("Shopping", ignoreCase = true) }
+            "Health" -> tasksOnly.filter { it.statusTag.equals("Health", ignoreCase = true) || it.subtitle.contains("Health", ignoreCase = true) }
             "High" -> tasksOnly.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
             "Medium" -> tasksOnly.filter { it.priority == Priority.MEDIUM || (it.priority == null && it.statusTag?.contains("High", ignoreCase = true) != true && it.statusTag?.contains("Low", ignoreCase = true) != true) }
             "Low" -> tasksOnly.filter { it.priority == Priority.LOW || it.statusTag?.contains("Low", ignoreCase = true) == true }
@@ -278,8 +355,96 @@ fun TasksScreen(
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
+
+                            // Bulk Delete Button with Confirmation Dialog
+                            Button(
+                                onClick = {
+                                    if (selectedTaskIds.isNotEmpty()) {
+                                        showBulkDeleteConfirmDialog = true
+                                    }
+                                },
+                                enabled = selectedTaskIds.isNotEmpty(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color(0xFFD32F2F),
+                                    contentColor = Color.White,
+                                    disabledContainerColor = SurfaceContainerHigh,
+                                    disabledContentColor = OnSurfaceVariant
+                                ),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.testTag("bulk_delete_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    "Delete (${selectedTaskIds.size})",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
                         }
                     }
+                }
+
+                // Bulk Delete Confirmation Dialog
+                if (showBulkDeleteConfirmDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showBulkDeleteConfirmDialog = false },
+                        shape = RoundedCornerShape(18.dp),
+                        containerColor = SurfaceContainerLowest,
+                        icon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFFEBEE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    tint = Color(0xFFD32F2F),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        },
+                        title = {
+                            Text("Delete Selected Tasks?", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold))
+                        },
+                        text = {
+                            Text(
+                                "Are you sure you want to permanently delete ${selectedTaskIds.size} selected tasks? This action cannot be undone.",
+                                style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
+                            )
+                        },
+                        confirmButton = {
+                            Button(
+                                onClick = {
+                                    viewModel.bulkDeleteTasks(selectedTaskIds)
+                                    selectedTaskIds = emptySet()
+                                    isSelectionMode = false
+                                    showBulkDeleteConfirmDialog = false
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.testTag("confirm_bulk_delete_btn")
+                            ) {
+                                Text("Delete Permanently", fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showBulkDeleteConfirmDialog = false },
+                                modifier = Modifier.testTag("cancel_bulk_delete_btn")
+                            ) {
+                                Text("Cancel")
+                            }
+                        },
+                        modifier = Modifier.testTag("bulk_delete_confirm_dialog")
+                    )
                 }
             } else {
                 Row(
@@ -367,6 +532,182 @@ fun TasksScreen(
                             Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Add Task", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+                }
+            }
+        }
+
+        // Quick Add Task Card with Interactive Color-Coded Category Selector
+        item {
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                border = BorderStroke(1.dp, Primary.copy(alpha = 0.25f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("quick_add_task_card")
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(PrimaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Text(
+                                text = "Quick Add Task",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                        }
+
+                        // Selected Category preview pill indicator
+                        val currentMeta = getTaskCategoryMeta(quickAddCategory)
+                        Surface(
+                            shape = RoundedCornerShape(99.dp),
+                            color = currentMeta.backgroundColor,
+                            border = BorderStroke(1.dp, currentMeta.borderColor),
+                            modifier = Modifier.testTag("quick_add_selected_category_preview")
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(currentMeta.icon, fontSize = 11.sp)
+                                Text(
+                                    currentMeta.name,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = currentMeta.textColor,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
+                                )
+                            }
+                        }
+                    }
+
+                    // Input & Add Button Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = quickAddTitle,
+                            onValueChange = { quickAddTitle = it },
+                            placeholder = { Text("What needs to be done?", fontSize = 13.sp) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                                imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                            ),
+                            keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                                onDone = {
+                                    if (quickAddTitle.isNotBlank()) {
+                                        viewModel.saveNewTask(
+                                            title = quickAddTitle.trim(),
+                                            notes = "",
+                                            priority = Priority.MEDIUM,
+                                            space = quickAddCategory
+                                        )
+                                        quickAddTitle = ""
+                                    }
+                                }
+                            ),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Primary,
+                                unfocusedBorderColor = SurfaceContainerHigh,
+                                focusedContainerColor = SurfaceContainerLow,
+                                unfocusedContainerColor = SurfaceContainerLow
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .testTag("quick_add_task_input")
+                        )
+
+                        Button(
+                            onClick = {
+                                if (quickAddTitle.isNotBlank()) {
+                                    viewModel.saveNewTask(
+                                        title = quickAddTitle.trim(),
+                                        notes = "",
+                                        priority = Priority.MEDIUM,
+                                        space = quickAddCategory
+                                    )
+                                    quickAddTitle = ""
+                                }
+                            },
+                            enabled = quickAddTitle.isNotBlank(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Primary,
+                                disabledContainerColor = SurfaceContainerHigh
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+                            modifier = Modifier.testTag("quick_add_task_btn")
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add", modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Add", fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Color-Coded Category Selection Pills Row
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = "Select Category:",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.SemiBold,
+                                color = OnSurfaceVariant,
+                                fontSize = 11.sp
+                            )
+                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("Work", "Personal", "Shopping", "Health", "Urgent", "Finance").forEach { cat ->
+                                val isSelected = quickAddCategory.equals(cat, ignoreCase = true)
+                                TaskCategoryPill(
+                                    category = cat,
+                                    isSelected = isSelected,
+                                    onClick = { quickAddCategory = cat },
+                                    modifier = Modifier
+                                        .testTag("quick_add_category_${cat.lowercase()}")
+                                        .testTag("quick_add_pill_${cat.lowercase()}")
+                                )
+                            }
                         }
                     }
                 }
@@ -497,6 +838,19 @@ fun TasksScreen(
             val lowCount = remember(tasksOnly) {
                 tasksOnly.count { it.priority == Priority.LOW || it.statusTag?.contains("Low", ignoreCase = true) == true }
             }
+            val workCount = remember(tasksOnly) {
+                tasksOnly.count { it.statusTag.equals("Work", ignoreCase = true) || it.subtitle.contains("Work", ignoreCase = true) }
+            }
+            val personalCount = remember(tasksOnly) {
+                tasksOnly.count { it.statusTag.equals("Personal", ignoreCase = true) || it.subtitle.contains("Personal", ignoreCase = true) }
+            }
+            val shoppingCount = remember(tasksOnly) {
+                tasksOnly.count { it.statusTag.equals("Shopping", ignoreCase = true) || it.subtitle.contains("Shopping", ignoreCase = true) }
+            }
+            val healthCount = remember(tasksOnly) {
+                tasksOnly.count { it.statusTag.equals("Health", ignoreCase = true) || it.subtitle.contains("Health", ignoreCase = true) }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -505,6 +859,10 @@ fun TasksScreen(
             ) {
                 listOf(
                     "All (${tasksOnly.size})",
+                    "Work ($workCount)",
+                    "Personal ($personalCount)",
+                    "Shopping ($shoppingCount)",
+                    "Health ($healthCount)",
                     "High ($highCount)",
                     "Medium ($mediumCount)",
                     "Low ($lowCount)",
@@ -513,21 +871,51 @@ fun TasksScreen(
                 ).forEach { tab ->
                     val rawTab = tab.substringBefore(" (")
                     val isSelected = filterState == rawTab
-                    Box(
+                    val isCat = rawTab in listOf("Work", "Personal", "Shopping", "Health")
+                    val catMeta = if (isCat) getTaskCategoryMeta(rawTab) else null
+
+                    val containerBg = when {
+                        isSelected && catMeta != null -> catMeta.textColor
+                        isSelected -> Primary
+                        catMeta != null -> catMeta.backgroundColor
+                        else -> SurfaceContainer
+                    }
+                    val labelColor = when {
+                        isSelected -> Color.White
+                        catMeta != null -> catMeta.textColor
+                        else -> OnSurfaceVariant
+                    }
+                    val borderStroke = when {
+                        isSelected && catMeta != null -> BorderStroke(1.dp, catMeta.textColor)
+                        catMeta != null -> BorderStroke(1.dp, catMeta.borderColor)
+                        else -> null
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = containerBg,
+                        border = borderStroke,
                         modifier = Modifier
                             .clip(RoundedCornerShape(99.dp))
-                            .background(if (isSelected) Primary else SurfaceContainer)
                             .clickable { filterState = rawTab }
-                            .padding(horizontal = 14.dp, vertical = 7.dp)
                             .testTag("filter_tab_${rawTab.lowercase()}")
                     ) {
-                        Text(
-                            text = tab,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) Color.White else OnSurfaceVariant
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            if (catMeta != null) {
+                                Text(catMeta.icon, fontSize = 12.sp)
+                            }
+                            Text(
+                                text = tab,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = labelColor
+                                )
                             )
-                        )
+                        }
                     }
                 }
             }
@@ -1422,23 +1810,6 @@ fun AnimatedTaskItemRow(
                         horizontalAlignment = Alignment.End,
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
-                        // Category Badge
-                        val (catIcon, catBg, catColor) = when (categoryName) {
-                            "Work" -> Triple("💼", Color(0xFFE8EAF6), Color(0xFF283593))
-                            "Personal" -> Triple("👤", Color(0xFFF3E5F5), Color(0xFF6A1B9A))
-                            "Shopping" -> Triple("🛒", Color(0xFFE0F2F1), Color(0xFF00695C))
-                            "Urgent" -> Triple("⚡", Color(0xFFFFEBEE), Color(0xFFC62828))
-                            "Finance" -> Triple("💰", Color(0xFFE8F5E9), Color(0xFF2E7D32))
-                            "Health" -> Triple("🏥", Color(0xFFE1F5FE), Color(0xFF0277BD))
-                            "Engineering" -> Triple("⚙️", Color(0xFFEDE7F6), Color(0xFF512DA8))
-                            "Design" -> Triple("🎨", Color(0xFFFCE4EC), Color(0xFFC2185B))
-                            "Security" -> Triple("🔒", Color(0xFFFFF3E0), Color(0xFFE65100))
-                            "Documentation" -> Triple("📝", Color(0xFFE0F2F1), Color(0xFF00796B))
-                            "Deliverable" -> Triple("🚀", Color(0xFFE8F5E9), Color(0xFF2E7D32))
-                            "Tech Debt" -> Triple("🔧", Color(0xFFFBE9E7), Color(0xFFD84315))
-                            else -> Triple("📌", Color(0xFFF5F5F5), Color(0xFF424242))
-                        }
-
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1451,18 +1822,12 @@ fun AnimatedTaskItemRow(
                                 onClick = { isSubtasksExpanded = !isSubtasksExpanded }
                             )
 
-                            Text(
-                                text = "$catIcon $categoryName",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = catColor,
-                                    fontSize = 10.sp
-                                ),
+                            // Color-coded category pill
+                            TaskCategoryPill(
+                                category = categoryName,
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(catBg)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                                     .testTag("task_category_badge_${task.id}")
+                                    .testTag("task_category_pill_${task.id}")
                             )
 
                             // Fast Tap Context Menu Button
@@ -1941,6 +2306,48 @@ fun AnimatedTaskItemRow(
                                 )
                             }
                         }
+
+                        // Task Actions (Edit & Delete Task)
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = SurfaceContainerHigh.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            OutlinedButton(
+                                onClick = { showQuickEditDialog = true },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .testTag("edit_task_button_${task.id}")
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text("Edit Task", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                            }
+
+                            OutlinedButton(
+                                onClick = { showDeleteConfirmDialog = true },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = Color(0xFFD32F2F)
+                                ),
+                                border = BorderStroke(1.dp, Color(0xFFEF9A9A)),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .testTag("delete_task_btn_${task.id}")
+                                    .testTag("task_detail_delete_btn_${task.id}")
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(15.dp))
+                                Spacer(modifier = Modifier.width(5.dp))
+                                Text("Delete Task", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)))
+                            }
+                        }
                     }
                 }
                 }
@@ -2376,25 +2783,14 @@ fun AnimatedTaskItemRow(
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health").forEach { cat ->
-                                val isSelected = editCategory == cat
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (isSelected) Primary else SurfaceContainerHigh,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { editCategory = cat }
-                                        .testTag("edit_task_cat_${cat.lowercase()}_${task.id}")
-                                ) {
-                                    Text(
-                                        text = cat,
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isSelected) Color.White else OnSurfaceVariant
-                                        ),
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                    )
-                                }
+                            listOf("Work", "Personal", "Shopping", "Health", "Urgent", "Finance").forEach { cat ->
+                                val isSelected = editCategory.equals(cat, ignoreCase = true)
+                                TaskCategoryPill(
+                                    category = cat,
+                                    isSelected = isSelected,
+                                    onClick = { editCategory = cat },
+                                    modifier = Modifier.testTag("edit_task_cat_${cat.lowercase()}_${task.id}")
+                                )
                             }
                         }
                     }
@@ -2570,11 +2966,31 @@ fun AnimatedTaskItemRow(
                 }
             },
             dismissButton = {
-                TextButton(
-                    onClick = { showQuickEditDialog = false },
-                    modifier = Modifier.testTag("cancel_edit_task_btn_${task.id}")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Cancel")
+                    TextButton(
+                        onClick = {
+                            showQuickEditDialog = false
+                            showDeleteConfirmDialog = true
+                        },
+                        colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFFD32F2F)),
+                        modifier = Modifier
+                            .testTag("quick_edit_delete_task_btn_${task.id}")
+                            .testTag("quick_edit_delete_btn_${task.id}")
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete", color = Color(0xFFD32F2F), fontWeight = FontWeight.Bold)
+                    }
+
+                    TextButton(
+                        onClick = { showQuickEditDialog = false },
+                        modifier = Modifier.testTag("cancel_edit_task_btn_${task.id}")
+                    ) {
+                        Text("Cancel")
+                    }
                 }
             }
         )
@@ -2963,7 +3379,7 @@ fun AnimatedTaskItemRow(
             },
             text = {
                 Text(
-                    "Are you sure you want to delete '${task.title}'? This action cannot be undone.",
+                    "Are you sure you want to permanently delete '${task.title}'? This action cannot be undone.",
                     style = MaterialTheme.typography.bodyMedium.copy(color = OnSurfaceVariant)
                 )
             },
@@ -2975,19 +3391,26 @@ fun AnimatedTaskItemRow(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.testTag("confirm_delete_task_btn_${task.id}")
+                    modifier = Modifier
+                        .testTag("confirm_delete_task_btn_${task.id}")
+                        .testTag("confirm_delete_task_btn")
                 ) {
-                    Text("Delete", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Delete Permanently", fontWeight = FontWeight.Bold, color = Color.White)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showDeleteConfirmDialog = false },
-                    modifier = Modifier.testTag("cancel_delete_task_btn_${task.id}")
+                    modifier = Modifier
+                        .testTag("cancel_delete_task_btn_${task.id}")
+                        .testTag("cancel_delete_task_btn")
                 ) {
                     Text("Cancel")
                 }
-            }
+            },
+            modifier = Modifier
+                .testTag("delete_task_confirm_dialog")
+                .testTag("delete_confirmation_dialog_${task.id}")
         )
     }
     }

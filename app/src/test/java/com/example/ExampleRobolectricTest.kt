@@ -232,4 +232,51 @@ class ExampleRobolectricTest {
     org.junit.Assert.assertFalse(reopened.isCompleted)
     assertEquals(0, reopened.progress)
   }
+
+  @Test
+  fun `quick add task with category creates task with correct statusTag and space`() {
+    val viewModel = DayMeetViewModel()
+    val initialCount = viewModel.feedItems.value.size
+
+    viewModel.saveNewTask(
+      title = "Buy organic groceries",
+      notes = "Organic fruits and oats",
+      priority = com.example.model.Priority.MEDIUM,
+      space = "Shopping"
+    )
+
+    val updatedFeed = viewModel.feedItems.value
+    assertEquals(initialCount + 1, updatedFeed.size)
+
+    val createdTask = updatedFeed.first()
+    assertEquals("Buy organic groceries", createdTask.title)
+    assertEquals("Shopping", createdTask.statusTag)
+    assertEquals(com.example.model.FeedCategory.TASK, createdTask.category)
+    org.junit.Assert.assertFalse(createdTask.isCompleted)
+  }
+
+  @Test
+  fun `deleteTask permanently removes task from feedItems and crossStreamItems`() {
+    val viewModel = DayMeetViewModel()
+    val task = viewModel.feedItems.value.first { it.category == com.example.model.FeedCategory.TASK }
+    val taskId = task.id
+
+    viewModel.deleteTask(taskId)
+
+    val remainingTasks = viewModel.feedItems.value.filter { it.id == taskId }
+    assertTrue("Task should be deleted from feedItems", remainingTasks.isEmpty())
+  }
+
+  @Test
+  fun `bulkDeleteTasks permanently removes all selected tasks`() {
+    val viewModel = DayMeetViewModel()
+    val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK }.take(2)
+    val targetIds = tasks.map { it.id }.toSet()
+    assertEquals(2, targetIds.size)
+
+    viewModel.bulkDeleteTasks(targetIds)
+
+    val remainingTasks = viewModel.feedItems.value.filter { it.id in targetIds }
+    assertTrue("All selected tasks should be deleted", remainingTasks.isEmpty())
+  }
 }

@@ -752,34 +752,39 @@ fun CreateTaskSheet(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            "Work" to "💼",
-                            "Personal" to "👤",
-                            "Shopping" to "🛒",
-                            "Urgent" to "⚡",
-                            "Finance" to "💰",
-                            "Health" to "🏥"
-                        ).forEach { (cat, emoji) ->
+                            Triple("Work", "💼", Color(0xFF1E40AF) to Color(0xFFEFF6FF)),
+                            Triple("Personal", "👤", Color(0xFF7E22CE) to Color(0xFFFAF5FF)),
+                            Triple("Shopping", "🛒", Color(0xFF0F766E) to Color(0xFFF0FDFA)),
+                            Triple("Health", "🏥", Color(0xFF0369A1) to Color(0xFFF0F9FF)),
+                            Triple("Urgent", "⚡", Color(0xFFB91C1C) to Color(0xFFFEF2F2)),
+                            Triple("Finance", "💰", Color(0xFF15803D) to Color(0xFFF0FDF4))
+                        ).forEach { (cat, emoji, colors) ->
+                            val (primaryColor, bgColor) = colors
                             val isSelected = selectedCategory == cat
-                            FilterChip(
-                                selected = isSelected,
-                                onClick = { selectedCategory = cat },
-                                label = {
+                            Surface(
+                                shape = RoundedCornerShape(99.dp),
+                                color = if (isSelected) primaryColor else bgColor,
+                                border = BorderStroke(1.dp, if (isSelected) primaryColor else primaryColor.copy(alpha = 0.35f)),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .clickable { selectedCategory = cat }
+                                    .testTag("quick_add_category_${cat.lowercase()}")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(emoji, fontSize = 13.sp)
                                     Text(
-                                        text = "$emoji $cat",
+                                        text = cat,
                                         style = MaterialTheme.typography.labelMedium.copy(
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                                            color = if (isSelected) Color.White else primaryColor
                                         )
                                     )
-                                },
-                                shape = RoundedCornerShape(99.dp),
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Primary,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = SurfaceContainerLow,
-                                    labelColor = OnSurfaceVariant
-                                ),
-                                modifier = Modifier.testTag("quick_add_category_${cat.lowercase()}")
-                            )
+                                }
+                            }
                         }
                     }
                 }

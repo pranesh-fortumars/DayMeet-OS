@@ -1903,9 +1903,19 @@ class DayMeetViewModel : ViewModel() {
     fun deleteTask(id: String) {
         val task = _feedItems.value.firstOrNull { it.id == id }
         _feedItems.value = _feedItems.value.filterNot { it.id == id }
+        _crossStreamItems.value = _crossStreamItems.value.filterNot { it.id == id || (task != null && it.title.equals(task.title, ignoreCase = true)) }
         if (task != null) {
-            showToast("Deleted task '${task.title}'")
+            showToast("Permanently deleted task '${task.title}'")
         }
+    }
+
+    fun bulkDeleteTasks(ids: Set<String>) {
+        if (ids.isEmpty()) return
+        val count = ids.size
+        val deletedTitles = _feedItems.value.filter { it.id in ids }.map { it.title }
+        _feedItems.value = _feedItems.value.filterNot { it.id in ids }
+        _crossStreamItems.value = _crossStreamItems.value.filterNot { it.id in ids || it.title in deletedTitles }
+        showToast("Permanently deleted $count task${if (count > 1) "s" else ""}")
     }
 
     fun toggleCrossStreamDone(id: String) {
