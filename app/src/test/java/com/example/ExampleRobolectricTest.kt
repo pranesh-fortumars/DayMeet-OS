@@ -157,4 +157,33 @@ class ExampleRobolectricTest {
     val finalItem = viewModel.crossStreamItems.value.first { it.id == "cs2" }
     assertEquals(initialSubtaskCount, finalItem.subtasks.size)
   }
+
+  @Test
+  fun `feedItems task subtask addition, toggle, and deletion works seamlessly`() {
+    val viewModel = DayMeetViewModel()
+    val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK }
+    assertTrue("Should have task items in feed", tasks.isNotEmpty())
+
+    val targetTask = tasks.first()
+    val initialSubtaskCount = targetTask.subtasks.size
+
+    // Add subtask
+    viewModel.addSubtask(targetTask.id, "Prepare automated release notes")
+    val taskWithSub = viewModel.feedItems.value.first { it.id == targetTask.id }
+    assertEquals(initialSubtaskCount + 1, taskWithSub.subtasks.size)
+    val addedSub = taskWithSub.subtasks.last()
+    assertEquals("Prepare automated release notes", addedSub.title)
+    org.junit.Assert.assertFalse(addedSub.isCompleted)
+
+    // Toggle subtask
+    viewModel.toggleSubtask(targetTask.id, addedSub.id)
+    val toggledTask = viewModel.feedItems.value.first { it.id == targetTask.id }
+    val toggledSub = toggledTask.subtasks.first { it.id == addedSub.id }
+    assertTrue("Subtask should be completed after toggle", toggledSub.isCompleted)
+
+    // Delete subtask
+    viewModel.deleteSubtask(targetTask.id, addedSub.id)
+    val deletedTask = viewModel.feedItems.value.first { it.id == targetTask.id }
+    assertEquals(initialSubtaskCount, deletedTask.subtasks.size)
+  }
 }
