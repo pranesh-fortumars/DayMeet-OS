@@ -255,76 +255,127 @@ fun TasksScreen(
         // Header
         item {
             if (isSelectionMode) {
-                // Multi-select Active Header Bar
+                // Multi-select / Batch Action Active Control Panel
                 Card(
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = PrimaryContainer),
-                    border = BorderStroke(1.dp, Primary.copy(alpha = 0.3f)),
+                    border = BorderStroke(1.dp, Primary.copy(alpha = 0.4f)),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("selection_mode_bar")
+                        .testTag("batch_action_panel")
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        // Top row: Exit action, Title, Selection Count, and Select All toggle
+                        val isAllSelected = selectedTaskIds.isNotEmpty() && selectedTaskIds.size >= displayedTasks.size && displayedTasks.isNotEmpty()
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            IconButton(
-                                onClick = {
-                                    isSelectionMode = false
-                                    selectedTaskIds = emptySet()
-                                },
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .testTag("cancel_selection_btn")
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Cancel Selection",
-                                    tint = OnPrimaryContainer
-                                )
-                            }
+                                IconButton(
+                                    onClick = {
+                                        isSelectionMode = false
+                                        selectedTaskIds = emptySet()
+                                    },
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(SurfaceContainerLowest.copy(alpha = 0.6f))
+                                        .testTag("cancel_selection_btn")
+                                        .testTag("exit_batch_mode_btn")
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Exit Batch Mode",
+                                        tint = OnPrimaryContainer,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
 
-                            Text(
-                                text = "${selectedTaskIds.size} selected",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = OnPrimaryContainer
-                                ),
-                                modifier = Modifier.testTag("selected_count_text")
-                            )
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            TextButton(
-                                onClick = {
-                                    val selectable = displayedTasks.filter { !it.isCompleted }.map { it.id }.toSet()
-                                    selectedTaskIds = if (selectedTaskIds.size == selectable.size && selectable.isNotEmpty()) {
-                                        emptySet()
-                                    } else {
-                                        selectable
-                                    }
-                                },
-                                modifier = Modifier.testTag("select_all_btn")
-                            ) {
                                 Text(
-                                    text = if (selectedTaskIds.isNotEmpty() && selectedTaskIds.size == displayedTasks.filter { !it.isCompleted }.size) "Deselect All" else "Select All",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Primary
+                                    text = "Batch Actions",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = OnPrimaryContainer
                                     )
                                 )
+
+                                Surface(
+                                    shape = RoundedCornerShape(99.dp),
+                                    color = Primary,
+                                    modifier = Modifier.testTag("selected_count_pill")
+                                ) {
+                                    Text(
+                                        text = "${selectedTaskIds.size} of ${displayedTasks.size} selected",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        ),
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            .testTag("selected_count_text")
+                                    )
+                                }
                             }
 
+                            // 'Select All' / 'Deselect All' Toggle Button
+                            Surface(
+                                shape = RoundedCornerShape(99.dp),
+                                color = if (isAllSelected) Primary else SurfaceContainerLowest,
+                                border = BorderStroke(1.dp, Primary),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(99.dp))
+                                    .clickable {
+                                        selectedTaskIds = if (isAllSelected) {
+                                            emptySet()
+                                        } else {
+                                            displayedTasks.map { it.id }.toSet()
+                                        }
+                                    }
+                                    .testTag("select_all_btn")
+                                    .testTag("toggle_select_all_btn")
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (isAllSelected) Icons.Default.Deselect else Icons.Default.SelectAll,
+                                        contentDescription = null,
+                                        tint = if (isAllSelected) Color.White else Primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = if (isAllSelected) "Deselect All" else "Select All (${displayedTasks.size})",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isAllSelected) Color.White else Primary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(color = OnPrimaryContainer.copy(alpha = 0.15f))
+
+                        // Bottom row: Bulk Complete and Bulk Delete action buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Bulk Complete Button
                             Button(
                                 onClick = {
                                     if (selectedTaskIds.isNotEmpty()) {
@@ -341,8 +392,11 @@ fun TasksScreen(
                                     disabledContainerColor = SurfaceContainerHigh,
                                     disabledContentColor = OnSurfaceVariant
                                 ),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                                modifier = Modifier.testTag("bulk_complete_btn")
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 9.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("bulk_complete_btn")
+                                    .testTag("batch_complete_btn")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.CheckCircle,
@@ -351,12 +405,12 @@ fun TasksScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Mark Done",
+                                    text = if (selectedTaskIds.isEmpty()) "Mark Done" else "Mark Done (${selectedTaskIds.size})",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
 
-                            // Bulk Delete Button with Confirmation Dialog
+                            // Bulk Delete Button
                             Button(
                                 onClick = {
                                     if (selectedTaskIds.isNotEmpty()) {
@@ -371,17 +425,20 @@ fun TasksScreen(
                                     disabledContainerColor = SurfaceContainerHigh,
                                     disabledContentColor = OnSurfaceVariant
                                 ),
-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
-                                modifier = Modifier.testTag("bulk_delete_btn")
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 9.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("bulk_delete_btn")
+                                    .testTag("batch_delete_btn")
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Delete,
                                     contentDescription = null,
                                     modifier = Modifier.size(18.dp)
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    "Delete (${selectedTaskIds.size})",
+                                    text = if (selectedTaskIds.isEmpty()) "Delete" else "Delete (${selectedTaskIds.size})",
                                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
                                 )
                             }
@@ -447,78 +504,59 @@ fun TasksScreen(
                     )
                 }
             } else {
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = "Tasks & Backlog",
-                                style = MaterialTheme.typography.headlineLarge.copy(
-                                    color = OnSurface,
-                                    fontSize = 24.sp
-                                )
-                            )
-                            // Task Completion Streak Counter Badge
-                            Surface(
-                                shape = RoundedCornerShape(99.dp),
-                                color = Color(0xFFFFF3E0),
-                                border = BorderStroke(1.dp, Color(0xFFFFB74D)),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(99.dp))
-                                    .clickable { showStreakDialog = true }
-                                    .testTag("task_completion_streak_badge")
+                    // Top row: Title, Streak Counter, and Add Task button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text("🔥", fontSize = 12.sp)
-                                    Text(
-                                        text = "${streakDays}d Streak",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color(0xFFE65100)
-                                        )
+                                Text(
+                                    text = "Tasks & Checklists",
+                                    style = MaterialTheme.typography.headlineLarge.copy(
+                                        color = OnSurface,
+                                        fontSize = 24.sp
                                     )
+                                )
+                                // Task Completion Streak Counter Badge
+                                Surface(
+                                    shape = RoundedCornerShape(99.dp),
+                                    color = Color(0xFFFFF3E0),
+                                    border = BorderStroke(1.dp, Color(0xFFFFB74D)),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(99.dp))
+                                        .clickable { showStreakDialog = true }
+                                        .testTag("task_completion_streak_badge")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Text("🔥", fontSize = 12.sp)
+                                        Text(
+                                            text = "${streakDays}d Streak",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFFE65100)
+                                            )
+                                        )
+                                    }
                                 }
                             }
-                        }
-                        Text(
-                            text = "$pendingCount open • $completedCount completed today",
-                            style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // Multi-select toggle button
-                        IconButton(
-                            onClick = {
-                                isSelectionMode = true
-                                selectedTaskIds = emptySet()
-                            },
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(SurfaceContainerHigh)
-                                .testTag("toggle_multi_select_btn")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Checklist,
-                                contentDescription = "Select multiple tasks",
-                                tint = OnSurface,
-                                modifier = Modifier.size(20.dp)
+                            Text(
+                                text = "$pendingCount open • $completedCount completed today",
+                                style = MaterialTheme.typography.bodySmall.copy(color = OnSurfaceVariant)
                             )
                         }
 
@@ -532,6 +570,83 @@ fun TasksScreen(
                             Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Add Task", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                        }
+                    }
+
+                    // Second row: Dedicated 'Batch Action' and 'Select All' Quick Toggles
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Batch Action Toggle Button
+                        OutlinedButton(
+                            onClick = {
+                                isSelectionMode = true
+                                selectedTaskIds = emptySet()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = SurfaceContainerLow,
+                                contentColor = OnSurface
+                            ),
+                            border = BorderStroke(1.dp, SurfaceContainerHigh),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier
+                                .height(38.dp)
+                                .testTag("batch_action_toggle")
+                                .testTag("toggle_batch_action_btn")
+                                .testTag("toggle_multi_select_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Checklist,
+                                contentDescription = "Batch Action",
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Batch Action",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = OnSurface
+                                )
+                            )
+                        }
+
+                        // Select All Toggle Button
+                        OutlinedButton(
+                            onClick = {
+                                isSelectionMode = true
+                                selectedTaskIds = displayedTasks.map { it.id }.toSet()
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = Primary.copy(alpha = 0.08f),
+                                contentColor = Primary
+                            ),
+                            border = BorderStroke(1.dp, Primary.copy(alpha = 0.35f)),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier
+                                .height(38.dp)
+                                .testTag("select_all_toggle_btn")
+                                .testTag("quick_select_all_btn")
+                                .testTag("select_all_header_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SelectAll,
+                                contentDescription = "Select All",
+                                tint = Primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Select All (${displayedTasks.size})",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Primary
+                                )
+                            )
                         }
                     }
                 }

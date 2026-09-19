@@ -268,6 +268,22 @@ class ExampleRobolectricTest {
   }
 
   @Test
+  fun `bulkMarkTasksCompleted completes all specified tasks`() {
+    val viewModel = DayMeetViewModel()
+    val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK && !it.isCompleted }.take(2)
+    val targetIds = tasks.map { it.id }.toSet()
+    assertEquals(2, targetIds.size)
+
+    viewModel.bulkMarkTasksCompleted(targetIds)
+
+    val updatedTasks = viewModel.feedItems.value.filter { it.id in targetIds }
+    for (task in updatedTasks) {
+      assertTrue("Task should be completed", task.isCompleted)
+      assertEquals(100, task.progress)
+    }
+  }
+
+  @Test
   fun `bulkDeleteTasks permanently removes all selected tasks`() {
     val viewModel = DayMeetViewModel()
     val tasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK }.take(2)
