@@ -36,6 +36,7 @@ fun MoreScreen(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
+    val lifeInboxItems by viewModel.lifeInboxItems.collectAsStateWithLifecycle()
 
     LazyColumn(
         modifier = modifier
@@ -146,6 +147,20 @@ fun MoreScreen(
                         iconBg = TertiaryFixed,
                         onClick = { viewModel.openDailyBriefing() },
                         testTag = "module_briefing"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Life Inbox",
+                        subtitle = "Universal capture: Text, voice, photos, links & ideas",
+                        badge = if (lifeInboxItems.isNotEmpty()) "${lifeInboxItems.size} Unfiled" else "Inbox Clear",
+                        badgeColor = if (lifeInboxItems.isNotEmpty()) AmberWarning else EmeraldSuccess,
+                        icon = Icons.Default.Inbox,
+                        iconTint = if (lifeInboxItems.isNotEmpty()) AmberWarning else Primary,
+                        iconBg = if (lifeInboxItems.isNotEmpty()) Color(0xFFFFF3E0) else PrimaryFixed,
+                        onClick = { viewModel.openSubScreen("life_inbox") },
+                        testTag = "module_life_inbox"
                     )
                 }
             }

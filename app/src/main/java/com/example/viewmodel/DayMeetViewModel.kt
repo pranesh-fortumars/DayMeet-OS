@@ -112,6 +112,50 @@ class DayMeetViewModel : ViewModel() {
     private val _confettiMilestone = MutableStateFlow<String?>(null)
     val confettiMilestone: StateFlow<String?> = _confettiMilestone.asStateFlow()
 
+    // Phase 1: Life Mode (All, Work, Personal)
+    private val _currentLifeMode = MutableStateFlow(LifeMode.ALL)
+    val currentLifeMode: StateFlow<LifeMode> = _currentLifeMode.asStateFlow()
+
+    // Phase 1: Life Inbox Items
+    private val _lifeInboxItems = MutableStateFlow(
+        listOf(
+            LifeInboxItem(
+                id = "inbox_1",
+                content = "Need to renew bike insurance next month and compare prices.",
+                type = LifeInboxType.TEXT,
+                timestamp = "Today, 10:15 AM",
+                source = "Quick Dump",
+                suggestions = listOf(
+                    LifeInboxSuggestion("sug_1", SuggestedActionType.ADD_VEHICLE_HOME, "Bike Insurance Renewal", "Due in 30 days • Compare quotes", "Home & Vehicle", "Vehicle"),
+                    LifeInboxSuggestion("sug_2", SuggestedActionType.CREATE_REMINDER, "Remind: Insurance comparison", "Next month 1st", "Reminders"),
+                    LifeInboxSuggestion("sug_3", SuggestedActionType.CREATE_TASK, "Compare insurance plans on PolicyBazaar", "Priority: Medium", "Tasks", "Personal")
+                )
+            ),
+            LifeInboxItem(
+                id = "inbox_2",
+                content = "https://figma.com/design/daymeet-design-system-v2 Elena shared new UI specs",
+                type = LifeInboxType.LINK,
+                timestamp = "Yesterday, 06:40 PM",
+                source = "Share Sheet",
+                suggestions = listOf(
+                    LifeInboxSuggestion("sug_4", SuggestedActionType.CREATE_TASK, "Review Figma design system v2", "From Elena • Link attached", "Tasks", "Work"),
+                    LifeInboxSuggestion("sug_5", SuggestedActionType.SAVE_NOTE, "Design System v2 Specs Link", "Saved reference bookmark", "Notes")
+                )
+            ),
+            LifeInboxItem(
+                id = "inbox_3",
+                content = "Voice note: Remember to order fresh organic coffee beans and oat milk before Saturday brunch",
+                type = LifeInboxType.VOICE,
+                timestamp = "Today, 08:30 AM",
+                source = "Voice Capture",
+                suggestions = listOf(
+                    LifeInboxSuggestion("sug_6", SuggestedActionType.SAVE_WISHLIST, "Organic coffee beans & oat milk", "Est: ₹450 • Groceries", "Shopping")
+                )
+            )
+        )
+    )
+    val lifeInboxItems: StateFlow<List<LifeInboxItem>> = _lifeInboxItems.asStateFlow()
+
     // Notes & Knowledge
     private val _notes = MutableStateFlow(DayMeetRepository.getInitialNotes())
     val notes: StateFlow<List<NoteItem>> = _notes.asStateFlow()
@@ -1148,17 +1192,27 @@ class DayMeetViewModel : ViewModel() {
         }
     }
 
-    fun addShoppingItem(name: String, quantity: String, price: Double, category: String) {
+    fun addShoppingItem(
+        name: String,
+        quantity: String = "1 item",
+        price: Double = 150.0,
+        category: String = "Groceries"
+    ) {
         val item = ShoppingItem(
             id = "shop_${System.currentTimeMillis()}",
-            name = name,
+            name = name.ifBlank { "Grocery Item" },
             quantity = quantity.ifBlank { "1 item" },
             estimatedPrice = price,
-            category = category,
+            category = category.ifBlank { "Groceries" },
             isPurchased = false
         )
         _shoppingItems.value = _shoppingItems.value + item
         showToast("Added $name to Shopping List")
+    }
+
+    fun deleteShoppingItem(id: String) {
+        _shoppingItems.value = _shoppingItems.value.filterNot { it.id == id }
+        showToast("Item removed from list")
     }
 
     // Reminders Actions
@@ -2559,5 +2613,350 @@ class DayMeetViewModel : ViewModel() {
         _isAutoCheckUpdateEnabled.value = !_isAutoCheckUpdateEnabled.value
         val state = if (_isAutoCheckUpdateEnabled.value) "enabled" else "disabled"
         showToast("Automatic update checks $state")
+    }
+
+    // ==========================================
+    // Phase 1: Life Mode & Life Inbox Methods
+    // ==========================================
+
+    fun setLifeMode(mode: LifeMode) {
+        _currentLifeMode.value = mode
+        showToast("Switched to ${mode.label}")
+    }
+
+    fun cycleLifeMode() {
+        val next = when (_currentLifeMode.value) {
+            LifeMode.ALL -> LifeMode.WORK
+            LifeMode.WORK -> LifeMode.PERSONAL
+            LifeMode.PERSONAL -> LifeMode.ALL
+        }
+        setLifeMode(next)
+    }
+
+    fun addToLifeInbox(
+        content: String,
+        type: LifeInboxType = LifeInboxType.TEXT,
+        source: String = "Manual Dump",
+        mediaUri: String? = null
+    ) {
+        if (content.isBlank()) return
+        val suggestions = generateSuggestionsForInbox(content, type)
+        val newItem = LifeInboxItem(
+            id = "inbox_${System.currentTimeMillis()}",
+            content = content.trim(),
+            type = type,
+            timestamp = "Just now",
+            source = source,
+            mediaUri = mediaUri,
+            suggestions = suggestions
+        )
+        _lifeInboxItems.value = listOf(newItem) + _lifeInboxItems.value
+        showToast("Dumped to Life Inbox (${suggestions.size} suggestions ready)")
+    }
+
+    fun dumpSimulatedMediaToInbox(type: LifeInboxType) {
+        when (type) {
+            LifeInboxType.VOICE -> {
+                addToLifeInbox(
+                    content = "Audio Note: Call Dr. Mehta for annual physical report follow-up on Friday",
+                    type = LifeInboxType.VOICE,
+                    source = "Voice Capture"
+                )
+            }
+            LifeInboxType.PHOTO -> {
+                addToLifeInbox(
+                    content = "Photo: Parking receipt ₹150 at Airport Terminal 2",
+                    type = LifeInboxType.PHOTO,
+                    source = "Camera"
+                )
+            }
+            LifeInboxType.SCREENSHOT -> {
+                addToLifeInbox(
+                    content = "Screenshot: Flight 6E-243 Mumbai to Bengaluru PNR 8KX92P 06:15 AM",
+                    type = LifeInboxType.SCREENSHOT,
+                    source = "Screenshot Intent"
+                )
+            }
+            LifeInboxType.LINK -> {
+                addToLifeInbox(
+                    content = "https://github.com/daymeet/architecture-rfcs/issues/42 Async worker redesign",
+                    type = LifeInboxType.LINK,
+                    source = "Web Link"
+                )
+            }
+            LifeInboxType.IDEA -> {
+                addToLifeInbox(
+                    content = "Idea: Add a 2-minute weekly retrospective voice prompt on Sunday night",
+                    type = LifeInboxType.IDEA,
+                    source = "Mind Dump"
+                )
+            }
+            else -> {
+                addToLifeInbox("Quick memo: Verify credit card statement for suspicious debit", type, "Quick Dump")
+            }
+        }
+    }
+
+    fun captureFromClipboard(clipboardContent: String? = null) {
+        val text = clipboardContent ?: "Meeting Link: https://meet.google.com/xyz-qwe-asd Product Sync at 4pm"
+        addToLifeInbox(
+            content = text,
+            type = if (text.contains("http")) LifeInboxType.LINK else LifeInboxType.TEXT,
+            source = "Clipboard"
+        )
+    }
+
+    fun handleSharedIntent(sharedText: String?, sharedUri: String? = null) {
+        val content = sharedText ?: "Shared document or media from Android share sheet"
+        val type = when {
+            sharedUri != null -> LifeInboxType.DOCUMENT
+            content.contains("http") -> LifeInboxType.LINK
+            content.contains("screenshot", ignoreCase = true) -> LifeInboxType.SCREENSHOT
+            else -> LifeInboxType.TEXT
+        }
+        addToLifeInbox(
+            content = content,
+            type = type,
+            source = "Android Share Sheet",
+            mediaUri = sharedUri
+        )
+    }
+
+    private fun generateSuggestionsForInbox(content: String, type: LifeInboxType): List<LifeInboxSuggestion> {
+        val lower = content.lowercase()
+        val suggestions = mutableListOf<LifeInboxSuggestion>()
+
+        if (lower.contains("insurance") || lower.contains("car") || lower.contains("bike") || lower.contains("vehicle") || lower.contains("home")) {
+            suggestions.add(
+                LifeInboxSuggestion(
+                    id = "sug_${System.currentTimeMillis()}_1",
+                    type = SuggestedActionType.ADD_VEHICLE_HOME,
+                    title = if (lower.contains("insurance")) "Insurance Renewal" else "Home/Vehicle Maintenance",
+                    detail = "Add to Home & Vehicle maintenance timeline",
+                    targetModule = "Home & Vehicle",
+                    category = if (lower.contains("bike") || lower.contains("car") || lower.contains("vehicle")) "Vehicle" else "Home"
+                )
+            )
+        }
+
+        if (lower.contains("remind") || lower.contains("call") || lower.contains("next month") || lower.contains("tomorrow") || lower.contains("follow-up") || lower.contains("friday")) {
+            suggestions.add(
+                LifeInboxSuggestion(
+                    id = "sug_${System.currentTimeMillis()}_2",
+                    type = SuggestedActionType.CREATE_REMINDER,
+                    title = "Reminder: " + content.take(30) + if (content.length > 30) "..." else "",
+                    detail = "Smart alert with notification",
+                    targetModule = "Reminders"
+                )
+            )
+        }
+
+        if (lower.contains("₹") || lower.contains("receipt") || lower.contains("bill") || lower.contains("paid") || lower.contains("expense") || lower.contains("rs") || lower.contains("cost")) {
+            val amount = Regex("""(?:₹|rs\.?|inr)?\s*([0-9,]+)""", RegexOption.IGNORE_CASE).find(content)?.groupValues?.get(1) ?: "150"
+            suggestions.add(
+                LifeInboxSuggestion(
+                    id = "sug_${System.currentTimeMillis()}_3",
+                    type = SuggestedActionType.LOG_EXPENSE,
+                    title = "Log Expense ₹$amount",
+                    detail = "Add transaction to Finance Tracker",
+                    targetModule = "Finance",
+                    amountOrDate = amount
+                )
+            )
+        }
+
+        if (lower.contains("meet") || lower.contains("zoom") || lower.contains("flight") || lower.contains("sync") || lower.contains("dr.") || lower.contains("doctor")) {
+            suggestions.add(
+                LifeInboxSuggestion(
+                    id = "sug_${System.currentTimeMillis()}_4",
+                    type = SuggestedActionType.CREATE_MEETING,
+                    title = "Schedule Calendar Event",
+                    detail = "Add to DayMeet Calendar timeline",
+                    targetModule = "Calendar"
+                )
+            )
+        }
+
+        if (lower.contains("coffee") || lower.contains("milk") || lower.contains("order") || lower.contains("buy") || lower.contains("shopping")) {
+            suggestions.add(
+                LifeInboxSuggestion(
+                    id = "sug_${System.currentTimeMillis()}_5",
+                    type = SuggestedActionType.SAVE_WISHLIST,
+                    title = "Add to Shopping List",
+                    detail = "Group with Groceries & Household",
+                    targetModule = "Shopping"
+                )
+            )
+        }
+
+        // Always provide a fallback Task and Note suggestion
+        suggestions.add(
+            LifeInboxSuggestion(
+                id = "sug_${System.currentTimeMillis()}_task",
+                type = SuggestedActionType.CREATE_TASK,
+                title = "Create Task: " + content.take(28),
+                detail = "Add to Tasks with High Priority",
+                targetModule = "Tasks",
+                category = if (lower.contains("figma") || lower.contains("sync") || lower.contains("github") || lower.contains("client")) "Work" else "Personal"
+            )
+        )
+
+        return suggestions
+    }
+
+    fun commitLifeInboxSuggestion(inboxItemId: String, suggestion: LifeInboxSuggestion) {
+        when (suggestion.type) {
+            SuggestedActionType.CREATE_TASK -> {
+                saveNewTask(
+                    title = suggestion.title.removePrefix("Create Task: "),
+                    notes = suggestion.detail,
+                    priority = Priority.HIGH,
+                    space = suggestion.category ?: "Work",
+                    subtasks = emptyList()
+                )
+            }
+            SuggestedActionType.CREATE_MEETING -> {
+                scheduleMeetingFromHub(
+                    title = suggestion.title,
+                    participants = listOf("Alex Chen"),
+                    time = "Today, 04:00 PM"
+                )
+            }
+            SuggestedActionType.CREATE_REMINDER -> {
+                val newRem = SmartReminder(
+                    id = "rem_${System.currentTimeMillis()}",
+                    title = suggestion.title,
+                    triggerType = "Smart Alert",
+                    scheduledTime = "Tomorrow, 09:00 AM"
+                )
+                _reminders.value = listOf(newRem) + _reminders.value
+                addCrossStreamItem(suggestion.title, "Reminder set from Life Inbox", "Reminder", "priority")
+            }
+            SuggestedActionType.LOG_EXPENSE -> {
+                val amt = suggestion.amountOrDate?.replace(",", "")?.toDoubleOrNull() ?: 150.0
+                checkAndLogExpense(
+                    title = suggestion.title.removePrefix("Log Expense ₹"),
+                    amount = amt,
+                    category = "General",
+                    method = "UPI"
+                )
+            }
+            SuggestedActionType.ADD_VEHICLE_HOME -> {
+                addHomeVehicleItem(
+                    title = suggestion.title,
+                    category = suggestion.category ?: "Vehicle",
+                    dueDate = "Next Month",
+                    detail = suggestion.detail,
+                    cost = "₹1,200"
+                )
+            }
+            SuggestedActionType.SAVE_NOTE -> {
+                val newNote = NoteItem(
+                    id = "note_${System.currentTimeMillis()}",
+                    title = suggestion.title,
+                    content = suggestion.detail,
+                    category = "Inbox Captures",
+                    updatedAt = "Just now"
+                )
+                _notes.value = listOf(newNote) + _notes.value
+                showToast("Note saved: ${suggestion.title}")
+            }
+            SuggestedActionType.SAVE_WISHLIST -> {
+                addShoppingItem(
+                    name = suggestion.title.removePrefix("Add to Shopping List: ").removePrefix("Add to Shopping List"),
+                    quantity = "1",
+                    price = 250.0,
+                    category = "Groceries"
+                )
+            }
+            SuggestedActionType.ADD_CALENDAR_EVENT -> {
+                scheduleMeetingFromHub(
+                    title = suggestion.title,
+                    participants = listOf("Alex Chen"),
+                    time = "Tomorrow, 10:00 AM"
+                )
+            }
+        }
+
+        // Mark processed or remove item
+        _lifeInboxItems.value = _lifeInboxItems.value.filterNot { it.id == inboxItemId }
+        showToast("Committed to ${suggestion.targetModule}! ✨")
+    }
+
+    fun dismissLifeInboxItem(inboxItemId: String) {
+        _lifeInboxItems.value = _lifeInboxItems.value.filterNot { it.id == inboxItemId }
+        showToast("Item cleared from Inbox")
+    }
+
+    // Phase 1: Contextual Next Item for Home HUD
+    fun getContextualNextItem(): ContextualNextItem {
+        val nextMeeting = _meetings.value.firstOrNull()
+        val pendingTasks = _feedItems.value.filter { !it.isCompleted }
+        val mode = _currentLifeMode.value
+
+        return when {
+            mode == LifeMode.WORK && nextMeeting != null -> {
+                ContextualNextItem(
+                    title = nextMeeting.title,
+                    subtitle = "${nextMeeting.time} • ${nextMeeting.platform}",
+                    timeRemaining = "In 20m",
+                    iconType = "meeting",
+                    actionLabel = "Join Room",
+                    actionTag = "join_meeting",
+                    contextInsight = "3 participants joined • Agenda ready",
+                    urgentCount = pendingTasks.count { it.priority == Priority.HIGH || it.priority == Priority.URGENT }
+                )
+            }
+            mode == LifeMode.PERSONAL -> {
+                val nextPersonalTask = pendingTasks.firstOrNull { it.statusTag == "Personal" || it.statusTag == "Home" }
+                ContextualNextItem(
+                    title = nextPersonalTask?.title ?: "Evening Wind Down & Habits",
+                    subtitle = "Personal Mode Active • Work alerts muted",
+                    timeRemaining = "Next 45m",
+                    iconType = "focus",
+                    actionLabel = "Log Vital",
+                    actionTag = "open_health",
+                    contextInsight = "Hydration at 70% • 3 habits completed today",
+                    urgentCount = 0
+                )
+            }
+            nextMeeting != null -> {
+                ContextualNextItem(
+                    title = nextMeeting.title,
+                    subtitle = "${nextMeeting.time} • ${nextMeeting.platform}",
+                    timeRemaining = "In 20m",
+                    iconType = "meeting",
+                    actionLabel = "Join",
+                    actionTag = "join_meeting",
+                    contextInsight = "Focus session recommended before 09:30 AM",
+                    urgentCount = pendingTasks.count { it.priority == Priority.HIGH }
+                )
+            }
+            pendingTasks.isNotEmpty() -> {
+                val topTask = pendingTasks.first()
+                ContextualNextItem(
+                    title = topTask.title,
+                    subtitle = "High Priority Task • Due ${topTask.time}",
+                    timeRemaining = "Due Today",
+                    iconType = "task",
+                    actionLabel = "Start Task",
+                    actionTag = "start_task",
+                    contextInsight = "${pendingTasks.size} tasks remaining on today's planner",
+                    urgentCount = pendingTasks.size
+                )
+            }
+            else -> {
+                ContextualNextItem(
+                    title = "Free Flow Focus Block",
+                    subtitle = "All meetings & high priority tasks completed",
+                    timeRemaining = "Available",
+                    iconType = "focus",
+                    actionLabel = "Start Focus",
+                    actionTag = "start_focus",
+                    contextInsight = "Great time for deep thinking or personal reading",
+                    urgentCount = 0
+                )
+            }
+        }
     }
 }

@@ -15,10 +15,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.FilterCenterFocus
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
@@ -37,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.localization.AppLanguage
 import com.example.localization.LocalizationManager
+import com.example.model.LifeMode
 import com.example.ui.theme.*
 
 @Composable
@@ -45,6 +49,8 @@ fun DayMeetHeader(
     lastSyncedText: String = "Just now",
     isFocusModeActive: Boolean = false,
     currentLanguage: AppLanguage = AppLanguage.ENGLISH,
+    lifeMode: LifeMode = LifeMode.ALL,
+    onLifeModeClick: () -> Unit = {},
     onLanguageClick: () -> Unit = {},
     onFocusClick: () -> Unit = {},
     onSyncClick: () -> Unit = {},
@@ -182,6 +188,61 @@ fun DayMeetHeader(
                             tint = OnSurfaceVariant,
                             modifier = Modifier.size(22.dp)
                         )
+                    }
+
+                    // Life Mode (All / Work / Personal) Switcher Pill
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = when (lifeMode) {
+                            LifeMode.WORK -> Color(0xFF1E3A8A).copy(alpha = 0.12f)
+                            LifeMode.PERSONAL -> Color(0xFF15803D).copy(alpha = 0.12f)
+                            LifeMode.ALL -> SurfaceContainerLow
+                        },
+                        border = BorderStroke(
+                            width = 1.dp,
+                            color = when (lifeMode) {
+                                LifeMode.WORK -> Color(0xFF3B82F6)
+                                LifeMode.PERSONAL -> Color(0xFF22C55E)
+                                LifeMode.ALL -> Primary.copy(alpha = 0.25f)
+                            }
+                        ),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(99.dp))
+                            .clickable { onLifeModeClick() }
+                            .testTag("life_mode_header_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = when (lifeMode) {
+                                    LifeMode.WORK -> Icons.Default.BusinessCenter
+                                    LifeMode.PERSONAL -> Icons.Default.Home
+                                    LifeMode.ALL -> Icons.Default.Public
+                                },
+                                contentDescription = "Switch Life Mode",
+                                tint = when (lifeMode) {
+                                    LifeMode.WORK -> Color(0xFF1D4ED8)
+                                    LifeMode.PERSONAL -> Color(0xFF15803D)
+                                    LifeMode.ALL -> Primary
+                                },
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = lifeMode.label.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = when (lifeMode) {
+                                        LifeMode.WORK -> Color(0xFF1D4ED8)
+                                        LifeMode.PERSONAL -> Color(0xFF15803D)
+                                        LifeMode.ALL -> Primary
+                                    },
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
                     }
 
                     // Language Switcher Header Pill

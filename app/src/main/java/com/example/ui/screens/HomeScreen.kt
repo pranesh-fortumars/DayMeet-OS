@@ -56,6 +56,8 @@ import com.example.data.DayMeetRepository
 import com.example.model.CrossStreamItem
 import com.example.model.HabitItem
 import com.example.model.NonRoutineTask
+import com.example.model.LifeMode
+import com.example.ui.components.WhatsNextHudCard
 import com.example.localization.LocalAppStrings
 import com.example.ui.theme.*
 import com.example.util.TimeUtils
@@ -85,6 +87,34 @@ fun HomeScreen(
     val focusTimerRemaining by viewModel.focusTimerRemaining.collectAsState()
     val showFirstDataBanner by viewModel.showFirstDataBanner.collectAsState()
     val isSampleDataActive by viewModel.isSampleDataActive.collectAsState()
+    val currentLifeMode by viewModel.currentLifeMode.collectAsState()
+    val lifeInboxItems by viewModel.lifeInboxItems.collectAsState()
+
+    val filteredCrossStreamItems = remember(crossStreamItems, currentLifeMode) {
+        when (currentLifeMode) {
+            LifeMode.ALL -> crossStreamItems
+            LifeMode.WORK -> crossStreamItems.filter { item ->
+                item.tagType in listOf("meeting", "priority", "task", "project", "focus") ||
+                item.tag.contains("Work", ignoreCase = true) ||
+                item.title.contains("Sync", ignoreCase = true) ||
+                item.title.contains("Sprint", ignoreCase = true) ||
+                item.title.contains("Review", ignoreCase = true)
+            }
+            LifeMode.PERSONAL -> crossStreamItems.filter { item ->
+                item.tagType in listOf("wellness", "expense", "autopay", "travel", "habit") ||
+                item.tag.contains("Personal", ignoreCase = true) ||
+                item.tag.contains("Home", ignoreCase = true) ||
+                item.tag.contains("Health", ignoreCase = true) ||
+                item.title.contains("Gym", ignoreCase = true) ||
+                item.title.contains("Bill", ignoreCase = true) ||
+                item.title.contains("Doctor", ignoreCase = true)
+            }
+        }
+    }
+
+    val contextualNextItem = remember(meetings, feedItems, currentLifeMode) {
+        viewModel.getContextualNextItem()
+    }
 
     val electricityBill = upcomingBills.firstOrNull { it.id == "b1" }
     val nextMeeting = meetings.firstOrNull()
@@ -292,6 +322,24 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // 1.5. Dynamic Contextual "What's Next?" HUD Banner (Phase 1 Life OS)
+        item {
+            WhatsNextHudCard(
+                hudItem = contextualNextItem,
+                onPrimaryAction = { actionTag ->
+                    when (actionTag) {
+                        "join_meeting" -> viewModel.openMeetingMinutes()
+                        "start_task" -> viewModel.navigateTo("tasks")
+                        "start_focus" -> viewModel.start25MinPomodoroSession()
+                        "open_health" -> viewModel.openSubScreen("habits")
+                        else -> viewModel.navigateTo("calendar")
+                    }
+                },
+                onOpenInbox = { viewModel.openSubScreen("life_inbox") },
+                inboxCount = lifeInboxItems.size
+            )
         }
 
         // 2. Daily Briefing Card
@@ -970,7 +1018,7 @@ fun HomeScreen(
         }
 
         // Stream Items with animateItem for smooth entrance, exit, and re-ordering animations
-        items(crossStreamItems, key = { it.id }) { streamItem ->
+        items(filteredCrossStreamItems, key = { it.id }) { streamItem ->
             CrossStreamRowItem(
                 item = streamItem,
                 isFocusRunning = isFocusRunning,

@@ -1,5 +1,6 @@
 package com.example
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -52,15 +53,35 @@ import com.example.ui.theme.MyApplicationTheme
 import com.example.viewmodel.DayMeetViewModel
 
 class MainActivity : ComponentActivity() {
+    private var appViewModel: DayMeetViewModel? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.example.util.TaskNotificationScheduler.createNotificationChannel(this)
         enableEdgeToEdge()
+        handleIncomingIntent(intent)
         setContent {
             val viewModel: DayMeetViewModel = viewModel()
+            appViewModel = viewModel
             val isDarkMode by viewModel.isDarkMode.collectAsStateWithLifecycle()
             MyApplicationTheme(darkTheme = isDarkMode) {
                 DayMeetApp(viewModel = viewModel)
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingIntent(intent)
+    }
+
+    private fun handleIncomingIntent(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_SEND) {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT)
+            val sharedStream = intent.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM)
+            if (sharedText != null || sharedStream != null) {
+                appViewModel?.handleSharedIntent(sharedText, sharedStream?.toString())
             }
         }
     }
@@ -137,6 +158,7 @@ fun DayMeetApp(
     val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle()
     val lastSyncedTime by viewModel.lastSyncedTime.collectAsStateWithLifecycle()
     val isFocusModeActive by viewModel.isFocusModeActive.collectAsStateWithLifecycle()
+    val currentLifeMode by viewModel.currentLifeMode.collectAsStateWithLifecycle()
     val currentLanguage by viewModel.currentLanguage.collectAsStateWithLifecycle()
     val showLanguageDialog by viewModel.showLanguageDialog.collectAsStateWithLifecycle()
     val appStrings = remember(currentLanguage) { LocalizationManager.getStrings(currentLanguage) }
@@ -191,6 +213,10 @@ fun DayMeetApp(
                             lastSyncedText = lastSyncedTime,
                             isFocusModeActive = isFocusModeActive,
                             currentLanguage = currentLanguage,
+                            lifeMode = currentLifeMode,
+                            onLifeModeClick = {
+                                viewModel.cycleLifeMode()
+                            },
                             onLanguageClick = {
                                 viewModel.openLanguageSelector()
                             },
@@ -290,6 +316,7 @@ fun DayMeetApp(
                     "projects" -> ProjectsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                     "appointments" -> AppointmentsSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                     "home_vehicle" -> HomeVehicleSubScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
+                    "life_inbox" -> LifeInboxScreen(viewModel = viewModel, onBack = { viewModel.closeSubScreen() })
                 }
             }
 
