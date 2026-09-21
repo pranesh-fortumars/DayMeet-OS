@@ -486,6 +486,16 @@ fun HomeScreen(
             LifePillarsCard(viewModel = viewModel)
         }
 
+        // 2.5. Habit Stacking & Anchors (Phase 3 Life OS)
+        item {
+            HabitStackingCard(viewModel = viewModel)
+        }
+
+        // 2.6. Strategic OKRs & Horizons (Phase 3 Life OS)
+        item {
+            StrategicOkrsCard(viewModel = viewModel)
+        }
+
         // 3. My Day Widgets Header
         item {
             Row(

@@ -190,6 +190,20 @@ fun MoreScreen(
                         onClick = { viewModel.openEveningWindDown() },
                         testTag = "module_evening_wind_down"
                     )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Weekly Review & Retrospective",
+                        subtitle = "Week 38 score, wins, lessons & 5 pillars delta",
+                        badge = "Sunday Ritual",
+                        badgeColor = Color(0xFF6D28D9),
+                        icon = Icons.Default.Assessment,
+                        iconTint = Color(0xFF6D28D9),
+                        iconBg = Color(0xFFEDE9FE),
+                        onClick = { viewModel.openWeeklyReview() },
+                        testTag = "module_weekly_review"
+                    )
                 }
             }
         }

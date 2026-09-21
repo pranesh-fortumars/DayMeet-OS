@@ -907,6 +907,22 @@ fun ProjectsSubScreen(
                 }
             }
 
+            // High-Level Strategic OKRs (Phase 3)
+            item {
+                StrategicOkrsCard(viewModel = viewModel)
+            }
+
+            item {
+                Text(
+                    text = "PROJECT DELIVERABLES & SPRINTS",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontWeight = FontWeight.Bold,
+                        color = Primary,
+                        letterSpacing = 0.6.sp
+                    )
+                )
+            }
+
             items(projects, key = { it.id }) { project ->
                 Card(
                     shape = RoundedCornerShape(16.dp),

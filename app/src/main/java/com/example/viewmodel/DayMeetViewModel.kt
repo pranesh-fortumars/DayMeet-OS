@@ -163,6 +163,158 @@ class DayMeetViewModel : ViewModel() {
     private val _showEveningWindDown = MutableStateFlow(false)
     val showEveningWindDown: StateFlow<Boolean> = _showEveningWindDown.asStateFlow()
 
+    // Phase 3: Strategic OKRs, Habit Stacking & Weekly Review Dialogs
+    private val _showWeeklyReviewDialog = MutableStateFlow(false)
+    val showWeeklyReviewDialog: StateFlow<Boolean> = _showWeeklyReviewDialog.asStateFlow()
+
+    private val _strategicOkrs = MutableStateFlow(
+        listOf(
+            StrategicOKR(
+                id = "okr_1",
+                title = "Launch DayMeet Life OS Core Engine",
+                pillar = LifePillarType.WORK,
+                horizon = GoalHorizon.QUARTERLY,
+                targetDescription = "100% stable architecture across 5 pillars with 0 crash rate",
+                currentMetric = "88% Delivered • Final polish & OKR integration",
+                progressPercent = 88,
+                keyResults = listOf(
+                    "Universal capture & Life Inbox active",
+                    "Morning kickoff capacity load prevention",
+                    "Habit stacks & weekly retrospective engine"
+                ),
+                deadline = "30 September 2026",
+                status = "On Track",
+                colorHex = "#2563EB"
+            ),
+            StrategicOKR(
+                id = "okr_2",
+                title = "Peak Vitality & Half-Marathon Endurance",
+                pillar = LifePillarType.HEALTH,
+                horizon = GoalHorizon.QUARTERLY,
+                targetDescription = "21km continuous run + 10k daily step baseline",
+                currentMetric = "16.5km Longest Run • 9,400 daily step avg",
+                progressPercent = 78,
+                keyResults = listOf(
+                    "Hit 10k steps 6 days per week",
+                    "Hydrate 2.5L+ consistently",
+                    "Sunday 15km endurance block"
+                ),
+                deadline = "15 October 2026",
+                status = "On Track",
+                colorHex = "#16A34A"
+            ),
+            StrategicOKR(
+                id = "okr_3",
+                title = "Emergency Safety Net & Smart Portfolio Cap",
+                pillar = LifePillarType.WEALTH,
+                horizon = GoalHorizon.YEARLY,
+                targetDescription = "Save ₹3,00,000 liquid buffer and keep daily burn under ₹5,000",
+                currentMetric = "₹2,45,000 Saved • ₹3,850 avg daily burn",
+                progressPercent = 82,
+                keyResults = listOf(
+                    "Strict 0-impulse buying rule",
+                    "Auto-invest 25% on 1st of month",
+                    "Clear recurring utility bills instantly"
+                ),
+                deadline = "31 December 2026",
+                status = "Ahead",
+                colorHex = "#D97706"
+            ),
+            StrategicOKR(
+                id = "okr_4",
+                title = "Read 18 Books & Daily Systems Mindfulness",
+                pillar = LifePillarType.GROWTH,
+                horizon = GoalHorizon.YEARLY,
+                targetDescription = "18 non-fiction books read and synthesized into Notes vault",
+                currentMetric = "13 Books read • 42 vault entries",
+                progressPercent = 72,
+                keyResults = listOf(
+                    "20 minutes evening reading habit",
+                    "Weekly retrospective synthesis note",
+                    "Daily 10m breathwork session"
+                ),
+                deadline = "31 December 2026",
+                status = "On Track",
+                colorHex = "#9333EA"
+            )
+        )
+    )
+    val strategicOkrs: StateFlow<List<StrategicOKR>> = _strategicOkrs.asStateFlow()
+
+    private val _habitStacks = MutableStateFlow(
+        listOf(
+            HabitStack(
+                id = "stack_1",
+                anchorHabit = "After I pour my first morning espresso ☕",
+                newTinyHabit = "I will write my Top 3 Daily Highlights ☀️",
+                rewardOrCelebration = "Savor the first sip with full presence",
+                pillar = LifePillarType.WORK,
+                timeOfDay = "Morning",
+                streakDays = 18,
+                isCompletedToday = true
+            ),
+            HabitStack(
+                id = "stack_2",
+                anchorHabit = "When I shut my laptop for lunch 💻",
+                newTinyHabit = "I will drink a full 500ml glass of water 💧",
+                rewardOrCelebration = "Take 3 deep shoulder rolls and smile",
+                pillar = LifePillarType.HEALTH,
+                timeOfDay = "Afternoon",
+                streakDays = 12,
+                isCompletedToday = false
+            ),
+            HabitStack(
+                id = "stack_3",
+                anchorHabit = "After brushing my teeth at night 🪥",
+                newTinyHabit = "I will write 1 line of gratitude in Evening Wind-Down 🌙",
+                rewardOrCelebration = "Set phone into Do Not Disturb with peace of mind",
+                pillar = LifePillarType.GROWTH,
+                timeOfDay = "Evening",
+                streakDays = 21,
+                isCompletedToday = false
+            ),
+            HabitStack(
+                id = "stack_4",
+                anchorHabit = "After parking the car back home 🚗",
+                newTinyHabit = "I will inspect tire status and log any fuel expense 🧾",
+                rewardOrCelebration = "Leave vehicle clean and ready for tomorrow",
+                pillar = LifePillarType.HOME,
+                timeOfDay = "Evening",
+                streakDays = 9,
+                isCompletedToday = false
+            )
+        )
+    )
+    val habitStacks: StateFlow<List<HabitStack>> = _habitStacks.asStateFlow()
+
+    private val _weeklyReviews = MutableStateFlow(
+        listOf(
+            WeeklyReview(
+                id = "wr_curr",
+                weekNumber = 38,
+                weekRange = "Sep 15 - Sep 21, 2026",
+                completedTasksCount = 26,
+                focusHoursLogged = 24.0,
+                habitsConsistencyRate = 92,
+                topWins = listOf(
+                    "Shipped complete Life OS Phase 2 with 0 regressions",
+                    "Maintained morning 10k steps and daily hydration",
+                    "Stayed ₹12,000 under monthly discretionary spending"
+                ),
+                areasToImprove = "Guard afternoon focus sanctuary against non-urgent meeting invites.",
+                nextWeekFocus = listOf(
+                    "Sprint review & Q4 roadmap signoff",
+                    "Schedule annual dental cleaning visit",
+                    "Finish reading 'Atomic Habits' chapter 15 notes"
+                ),
+                overallScore = 93,
+                isReviewed = true,
+                reviewedDate = "Sunday, Sep 20"
+            )
+        )
+    )
+    val weeklyReviews: StateFlow<List<WeeklyReview>> = _weeklyReviews.asStateFlow()
+
     private val _dailyHighlights = MutableStateFlow(
         listOf(
             DailyHighlight(
@@ -3287,6 +3439,166 @@ class DayMeetViewModel : ViewModel() {
                 targetModule = "home_vehicle"
             )
         )
+    }
+
+    // ==========================================
+    // Phase 3: Strategic OKRs, Habit Stacking & Weekly Reviews
+    // ==========================================
+
+    fun openWeeklyReview() {
+        _showWeeklyReviewDialog.value = true
+    }
+
+    fun closeWeeklyReview() {
+        _showWeeklyReviewDialog.value = false
+    }
+
+    fun toggleHabitStack(stackId: String) {
+        _habitStacks.value = _habitStacks.value.map { stack ->
+            if (stack.id == stackId) {
+                val newCompleted = !stack.isCompletedToday
+                val newStreak = if (newCompleted) stack.streakDays + 1 else (stack.streakDays - 1).coerceAtLeast(0)
+                stack.copy(isCompletedToday = newCompleted, streakDays = newStreak)
+            } else stack
+        }
+        val target = _habitStacks.value.find { it.id == stackId }
+        if (target != null && target.isCompletedToday) {
+            showToast("✨ Habit Stack Completed! ${target.rewardOrCelebration} (Streak: ${target.streakDays}d)")
+        }
+    }
+
+    fun addHabitStack(
+        anchor: String,
+        newHabit: String,
+        reward: String,
+        pillar: LifePillarType,
+        timeOfDay: String
+    ) {
+        val newStack = HabitStack(
+            id = "stack_${System.currentTimeMillis()}",
+            anchorHabit = anchor,
+            newTinyHabit = newHabit,
+            rewardOrCelebration = reward,
+            pillar = pillar,
+            timeOfDay = timeOfDay,
+            streakDays = 1,
+            isCompletedToday = false
+        )
+        _habitStacks.value = listOf(newStack) + _habitStacks.value
+        showToast("Added Habit Stack: '$anchor' → '$newHabit'")
+    }
+
+    fun deleteHabitStack(stackId: String) {
+        _habitStacks.value = _habitStacks.value.filterNot { it.id == stackId }
+        showToast("Habit stack removed")
+    }
+
+    fun updateOkrProgress(okrId: String, newProgress: Int) {
+        val clamped = newProgress.coerceIn(0, 100)
+        _strategicOkrs.value = _strategicOkrs.value.map { okr ->
+            if (okr.id == okrId) {
+                val newStatus = when {
+                    clamped >= 100 -> "Achieved"
+                    clamped >= 80 -> "Ahead"
+                    clamped >= 50 -> "On Track"
+                    else -> "Needs Focus"
+                }
+                okr.copy(progressPercent = clamped, status = newStatus)
+            } else okr
+        }
+        showToast("OKR Progress updated to $clamped%")
+    }
+
+    fun addStrategicOkr(
+        title: String,
+        pillar: LifePillarType,
+        horizon: GoalHorizon,
+        targetDesc: String,
+        deadline: String
+    ) {
+        val newOkr = StrategicOKR(
+            id = "okr_${System.currentTimeMillis()}",
+            title = title,
+            pillar = pillar,
+            horizon = horizon,
+            targetDescription = targetDesc,
+            currentMetric = "Initiative Started • 0% Progress",
+            progressPercent = 0,
+            keyResults = listOf("Define baseline metrics", "Deliver milestone 1"),
+            deadline = deadline,
+            status = "On Track",
+            colorHex = pillar.defaultColor
+        )
+        _strategicOkrs.value = listOf(newOkr) + _strategicOkrs.value
+        showToast("🎯 Created OKR: '$title'")
+    }
+
+    fun saveWeeklyReview(
+        topWins: List<String>,
+        areasToImprove: String,
+        nextWeekFocus: List<String>,
+        score: Int
+    ) {
+        val newReview = WeeklyReview(
+            id = "wr_${System.currentTimeMillis()}",
+            weekNumber = 39,
+            weekRange = "Sep 22 - Sep 28, 2026",
+            completedTasksCount = _feedItems.value.count { it.isCompleted },
+            focusHoursLogged = 25.5,
+            habitsConsistencyRate = 94,
+            topWins = topWins.filter { it.isNotBlank() },
+            areasToImprove = areasToImprove,
+            nextWeekFocus = nextWeekFocus.filter { it.isNotBlank() },
+            overallScore = score.coerceIn(1, 100),
+            isReviewed = true,
+            reviewedDate = "Today, 08:00 PM"
+        )
+        _weeklyReviews.value = listOf(newReview) + _weeklyReviews.value
+        _showWeeklyReviewDialog.value = false
+
+        // Vault the review into Notes
+        val noteContent = buildString {
+            appendLine("# 📊 Weekly Executive Retrospective")
+            appendLine("Score: $score/100 | Week 39")
+            appendLine()
+            appendLine("## 🏆 Top Wins")
+            topWins.forEach { appendLine("- $it") }
+            appendLine()
+            appendLine("## 🔍 Areas to Improve")
+            appendLine(areasToImprove)
+            appendLine()
+            appendLine("## 🎯 Next Week Priorities")
+            nextWeekFocus.forEach { appendLine("- $it") }
+        }
+        val reviewNote = NoteItem(
+            id = "note_wr_${System.currentTimeMillis()}",
+            title = "Weekly Review: Sep 22 - Sep 28",
+            content = noteContent,
+            category = "Weekly Retrospective",
+            updatedAt = "Just now"
+        )
+        _notes.value = listOf(reviewNote) + _notes.value
+
+        showToast("🎉 Weekly Review logged & saved to Notes Vault!")
+    }
+
+    fun getPillarWeeklySummaries(): List<PillarWeeklySummary> {
+        val pillars = getLifePillars()
+        return pillars.map { p ->
+            val delta = when (p.type) {
+                LifePillarType.WORK -> +6
+                LifePillarType.HEALTH -> +4
+                LifePillarType.WEALTH -> +2
+                LifePillarType.GROWTH -> +8
+                LifePillarType.HOME -> +1
+            }
+            PillarWeeklySummary(
+                pillar = p.type,
+                score = p.score,
+                deltaFromLastWeek = delta,
+                highlight = p.activeInitiative
+            )
+        }
     }
 }
 

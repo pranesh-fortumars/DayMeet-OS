@@ -223,6 +223,18 @@ fun HabitsSubScreen(
             items(goals, key = { it.id }) { goal ->
                 GoalProgressCard(goal = goal)
             }
+
+            // 6. Habit Stacking & Micro-Actions (Phase 3)
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                HabitStackingCard(viewModel = viewModel)
+            }
+
+            // 7. Strategic OKRs & Horizon Alignment (Phase 3)
+            item {
+                Spacer(modifier = Modifier.height(10.dp))
+                StrategicOkrsCard(viewModel = viewModel)
+            }
         }
     }
 }
