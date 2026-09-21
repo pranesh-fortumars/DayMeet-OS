@@ -439,24 +439,51 @@ fun HomeScreen(
                             )
                         }
 
-                        Button(
-                            onClick = { viewModel.openDailyBriefing() },
-                            shape = RoundedCornerShape(99.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                            modifier = Modifier.height(34.dp).testTag("start_my_day_btn")
-                        ) {
-                            Text(
-                                text = "Start My Day →",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            OutlinedButton(
+                                onClick = { viewModel.openMorningKickoff() },
+                                shape = RoundedCornerShape(99.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.height(34.dp).testTag("plan_morning_btn")
+                            ) {
+                                Text(
+                                    text = "Plan ☀️",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Primary
+                                    )
                                 )
-                            )
+                            }
+
+                            Button(
+                                onClick = { viewModel.openDailyBriefing() },
+                                shape = RoundedCornerShape(99.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                modifier = Modifier.height(34.dp).testTag("start_my_day_btn")
+                            ) {
+                                Text(
+                                    text = "Start →",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                )
+                            }
                         }
                     }
                 }
             }
+        }
+
+        // 2.2. Day Canvas & Time Blocks with Smart Focus Gaps (Phase 2 Life OS)
+        item {
+            DayCanvasTimeBlockCard(viewModel = viewModel)
+        }
+
+        // 2.4. Life Balance & 5 Core Pillars (Phase 2 Life OS)
+        item {
+            LifePillarsCard(viewModel = viewModel)
         }
 
         // 3. My Day Widgets Header

@@ -149,6 +149,8 @@ fun DayMeetApp(
     val showQuickMeetingDialog by viewModel.showQuickMeetingDialog.collectAsStateWithLifecycle()
     val showScheduleMeetingModal by viewModel.showScheduleMeetingModal.collectAsStateWithLifecycle()
     val showDailyBriefing by viewModel.showDailyBriefing.collectAsStateWithLifecycle()
+    val showMorningKickoff by viewModel.showMorningKickoff.collectAsStateWithLifecycle()
+    val showEveningWindDown by viewModel.showEveningWindDown.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
@@ -389,6 +391,22 @@ fun DayMeetApp(
                 DailyBriefingDialog(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeDailyBriefing() }
+                )
+            }
+
+            // Morning Kickoff Dialog (Phase 2 Life OS)
+            if (showMorningKickoff) {
+                MorningKickoffDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeMorningKickoff() }
+                )
+            }
+
+            // Evening Wind-Down Dialog (Phase 2 Life OS)
+            if (showEveningWindDown) {
+                EveningWindDownDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeEveningWindDown() }
                 )
             }
 

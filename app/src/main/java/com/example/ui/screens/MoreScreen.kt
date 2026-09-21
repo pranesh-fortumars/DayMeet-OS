@@ -162,6 +162,34 @@ fun MoreScreen(
                         onClick = { viewModel.openSubScreen("life_inbox") },
                         testTag = "module_life_inbox"
                     )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Morning Kickoff",
+                        subtitle = "Daily capacity budget, energy gauge & top 3 highlights",
+                        badge = "Plan Day",
+                        badgeColor = Color(0xFFD97706),
+                        icon = Icons.Default.WbSunny,
+                        iconTint = Color(0xFFD97706),
+                        iconBg = Color(0xFFFEF3C7),
+                        onClick = { viewModel.openMorningKickoff() },
+                        testTag = "module_morning_kickoff"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Evening Wind-Down",
+                        subtitle = "Day retrospective, guilt-free rollover & gratitude journal",
+                        badge = "Reflect",
+                        badgeColor = Color(0xFF7C3AED),
+                        icon = Icons.Default.Bedtime,
+                        iconTint = Color(0xFF7C3AED),
+                        iconBg = Color(0xFFEDE9FE),
+                        onClick = { viewModel.openEveningWindDown() },
+                        testTag = "module_evening_wind_down"
+                    )
                 }
             }
         }

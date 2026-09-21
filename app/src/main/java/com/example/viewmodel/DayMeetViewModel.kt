@@ -156,6 +156,79 @@ class DayMeetViewModel : ViewModel() {
     )
     val lifeInboxItems: StateFlow<List<LifeInboxItem>> = _lifeInboxItems.asStateFlow()
 
+    // Phase 2: Daily Architecture & Life Engine States
+    private val _showMorningKickoff = MutableStateFlow(false)
+    val showMorningKickoff: StateFlow<Boolean> = _showMorningKickoff.asStateFlow()
+
+    private val _showEveningWindDown = MutableStateFlow(false)
+    val showEveningWindDown: StateFlow<Boolean> = _showEveningWindDown.asStateFlow()
+
+    private val _dailyHighlights = MutableStateFlow(
+        listOf(
+            DailyHighlight(
+                id = "hl_1",
+                title = "Finalize Q4 Token Audit Signoff",
+                pillar = LifePillarType.WORK,
+                estimatedMinutes = 45,
+                isCompleted = false,
+                timeSlot = "10:45 AM"
+            ),
+            DailyHighlight(
+                id = "hl_2",
+                title = "5km Sunset Cardio & Core Reset",
+                pillar = LifePillarType.HEALTH,
+                estimatedMinutes = 40,
+                isCompleted = false,
+                timeSlot = "05:30 PM"
+            ),
+            DailyHighlight(
+                id = "hl_3",
+                title = "Clear Tata Power Bill & Monthly Budget Review",
+                pillar = LifePillarType.WEALTH,
+                estimatedMinutes = 15,
+                isCompleted = false,
+                timeSlot = "07:15 PM"
+            )
+        )
+    )
+    val dailyHighlights: StateFlow<List<DailyHighlight>> = _dailyHighlights.asStateFlow()
+
+    private val _timeBlockGaps = MutableStateFlow(
+        listOf(
+            TimeBlockGap(
+                id = "gap_1",
+                startTime = "11:30 AM",
+                endTime = "12:30 PM",
+                durationMinutes = 60,
+                suggestedTitle = "Focus Window: Deep Engineering & Token Review",
+                gapType = "focus"
+            ),
+            TimeBlockGap(
+                id = "gap_2",
+                startTime = "03:30 PM",
+                endTime = "04:15 PM",
+                durationMinutes = 45,
+                suggestedTitle = "Bio Reset & Quick Inbox Processing",
+                gapType = "recharge"
+            )
+        )
+    )
+    val timeBlockGaps: StateFlow<List<TimeBlockGap>> = _timeBlockGaps.asStateFlow()
+
+    private val _dailyReflections = MutableStateFlow(
+        listOf(
+            DailyReflection(
+                id = "ref_1",
+                date = "Yesterday",
+                topWins = "Shipped mobile tokens system, completed 6km run, zero impulse spending.",
+                gratitudeNotes = "Grateful for crisp autumn weather and team velocity.",
+                lessonOrNextStep = "Block morning 9-11am exclusively for deep engineering work.",
+                energyRating = 5
+            )
+        )
+    )
+    val dailyReflections: StateFlow<List<DailyReflection>> = _dailyReflections.asStateFlow()
+
     // Notes & Knowledge
     private val _notes = MutableStateFlow(DayMeetRepository.getInitialNotes())
     val notes: StateFlow<List<NoteItem>> = _notes.asStateFlow()
@@ -2959,4 +3032,261 @@ class DayMeetViewModel : ViewModel() {
             }
         }
     }
+
+    // ==========================================
+    // Phase 2: Daily Architecture & Life Engine
+    // ==========================================
+
+    fun openMorningKickoff() {
+        _showMorningKickoff.value = true
+    }
+
+    fun closeMorningKickoff() {
+        _showMorningKickoff.value = false
+    }
+
+    fun openEveningWindDown() {
+        _showEveningWindDown.value = true
+    }
+
+    fun closeEveningWindDown() {
+        _showEveningWindDown.value = false
+    }
+
+    fun toggleDailyHighlight(id: String) {
+        _dailyHighlights.value = _dailyHighlights.value.map { hl ->
+            if (hl.id == id) {
+                val newStatus = !hl.isCompleted
+                if (newStatus) {
+                    showToast("Highlight achieved: ${hl.title}! 🎯")
+                }
+                hl.copy(isCompleted = newStatus)
+            } else hl
+        }
+    }
+
+    fun addDailyHighlight(
+        title: String,
+        pillar: LifePillarType = LifePillarType.WORK,
+        minutes: Int = 45,
+        slot: String? = null
+    ) {
+        if (title.isBlank()) return
+        val newHl = DailyHighlight(
+            id = "hl_${System.currentTimeMillis()}",
+            title = title.trim(),
+            pillar = pillar,
+            estimatedMinutes = minutes,
+            isCompleted = false,
+            timeSlot = slot ?: "Today"
+        )
+        _dailyHighlights.value = _dailyHighlights.value + newHl
+        showToast("Daily Highlight added: $title")
+    }
+
+    fun removeDailyHighlight(id: String) {
+        _dailyHighlights.value = _dailyHighlights.value.filterNot { it.id == id }
+        showToast("Highlight removed")
+    }
+
+    fun confirmMorningPlan() {
+        _showMorningKickoff.value = false
+        showToast("Today's Plan Locked In! 🚀 Let's execute with focus.")
+    }
+
+    fun getDailyEnergyBudget(): DailyEnergyBudget {
+        val totalCapacity = 8.0
+        val meetingHours = _meetings.value.size * 0.75
+        val pendingTasks = _feedItems.value.filter { it.category == FeedCategory.TASK && !it.isCompleted }
+        val taskHours = pendingTasks.size * 0.6
+        val highlightsMinutes = _dailyHighlights.value.filter { !it.isCompleted }.sumOf { it.estimatedMinutes }
+        val highlightHours = highlightsMinutes / 60.0
+
+        val committed = kotlin.math.min(12.0, (meetingHours + taskHours + highlightHours).coerceAtLeast(2.0))
+        val roundedCommitted = (kotlin.math.round(committed * 10) / 10.0)
+        val remaining = (kotlin.math.max(0.0, totalCapacity - roundedCommitted) * 10).toInt() / 10.0
+        val loadPct = ((roundedCommitted / totalCapacity) * 100).toInt()
+
+        val (status, warning) = when {
+            loadPct > 100 -> EnergyStatus.OVERLOADED to "⚠️ Warning: Day is overloaded (>8.0h). Consider deferring non-urgent tasks to prevent burnout."
+            loadPct > 80 -> EnergyStatus.HEAVY to "High cognitive demand today. Ensure you schedule 10m recharge breaks."
+            loadPct >= 50 -> EnergyStatus.OPTIMAL to "Optimal energy balance. Ample focus time available for deep work."
+            else -> EnergyStatus.LIGHT to "Light schedule with high flexibility. Great day for strategic learning."
+        }
+
+        return DailyEnergyBudget(
+            totalCapacityHours = totalCapacity,
+            committedHours = roundedCommitted,
+            remainingHours = remaining,
+            loadPercentage = loadPct,
+            status = status,
+            burnoutWarning = warning
+        )
+    }
+
+    fun fillTimeBlockGapWithFocus(gapId: String) {
+        val gap = _timeBlockGaps.value.find { it.id == gapId }
+        val title = gap?.suggestedTitle ?: "Focus Sanctuary (Deep Work)"
+        val startTime = gap?.startTime ?: "11:30 AM"
+
+        val newEvent = TimelineEvent(
+            id = "timeline_focus_${System.currentTimeMillis()}",
+            time = startTime,
+            period = if (startTime.contains("PM", ignoreCase = true)) "PM" else "AM",
+            title = title,
+            subtitle = "Protected Deep Work Block • Zero Distractions",
+            durationMinutes = gap?.durationMinutes ?: 60,
+            type = TimelineType.DEEP_FOCUS,
+            priorityTag = "High Focus"
+        )
+        _timelineEvents.value = listOf(newEvent) + _timelineEvents.value.filterNot { it.id == newEvent.id }
+
+        // Remove gap
+        _timeBlockGaps.value = _timeBlockGaps.value.filterNot { it.id == gapId }
+        showToast("Focus Block scheduled into calendar ($startTime) 🛡️")
+    }
+
+    fun fillTimeBlockGapWithTask(gapId: String, taskId: String) {
+        val task = _feedItems.value.find { it.id == taskId }
+        val gap = _timeBlockGaps.value.find { it.id == gapId }
+        if (task != null && gap != null) {
+            _feedItems.value = _feedItems.value.map {
+                if (it.id == taskId) it.copy(time = gap.startTime) else it
+            }
+            _timeBlockGaps.value = _timeBlockGaps.value.filterNot { it.id == gapId }
+            showToast("Task '${task.title}' scheduled for ${gap.startTime} ⏱️")
+        }
+    }
+
+    fun rolloverUnfinishedTasksToTomorrow() {
+        val pending = _feedItems.value.filter { it.category == FeedCategory.TASK && !it.isCompleted }
+        if (pending.isEmpty()) {
+            showToast("All tasks are already completed! Amazing job today! 🎉")
+            return
+        }
+
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.category == FeedCategory.TASK && !item.isCompleted) {
+                item.copy(
+                    time = "Tomorrow, 10:00 AM",
+                    statusTag = "Rolled Over"
+                )
+            } else item
+        }
+        showToast("${pending.size} tasks rolled over to tomorrow without guilt ✨")
+    }
+
+    fun submitEveningReflection(
+        wins: String,
+        gratitude: String,
+        lesson: String,
+        energyRating: Int,
+        rolloverTasks: Boolean
+    ) {
+        val reflection = DailyReflection(
+            id = "ref_${System.currentTimeMillis()}",
+            date = "Today, Evening",
+            topWins = wins.ifBlank { "Executed priorities and stayed mindful." },
+            gratitudeNotes = gratitude.ifBlank { "Grateful for energy, teammates, and progress." },
+            lessonOrNextStep = lesson.ifBlank { "Maintain clear focus boundaries tomorrow." },
+            energyRating = energyRating
+        )
+        _dailyReflections.value = listOf(reflection) + _dailyReflections.value
+
+        // Also save reflection into Notes vault
+        val noteContent = buildString {
+            appendLine("📅 DAILY EVENING RETROSPECTIVE")
+            appendLine("Energy Rating: $energyRating / 5 ⭐")
+            appendLine("\n🏆 Top Wins:")
+            appendLine(reflection.topWins)
+            appendLine("\n🙏 Gratitude:")
+            appendLine(reflection.gratitudeNotes)
+            appendLine("\n💡 Tomorrow's Focus & Lesson:")
+            appendLine(reflection.lessonOrNextStep)
+        }
+        val note = NoteItem(
+            id = "note_retro_${System.currentTimeMillis()}",
+            title = "Evening Reflection • Today",
+            content = noteContent,
+            category = "Reflections",
+            updatedAt = "Just now"
+        )
+        _notes.value = listOf(note) + _notes.value
+
+        if (rolloverTasks) {
+            rolloverUnfinishedTasksToTomorrow()
+        }
+
+        _showEveningWindDown.value = false
+        triggerConfetti("Daily Wind-down Complete! Rest well tonight! 🌙")
+    }
+
+    fun getLifePillars(): List<LifePillar> {
+        val completedTasks = _feedItems.value.count { it.category == FeedCategory.TASK && it.isCompleted }
+        val totalTasks = _feedItems.value.count { it.category == FeedCategory.TASK }
+        val workScore = if (totalTasks > 0) ((completedTasks.toDouble() / totalTasks) * 40 + 50).toInt().coerceIn(50, 98) else 85
+
+        val healthSteps = _healthMetrics.value.steps
+        val healthWater = _healthMetrics.value.hydration
+        val healthScore = (((healthSteps / 10000.0) * 50 + (healthWater / 3.0) * 50)).toInt().coerceIn(45, 96)
+
+        val spent = _transactions.value.filter { it.amount < 0 }.sumOf { -it.amount }
+        val monthlyBudget = 50000.0
+        val wealthScore = if (spent <= monthlyBudget) 92 else 68
+
+        val habitsChecked = _habits.value.count { it.isCompletedToday }
+        val growthScore = if (_habits.value.isNotEmpty()) ((habitsChecked.toDouble() / _habits.value.size) * 50 + 45).toInt().coerceIn(40, 95) else 78
+
+        val homeMaintCount = _homeVehicleItems.value.size
+        val homeScore = 82
+
+        return listOf(
+            LifePillar(
+                type = LifePillarType.WORK,
+                title = "Career & Work",
+                score = workScore,
+                activeInitiative = "Q4 Token Launch & Architecture",
+                metricSummary = "$completedTasks/$totalTasks Tasks Done • ${_meetings.value.size} Meetings",
+                statusText = if (workScore >= 80) "On Track" else "Needs Attention",
+                targetModule = "tasks"
+            ),
+            LifePillar(
+                type = LifePillarType.HEALTH,
+                title = "Health & Vitality",
+                score = healthScore,
+                activeInitiative = "Hydration & 10k Steps Daily Target",
+                metricSummary = "${healthSteps} Steps • ${healthWater}L Hydrated • 88 Sleep Score",
+                statusText = if (healthScore >= 75) "Optimal" else "Below Target",
+                targetModule = "habits"
+            ),
+            LifePillar(
+                type = LifePillarType.WEALTH,
+                title = "Wealth & Finance",
+                score = wealthScore,
+                activeInitiative = "Under ₹5k Daily Spend Cap & Savings",
+                metricSummary = "₹${String.format("%.0f", spent)} Spent • ₹${String.format("%.0f", monthlyBudget)} Budget",
+                statusText = "Safe Buffer",
+                targetModule = "finance"
+            ),
+            LifePillar(
+                type = LifePillarType.GROWTH,
+                title = "Personal Growth",
+                score = growthScore,
+                activeInitiative = "Deep Reading & Mindfulness Streak",
+                metricSummary = "$habitsChecked/${_habits.value.size} Habits Complete • ${_notes.value.size} Notes Vaulted",
+                statusText = "Consistent",
+                targetModule = "habits"
+            ),
+            LifePillar(
+                type = LifePillarType.HOME,
+                title = "Home & Loved Ones",
+                score = homeScore,
+                activeInitiative = "Vehicle & Living Space Maintenance",
+                metricSummary = "$homeMaintCount Maintenance Items Tracked",
+                statusText = "Scheduled",
+                targetModule = "home_vehicle"
+            )
+        )
+    }
 }
+

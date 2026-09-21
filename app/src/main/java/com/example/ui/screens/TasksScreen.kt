@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.FeedCategory
 import com.example.model.FeedItem
+import com.example.model.LifeMode
 import com.example.model.Priority
 import com.example.ui.theme.*
 import com.example.util.TimeUtils
@@ -184,6 +185,7 @@ fun TasksScreen(
     }
     var showStreakDialog by remember { mutableStateOf(false) }
 
+    val currentLifeMode by viewModel.currentLifeMode.collectAsState()
     var filterState by remember { mutableStateOf("All") } // "All", "Work", "Personal", "Shopping", "Health", "High", "Medium", "Low", "Pending", "Completed"
     var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -197,18 +199,40 @@ fun TasksScreen(
     var selectedTaskIds by remember { mutableStateOf(emptySet<String>()) }
     var showBulkDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled, searchQuery) {
+    val displayedTasks = remember(tasksOnly, filterState, isAutoSortByPriorityEnabled, searchQuery, currentLifeMode) {
+        val lifeModeFiltered = when (currentLifeMode) {
+            LifeMode.WORK -> if (filterState == "All") {
+                tasksOnly.filter {
+                    it.statusTag?.equals("Work", ignoreCase = true) == true ||
+                    it.statusTag?.equals("Engineering", ignoreCase = true) == true ||
+                    it.statusTag?.equals("Design", ignoreCase = true) == true ||
+                    it.statusTag?.equals("Deliverable", ignoreCase = true) == true ||
+                    it.subtitle.contains("Work", ignoreCase = true) ||
+                    it.priority == Priority.HIGH || it.priority == Priority.URGENT
+                }
+            } else tasksOnly
+            LifeMode.PERSONAL -> if (filterState == "All") {
+                tasksOnly.filter {
+                    it.statusTag?.equals("Personal", ignoreCase = true) == true ||
+                    it.statusTag?.equals("Shopping", ignoreCase = true) == true ||
+                    it.statusTag?.equals("Health", ignoreCase = true) == true ||
+                    it.subtitle.contains("Personal", ignoreCase = true)
+                }
+            } else tasksOnly
+            LifeMode.ALL -> tasksOnly
+        }
+
         var base = when (filterState) {
-            "Pending" -> tasksOnly.filter { !it.isCompleted }
-            "Completed" -> tasksOnly.filter { it.isCompleted }
-            "Work" -> tasksOnly.filter { it.statusTag.equals("Work", ignoreCase = true) || it.subtitle.contains("Work", ignoreCase = true) }
-            "Personal" -> tasksOnly.filter { it.statusTag.equals("Personal", ignoreCase = true) || it.subtitle.contains("Personal", ignoreCase = true) }
-            "Shopping" -> tasksOnly.filter { it.statusTag.equals("Shopping", ignoreCase = true) || it.subtitle.contains("Shopping", ignoreCase = true) }
-            "Health" -> tasksOnly.filter { it.statusTag.equals("Health", ignoreCase = true) || it.subtitle.contains("Health", ignoreCase = true) }
-            "High" -> tasksOnly.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
-            "Medium" -> tasksOnly.filter { it.priority == Priority.MEDIUM || (it.priority == null && it.statusTag?.contains("High", ignoreCase = true) != true && it.statusTag?.contains("Low", ignoreCase = true) != true) }
-            "Low" -> tasksOnly.filter { it.priority == Priority.LOW || it.statusTag?.contains("Low", ignoreCase = true) == true }
-            else -> tasksOnly
+            "Pending" -> lifeModeFiltered.filter { !it.isCompleted }
+            "Completed" -> lifeModeFiltered.filter { it.isCompleted }
+            "Work" -> lifeModeFiltered.filter { it.statusTag.equals("Work", ignoreCase = true) || it.subtitle.contains("Work", ignoreCase = true) }
+            "Personal" -> lifeModeFiltered.filter { it.statusTag.equals("Personal", ignoreCase = true) || it.subtitle.contains("Personal", ignoreCase = true) }
+            "Shopping" -> lifeModeFiltered.filter { it.statusTag.equals("Shopping", ignoreCase = true) || it.subtitle.contains("Shopping", ignoreCase = true) }
+            "Health" -> lifeModeFiltered.filter { it.statusTag.equals("Health", ignoreCase = true) || it.subtitle.contains("Health", ignoreCase = true) }
+            "High" -> lifeModeFiltered.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
+            "Medium" -> lifeModeFiltered.filter { it.priority == Priority.MEDIUM || (it.priority == null && it.statusTag?.contains("High", ignoreCase = true) != true && it.statusTag?.contains("Low", ignoreCase = true) != true) }
+            "Low" -> lifeModeFiltered.filter { it.priority == Priority.LOW || it.statusTag?.contains("Low", ignoreCase = true) == true }
+            else -> lifeModeFiltered
         }
 
         if (searchQuery.isNotBlank()) {

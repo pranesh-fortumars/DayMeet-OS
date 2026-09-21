@@ -39,12 +39,30 @@ fun CalendarScreen(
     val selectedDay by viewModel.selectedDay.collectAsState()
     val calendarMode by viewModel.calendarMode.collectAsState()
     val timelineEvents by viewModel.timelineEvents.collectAsState()
+    val currentLifeMode by viewModel.currentLifeMode.collectAsState()
+    val timeBlockGaps by viewModel.timeBlockGaps.collectAsState()
 
-    val displayedEvents = remember(timelineEvents, calendarMode) {
+    val displayedEvents = remember(timelineEvents, calendarMode, currentLifeMode) {
+        val modeFiltered = when (currentLifeMode) {
+            LifeMode.WORK -> timelineEvents.filter {
+                it.type == TimelineType.MEETING ||
+                it.type == TimelineType.DEEP_FOCUS ||
+                it.subtitle.contains("Work", ignoreCase = true) ||
+                it.priorityTag?.contains("Work", ignoreCase = true) == true
+            }
+            LifeMode.PERSONAL -> timelineEvents.filter {
+                it.type == TimelineType.PERSONAL ||
+                it.type == TimelineType.REMINDER ||
+                it.subtitle.contains("Personal", ignoreCase = true) ||
+                it.priorityTag?.contains("Personal", ignoreCase = true) == true
+            }
+            LifeMode.ALL -> timelineEvents
+        }
+
         if (calendarMode == "By Category") {
-            timelineEvents.sortedBy { it.type.name }
+            modeFiltered.sortedBy { it.type.name }
         } else {
-            timelineEvents
+            modeFiltered
         }
     }
 
@@ -334,6 +352,46 @@ fun CalendarScreen(
                                     tint = OnTertiaryFixed,
                                     modifier = Modifier.size(16.dp)
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Smart Focus Gap Suggestion in Calendar
+            if (timeBlockGaps.isNotEmpty()) {
+                val firstGap = timeBlockGaps.first()
+                item {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBBF7D0)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.FlashOn, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Open Focus Window Detected",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF15803D))
+                                )
+                                Text(
+                                    text = "${firstGap.startTime} - ${firstGap.endTime} (${firstGap.durationMinutes}m) • Protect from meeting creep",
+                                    style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF166534), fontSize = 11.sp)
+                                )
+                            }
+                            Button(
+                                onClick = { viewModel.fillTimeBlockGapWithFocus(firstGap.id) },
+                                shape = RoundedCornerShape(99.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                modifier = Modifier.height(30.dp)
+                            ) {
+                                Text("⚡ Block", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
