@@ -342,6 +342,11 @@ fun HomeScreen(
             )
         }
 
+        // 1.8. Context-Aware Geofence HUD Alert (Phase 4 Life OS)
+        item {
+            ContextAwareHUDCard(viewModel = viewModel)
+        }
+
         // 2. Daily Briefing Card
         item {
             Card(
@@ -479,6 +484,11 @@ fun HomeScreen(
         // 2.2. Day Canvas & Time Blocks with Smart Focus Gaps (Phase 2 Life OS)
         item {
             DayCanvasTimeBlockCard(viewModel = viewModel)
+        }
+
+        // 2.3. Cognitive Load & Focus-to-Meeting Heatmap Analysis (Phase 4 Life OS)
+        item {
+            CognitiveLoadAnalysisCard(viewModel = viewModel)
         }
 
         // 2.4. Life Balance & 5 Core Pillars (Phase 2 Life OS)
@@ -652,6 +662,38 @@ fun HomeScreen(
                         Text("Smart Quick-Add", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Primary))
                     }
                 }
+
+                // Voice Memo & Extraction Pill (Phase 4)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFEE2E2),
+                    modifier = Modifier.clickable { viewModel.openAudioMemo() }.testTag("quick_voice_memo_pill")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Mic, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(14.dp))
+                        Text("Voice Memo", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFFB91C1C)))
+                    }
+                }
+
+                // Pre-Meeting Brief Pill (Phase 4)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFEDE7F6),
+                    modifier = Modifier.clickable { viewModel.openPreMeetingBrief() }.testTag("quick_pre_brief_pill")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Timer, contentDescription = null, tint = Color(0xFF673AB7), modifier = Modifier.size(14.dp))
+                        Text("15m Pre-Brief", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF5E35B1)))
+                    }
+                }
             }
         }
 
@@ -801,23 +843,46 @@ fun HomeScreen(
                             }
                         }
 
-                        Button(
-                            onClick = { viewModel.showToast("Connecting to Google Meet room...") },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Primary),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                            modifier = Modifier.height(38.dp).testTag("join_meeting_btn")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Videocam,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Join Meeting",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
-                            )
+                            OutlinedButton(
+                                onClick = { viewModel.openPreMeetingBrief() },
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier.height(38.dp).testTag("hero_pre_brief_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Timer,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Pre-Brief",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
+
+                            Button(
+                                onClick = { viewModel.showToast("Connecting to Google Meet room...") },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Primary),
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.height(38.dp).testTag("join_meeting_btn")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Videocam,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Join",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                )
+                            }
                         }
                     }
                 }

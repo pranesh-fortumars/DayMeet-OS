@@ -256,6 +256,56 @@ fun ShoppingSubScreen(
                 }
             }
 
+            // Proactive Geofence Proximity Alert (Phase 4)
+            item {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFBFDBFE)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF3B82F6)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("🛒", fontSize = 16.sp)
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Store Proximity Alert Active",
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1E3A8A)
+                                )
+                            )
+                            Text(
+                                text = "Triggered when near Nature's Basket or Pharmacy (250m radius)",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF2563EB),
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.triggerContextPrompt("trig_store") },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.height(28.dp)
+                        ) {
+                            Text("Test CUE", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
             items(items, key = { it.id }) { item ->
                 Card(
                     shape = RoundedCornerShape(14.dp),

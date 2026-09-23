@@ -315,6 +315,115 @@ class DayMeetViewModel : ViewModel() {
     )
     val weeklyReviews: StateFlow<List<WeeklyReview>> = _weeklyReviews.asStateFlow()
 
+    // Phase 4: Proactive Intelligence & Context Awareness States
+    private val _contextTriggers = MutableStateFlow(
+        listOf(
+            ContextTrigger(
+                id = "trig_home",
+                type = GeofenceTriggerType.ARRIVING_HOME,
+                locationName = "Home Sanctuary (Indiranagar)",
+                actionPrompt = "Welcome back home! Transition into personal unwind mode.",
+                suggestedActions = listOf(
+                    "Log car fuel / maintenance check",
+                    "Review evening family dinner plan",
+                    "Begin 5-min Evening Wind-Down ritual"
+                ),
+                isActive = true,
+                lastTriggeredTime = "Today, 06:45 PM"
+            ),
+            ContextTrigger(
+                id = "trig_store",
+                type = GeofenceTriggerType.STORE_PROXIMITY,
+                locationName = "Nature's Basket Organic Supermarket (250m away)",
+                actionPrompt = "You have 3 unfulfilled grocery items nearby!",
+                suggestedActions = listOf(
+                    "Organic coffee beans & oat milk",
+                    "Greek yogurt (high protein)",
+                    "Almond butter & sourdough bread"
+                ),
+                isActive = true,
+                lastTriggeredTime = "Just now"
+            ),
+            ContextTrigger(
+                id = "trig_work",
+                type = GeofenceTriggerType.ARRIVING_WORK,
+                locationName = "WeWork Galaxy / HQ Office",
+                actionPrompt = "Good morning! Setup deep work zone.",
+                suggestedActions = listOf(
+                    "Turn on Focus Sanctuary mode",
+                    "Review Top 3 Morning Highlights",
+                    "Check Sprint Backlog & 10:30 AM Standup"
+                ),
+                isActive = true,
+                lastTriggeredTime = "Yesterday, 09:15 AM"
+            )
+        )
+    )
+    val contextTriggers: StateFlow<List<ContextTrigger>> = _contextTriggers.asStateFlow()
+
+    private val _activeContextNotification = MutableStateFlow<ContextTrigger?>(
+        _contextTriggers.value.find { it.id == "trig_store" }
+    )
+    val activeContextNotification: StateFlow<ContextTrigger?> = _activeContextNotification.asStateFlow()
+
+    private val _upcomingMeetingPreBrief = MutableStateFlow(
+        MeetingPreBrief(
+            meetingId = "meet_q4_sync",
+            meetingTitle = "Q4 Engineering & Roadmap Architecture Sync",
+            scheduledTime = "11:00 AM - 11:45 AM",
+            startsInMinutes = 15,
+            attendees = listOf("Alex Rivera (Lead Arch)", "Priya Sharma (Product)", "Devon Vance (Design)"),
+            keyContextSummary = "Final review of design token migration, database schema lock, and automated test passes before public rollout.",
+            previousDecisions = listOf(
+                "Agreed to decouple shared models into domain packages",
+                "Capped daily meeting slots at maximum 3.5 hours"
+            ),
+            openActionItemsForAttendees = listOf(
+                "Alex: Confirm SQLCipher encryption benchmark",
+                "Devon: Share Figma exported token spec",
+                "Me: Demo Life OS Phase 3 & 4 architecture"
+            ),
+            quickNotes = "Need to emphasize zero-regression test suite and sub-second cold launch speed."
+        )
+    )
+    val upcomingMeetingPreBrief: StateFlow<MeetingPreBrief?> = _upcomingMeetingPreBrief.asStateFlow()
+
+    private val _showPreMeetingBriefDialog = MutableStateFlow(false)
+    val showPreMeetingBriefDialog: StateFlow<Boolean> = _showPreMeetingBriefDialog.asStateFlow()
+
+    private val _showAudioMemoDialog = MutableStateFlow(false)
+    val showAudioMemoDialog: StateFlow<Boolean> = _showAudioMemoDialog.asStateFlow()
+
+    private val _audioVoiceMemos = MutableStateFlow(
+        listOf(
+            AudioVoiceMemo(
+                id = "memo_1",
+                title = "Post-Meeting Architecture Takeaways",
+                timestamp = "Today, 11:50 AM",
+                durationSeconds = 48,
+                audioSnippetSimulatedText = "Alex confirmed SQLite Room schema migration is green. We need to add geofence proximity trigger for grocery errand and run Robolectric tests.",
+                extractedActionItems = listOf(
+                    "Integrate grocery proximity trigger in home feed",
+                    "Verify Robolectric tests on Gradle pipeline"
+                ),
+                isProcessed = true
+            )
+        )
+    )
+    val audioVoiceMemos: StateFlow<List<AudioVoiceMemo>> = _audioVoiceMemos.asStateFlow()
+
+    private val _cognitiveAnalytics = MutableStateFlow(
+        CognitiveLoadAnalytics(
+            focusHours = 4.5,
+            meetingHours = 2.0,
+            focusMeetingRatioPercent = 69,
+            fragmentedGapsCount = 2,
+            interruptionRiskLevel = "Optimal Balance",
+            recommendation = "Great focus balance! Merge the 20-minute gap at 3:30 PM into your Recharge window to avoid fragmented context switching."
+        )
+    )
+    val cognitiveAnalytics: StateFlow<CognitiveLoadAnalytics> = _cognitiveAnalytics.asStateFlow()
+
     private val _dailyHighlights = MutableStateFlow(
         listOf(
             DailyHighlight(
@@ -3599,6 +3708,82 @@ class DayMeetViewModel : ViewModel() {
                 highlight = p.activeInitiative
             )
         }
+    }
+
+    // ==========================================
+    // Phase 4: Proactive Intelligence & Context Awareness Methods
+    // ==========================================
+
+    fun dismissActiveContextNotification() {
+        _activeContextNotification.value = null
+    }
+
+    fun triggerContextPrompt(triggerId: String) {
+        val trigger = _contextTriggers.value.find { it.id == triggerId }
+        if (trigger != null) {
+            _activeContextNotification.value = trigger
+            showToast("📍 Context Triggered: ${trigger.locationName}")
+        }
+    }
+
+    fun openPreMeetingBrief() {
+        _showPreMeetingBriefDialog.value = true
+    }
+
+    fun closePreMeetingBrief() {
+        _showPreMeetingBriefDialog.value = false
+    }
+
+    fun openAudioMemo() {
+        _showAudioMemoDialog.value = true
+    }
+
+    fun closeAudioMemo() {
+        _showAudioMemoDialog.value = false
+    }
+
+    fun saveAudioMemo(
+        title: String,
+        simulatedSpokenText: String,
+        extractedItems: List<String>
+    ) {
+        val newMemo = AudioVoiceMemo(
+            id = "memo_${System.currentTimeMillis()}",
+            title = title.ifBlank { "Voice Note • ${System.currentTimeMillis() % 1000}" },
+            timestamp = "Just now",
+            durationSeconds = (30..90).random(),
+            audioSnippetSimulatedText = simulatedSpokenText,
+            extractedActionItems = extractedItems.filter { it.isNotBlank() },
+            isProcessed = true
+        )
+        _audioVoiceMemos.value = listOf(newMemo) + _audioVoiceMemos.value
+
+        // Automatically create actionable tasks from the voice memo
+        extractedItems.filter { it.isNotBlank() }.forEach { action ->
+            val newTask = NonRoutineTask(
+                id = "nrt_${System.currentTimeMillis()}_${(100..999).random()}",
+                title = action,
+                category = "Meeting Action",
+                targetDescription = "1 Deliverable",
+                isCompleted = false,
+                progressSteps = 0,
+                totalSteps = 1,
+                estimatedMinutes = 30
+            )
+            _nonRoutineTasks.value = listOf(newTask) + _nonRoutineTasks.value
+        }
+
+        _showAudioMemoDialog.value = false
+        triggerConfetti("Voice Memo Transcribed & ${extractedItems.size} Actions Extracted! 🎙️")
+    }
+
+    fun optimizeFragmentedGaps() {
+        _cognitiveAnalytics.value = _cognitiveAnalytics.value.copy(
+            fragmentedGapsCount = 0,
+            interruptionRiskLevel = "Zero Interruption Sanctuary",
+            recommendation = "All fragmented slots merged into a continuous 90-minute Deep Focus Sanctuary."
+        )
+        showToast("⚡ Focus Sanctuary protected: Gaps consolidated!")
     }
 }
 

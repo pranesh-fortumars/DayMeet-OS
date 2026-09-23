@@ -73,12 +73,28 @@ fun MeetingMinutesScreen(
                         )
                     )
 
-                    IconButton(onClick = { viewModel.showToast("Options menu") }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = "More",
-                            tint = OnSurfaceVariant
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(
+                            onClick = { viewModel.openAudioMemo() },
+                            modifier = Modifier.testTag("minutes_audio_memo_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Record Voice Memo",
+                                tint = Color(0xFFDC2626)
+                            )
+                        }
+
+                        IconButton(
+                            onClick = { viewModel.openPreMeetingBrief() },
+                            modifier = Modifier.testTag("minutes_pre_brief_btn")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Timer,
+                                contentDescription = "Pre-Brief Context",
+                                tint = Color(0xFF673AB7)
+                            )
+                        }
                     }
                 }
             }

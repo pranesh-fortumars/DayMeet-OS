@@ -222,6 +222,34 @@ fun MoreScreen(
             ) {
                 Column(modifier = Modifier.padding(6.dp)) {
                     ModuleListRow(
+                        title = "Meeting Pre-Briefing",
+                        subtitle = "15m automated context: Attendees, past decisions & action items",
+                        badge = "15m Prep",
+                        badgeColor = Color(0xFF673AB7),
+                        icon = Icons.Default.Timer,
+                        iconTint = Color(0xFF673AB7),
+                        iconBg = Color(0xFFEDE7F6),
+                        onClick = { viewModel.openPreMeetingBrief() },
+                        testTag = "module_pre_meeting_brief"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Smart Audio Voice Memo",
+                        subtitle = "Voice transcription with automatic action item extraction to Tasks",
+                        badge = "Voice AI",
+                        badgeColor = Color(0xFFDC2626),
+                        icon = Icons.Default.Mic,
+                        iconTint = Color(0xFFDC2626),
+                        iconBg = Color(0xFFFEE2E2),
+                        onClick = { viewModel.openAudioMemo() },
+                        testTag = "module_audio_memo"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
                         title = strings.meetingsTitle,
                         subtitle = strings.meetingsSubtitle,
                         badge = "3 Today",

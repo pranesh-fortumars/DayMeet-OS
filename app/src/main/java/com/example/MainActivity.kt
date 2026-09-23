@@ -152,6 +152,8 @@ fun DayMeetApp(
     val showMorningKickoff by viewModel.showMorningKickoff.collectAsStateWithLifecycle()
     val showEveningWindDown by viewModel.showEveningWindDown.collectAsStateWithLifecycle()
     val showWeeklyReviewDialog by viewModel.showWeeklyReviewDialog.collectAsStateWithLifecycle()
+    val showPreMeetingBriefDialog by viewModel.showPreMeetingBriefDialog.collectAsStateWithLifecycle()
+    val showAudioMemoDialog by viewModel.showAudioMemoDialog.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
@@ -416,6 +418,22 @@ fun DayMeetApp(
                 WeeklyReviewDialog(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeWeeklyReview() }
+                )
+            }
+
+            // Pre-Meeting Briefing Dialog (Phase 4 Life OS)
+            if (showPreMeetingBriefDialog) {
+                PreMeetingBriefDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closePreMeetingBrief() }
+                )
+            }
+
+            // Smart Audio Memo Dialog (Phase 4 Life OS)
+            if (showAudioMemoDialog) {
+                AudioMemoDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeAudioMemo() }
                 )
             }
 
