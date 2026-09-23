@@ -716,6 +716,48 @@ fun MoreScreen(
             }
         }
 
+        // Phase 5: Android Home Widgets & System HUD Controls
+        item {
+            SectionHeader("ANDROID INTEGRATIONS & SYSTEM HUD")
+        }
+
+        item {
+            Card(
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(containerColor = SurfaceContainerLowest),
+                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(6.dp)) {
+                    ModuleListRow(
+                        title = "Home Screen Widgets & Tile HUD",
+                        subtitle = "Live RemoteViews (4x2, 2x2), Quick Settings tile & Ongoing HUD",
+                        badge = "Android 14",
+                        badgeColor = Color(0xFF4F46E5),
+                        icon = Icons.Default.Widgets,
+                        iconTint = Color(0xFF4F46E5),
+                        iconBg = Color(0xFFE0E7FF),
+                        onClick = { viewModel.openWidgetPreview() },
+                        testTag = "module_widgets_hud"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Sedentary Micro-Stretch Routine",
+                        subtitle = "30-second optic nerve & shoulder recharge for desk focus",
+                        badge = "Recovery",
+                        badgeColor = Color(0xFFD97706),
+                        icon = Icons.Default.SelfImprovement,
+                        iconTint = Color(0xFFD97706),
+                        iconBg = Color(0xFFFEF3C7),
+                        onClick = { viewModel.openSedentaryStretch() },
+                        testTag = "module_sedentary_stretch"
+                    )
+                }
+            }
+        }
+
         // 8. Production Releases & In-App Auto Updates
         item {
             SectionHeader("PRODUCTION RELEASES & AUTO-UPDATES")

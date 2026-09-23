@@ -135,6 +135,46 @@ fun HabitsSubScreen(
                 )
             }
 
+            // Health Connect Recovery & Physical Biometrics Anchor (Phase 5)
+            item {
+                val biometrics by viewModel.biometrics.collectAsState()
+                Card(
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+                    border = BorderStroke(1.dp, Color(0xFFBBF7D0)),
+                    modifier = Modifier.fillMaxWidth().testTag("habits_health_sync_banner")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFDCFCE7)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Favorite, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(20.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Health Connect: ${biometrics.readinessStatus} (${biometrics.readinessScore}/100)",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFF14532D))
+                            )
+                            Text(
+                                text = "Sleep: ${biometrics.sleepDurationHours}h • Steps: ${biometrics.dailySteps}/${biometrics.stepGoal} • HRV: ${biometrics.hrvMilliseconds}ms",
+                                style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF166534), fontSize = 11.sp)
+                            )
+                        }
+                        IconButton(onClick = { viewModel.openSedentaryStretch() }) {
+                            Icon(Icons.Default.SelfImprovement, contentDescription = "Stretch", tint = Color(0xFF15803D))
+                        }
+                    }
+                }
+            }
+
             // 2. View Mode Tabs (Heatmap vs Progress Chart vs All)
             item {
                 Row(

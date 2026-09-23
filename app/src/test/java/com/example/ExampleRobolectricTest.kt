@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.viewmodel.DayMeetViewModel
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -294,5 +295,43 @@ class ExampleRobolectricTest {
 
     val remainingTasks = viewModel.feedItems.value.filter { it.id in targetIds }
     assertTrue("All selected tasks should be deleted", remainingTasks.isEmpty())
+  }
+
+  @Test
+  fun `phase 5 biometrics and sedentary stretch flow works correctly`() {
+    val viewModel = DayMeetViewModel()
+    val initialBiometrics = viewModel.biometrics.value
+    assertTrue("Initial readiness score should be positive", initialBiometrics.readinessScore > 0)
+    assertTrue("Sleep quality should be recorded", initialBiometrics.sleepQualityScore > 0)
+    assertTrue("Resting heart rate should be realistic", initialBiometrics.restingHeartRateBpm in 40..100)
+
+    viewModel.openSedentaryStretch()
+    assertTrue("Sedentary stretch dialog should be open", viewModel.showSedentaryStretchDialog.value)
+
+    viewModel.completeSedentaryStretch()
+    assertFalse("Sedentary stretch dialog should be dismissed", viewModel.showSedentaryStretchDialog.value)
+    assertEquals(0, viewModel.biometrics.value.lastSedentaryMinutes)
+    assertFalse("Sedentary alert should be cleared", viewModel.biometrics.value.sedentaryAlertActive)
+  }
+
+  @Test
+  fun `phase 5 android widget pinning and hud switches operate properly`() {
+    val viewModel = DayMeetViewModel()
+    val widgets = viewModel.widgetConfigs.value
+    assertTrue("Widgets should be available", widgets.isNotEmpty())
+
+    val firstWidget = widgets.first()
+    val initialPinned = firstWidget.isPinned
+    viewModel.togglePinWidget(firstWidget.widgetId)
+    val updatedWidget = viewModel.widgetConfigs.value.first { it.widgetId == firstWidget.widgetId }
+    assertEquals(!initialPinned, updatedWidget.isPinned)
+
+    val initialTile = viewModel.persistentHUDState.value.isQuickSettingsTileActive
+    viewModel.toggleQuickSettingsTile()
+    assertEquals(!initialTile, viewModel.persistentHUDState.value.isQuickSettingsTileActive)
+
+    val initialNotif = viewModel.persistentHUDState.value.isOngoingNotificationEnabled
+    viewModel.toggleOngoingNotification()
+    assertEquals(!initialNotif, viewModel.persistentHUDState.value.isOngoingNotificationEnabled)
   }
 }

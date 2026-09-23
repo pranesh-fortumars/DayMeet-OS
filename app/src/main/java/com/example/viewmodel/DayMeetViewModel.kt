@@ -424,6 +424,49 @@ class DayMeetViewModel : ViewModel() {
     )
     val cognitiveAnalytics: StateFlow<CognitiveLoadAnalytics> = _cognitiveAnalytics.asStateFlow()
 
+    // Phase 5: Deep Integrations, Biometrics & Device Telemetry States
+    private val _biometrics = MutableStateFlow(HealthBiometrics())
+    val biometrics: StateFlow<HealthBiometrics> = _biometrics.asStateFlow()
+
+    private val _widgetConfigs = MutableStateFlow(
+        listOf(
+            WidgetConfig(
+                widgetId = "widget_today_glance",
+                title = "Today at a Glance",
+                sizeSpan = "4x2",
+                isPinned = true,
+                themeStyle = WidgetThemeStyle.DYNAMIC_SYSTEM,
+                previewDescription = "Contextual Next Meeting, Top Sprint Priority, and Live Focus Sanctuary timer."
+            ),
+            WidgetConfig(
+                widgetId = "widget_habit_matrix",
+                title = "Habit Stacking Matrix",
+                sizeSpan = "2x2",
+                isPinned = false,
+                themeStyle = WidgetThemeStyle.DYNAMIC_SYSTEM,
+                previewDescription = "1-tap completion for daily anchors with real-time streak counters."
+            ),
+            WidgetConfig(
+                widgetId = "widget_pillars_radar",
+                title = "5 Life Pillars Radar",
+                sizeSpan = "4x1",
+                isPinned = false,
+                themeStyle = WidgetThemeStyle.DARK_NEUMORPHIC,
+                previewDescription = "Holistic balance score across Work, Health, Wealth, Growth, and Home."
+            )
+        )
+    )
+    val widgetConfigs: StateFlow<List<WidgetConfig>> = _widgetConfigs.asStateFlow()
+
+    private val _persistentHUDState = MutableStateFlow(PersistentHUDState())
+    val persistentHUDState: StateFlow<PersistentHUDState> = _persistentHUDState.asStateFlow()
+
+    private val _showSedentaryStretchDialog = MutableStateFlow(false)
+    val showSedentaryStretchDialog: StateFlow<Boolean> = _showSedentaryStretchDialog.asStateFlow()
+
+    private val _showWidgetPreviewDialog = MutableStateFlow(false)
+    val showWidgetPreviewDialog: StateFlow<Boolean> = _showWidgetPreviewDialog.asStateFlow()
+
     private val _dailyHighlights = MutableStateFlow(
         listOf(
             DailyHighlight(
@@ -3784,6 +3827,57 @@ class DayMeetViewModel : ViewModel() {
             recommendation = "All fragmented slots merged into a continuous 90-minute Deep Focus Sanctuary."
         )
         showToast("⚡ Focus Sanctuary protected: Gaps consolidated!")
+    }
+
+    // ==========================================
+    // Phase 5: Deep Integrations, Biometrics & Widgets Methods
+    // ==========================================
+
+    fun openSedentaryStretch() {
+        _showSedentaryStretchDialog.value = true
+    }
+
+    fun closeSedentaryStretch() {
+        _showSedentaryStretchDialog.value = false
+    }
+
+    fun completeSedentaryStretch() {
+        _biometrics.value = _biometrics.value.copy(
+            lastSedentaryMinutes = 0,
+            sedentaryAlertActive = false
+        )
+        _showSedentaryStretchDialog.value = false
+        showToast("🏃 Sedentary timer reset! Micro-stretch recorded.")
+    }
+
+    fun openWidgetPreview() {
+        _showWidgetPreviewDialog.value = true
+    }
+
+    fun closeWidgetPreview() {
+        _showWidgetPreviewDialog.value = false
+    }
+
+    fun togglePinWidget(widgetId: String) {
+        _widgetConfigs.value = _widgetConfigs.value.map { w ->
+            if (w.widgetId == widgetId) {
+                val next = !w.isPinned
+                showToast(if (next) "📌 Widget pinned to Android Home Screen!" else "Widget unpinned")
+                w.copy(isPinned = next)
+            } else w
+        }
+    }
+
+    fun toggleQuickSettingsTile() {
+        val next = !_persistentHUDState.value.isQuickSettingsTileActive
+        _persistentHUDState.value = _persistentHUDState.value.copy(isQuickSettingsTileActive = next)
+        showToast(if (next) "⚡ Quick Settings Focus Tile enabled!" else "Focus Tile disabled")
+    }
+
+    fun toggleOngoingNotification() {
+        val next = !_persistentHUDState.value.isOngoingNotificationEnabled
+        _persistentHUDState.value = _persistentHUDState.value.copy(isOngoingNotificationEnabled = next)
+        showToast(if (next) "🔔 Ongoing HUD Notification enabled" else "HUD Notification hidden")
     }
 }
 

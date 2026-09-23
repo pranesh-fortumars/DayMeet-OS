@@ -154,6 +154,8 @@ fun DayMeetApp(
     val showWeeklyReviewDialog by viewModel.showWeeklyReviewDialog.collectAsStateWithLifecycle()
     val showPreMeetingBriefDialog by viewModel.showPreMeetingBriefDialog.collectAsStateWithLifecycle()
     val showAudioMemoDialog by viewModel.showAudioMemoDialog.collectAsStateWithLifecycle()
+    val showSedentaryStretchDialog by viewModel.showSedentaryStretchDialog.collectAsStateWithLifecycle()
+    val showWidgetPreviewDialog by viewModel.showWidgetPreviewDialog.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
@@ -434,6 +436,22 @@ fun DayMeetApp(
                 AudioMemoDialog(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeAudioMemo() }
+                )
+            }
+
+            // Sedentary Micro-Stretch Dialog (Phase 5 Life OS)
+            if (showSedentaryStretchDialog) {
+                SedentaryStretchDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeSedentaryStretch() }
+                )
+            }
+
+            // Android Widgets & Quick Settings HUD Hub (Phase 5 Life OS)
+            if (showWidgetPreviewDialog) {
+                AndroidWidgetsHUDDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeWidgetPreview() }
                 )
             }
 

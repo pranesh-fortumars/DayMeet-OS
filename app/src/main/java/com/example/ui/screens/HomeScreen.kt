@@ -506,6 +506,11 @@ fun HomeScreen(
             StrategicOkrsCard(viewModel = viewModel)
         }
 
+        // 2.7. Health Connect & Sensor Biometrics Telemetry (Phase 5 Life OS)
+        item {
+            HealthConnectReadinessCard(viewModel = viewModel)
+        }
+
         // 3. My Day Widgets Header
         item {
             Row(
@@ -692,6 +697,22 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Default.Timer, contentDescription = null, tint = Color(0xFF673AB7), modifier = Modifier.size(14.dp))
                         Text("15m Pre-Brief", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF5E35B1)))
+                    }
+                }
+
+                // Android Widgets & Quick Settings HUD Pill (Phase 5)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFE0E7FF),
+                    modifier = Modifier.clickable { viewModel.openWidgetPreview() }.testTag("quick_widgets_hud_pill")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Widgets, contentDescription = null, tint = Color(0xFF4F46E5), modifier = Modifier.size(14.dp))
+                        Text("Home Widgets", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF4338CA)))
                     }
                 }
             }
