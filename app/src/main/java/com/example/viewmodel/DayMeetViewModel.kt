@@ -467,6 +467,67 @@ class DayMeetViewModel : ViewModel() {
     private val _showWidgetPreviewDialog = MutableStateFlow(false)
     val showWidgetPreviewDialog: StateFlow<Boolean> = _showWidgetPreviewDialog.asStateFlow()
 
+    // Phase 6: Autonomous Delegation, Collaborative Sync & Ecosystem States
+    private val _activeProfile = MutableStateFlow(LifeOSProfile.WORK)
+    val activeProfile: StateFlow<LifeOSProfile> = _activeProfile.asStateFlow()
+
+    private val _delegatedTasks = MutableStateFlow(
+        listOf(
+            DelegatedTaskItem(
+                id = "del_1",
+                title = "Cloud SQL Read-Replica Infrastructure Migration",
+                assigneeName = "Alex Chen",
+                assigneeAvatarInitials = "AC",
+                role = DelegationRole.ENGINEERING,
+                deadline = "Tomorrow, 5:00 PM",
+                status = "In Progress",
+                isAutoFollowUpEnabled = true,
+                lastPingMessage = "Terraform scripts completed; staging deploy underway.",
+                notes = "Target <10ms latency for cross-region reads."
+            ),
+            DelegatedTaskItem(
+                id = "del_2",
+                title = "Design Tokens System & M3 Dark Mode Palette",
+                assigneeName = "Sarah Lee",
+                assigneeAvatarInitials = "SL",
+                role = DelegationRole.PRODUCT_DESIGN,
+                deadline = "Friday, 12:00 PM",
+                status = "In Review",
+                isAutoFollowUpEnabled = true,
+                lastPingMessage = "Figma token variables exported to GitHub pull request.",
+                notes = "Check contrast ratio on Slate-900 surface."
+            ),
+            DelegatedTaskItem(
+                id = "del_3",
+                title = "Q3 Expense Reimbursements & Invoice Reconciliations",
+                assigneeName = "Elena Rostova",
+                assigneeAvatarInitials = "ER",
+                role = DelegationRole.FINANCE_LEGAL,
+                deadline = "Next Monday",
+                status = "Pending Accept",
+                isAutoFollowUpEnabled = false,
+                lastPingMessage = "Generated monthly PDF breakdown for accounts team.",
+                notes = "Requires VP sign-off before Friday."
+            )
+        )
+    )
+    val delegatedTasks: StateFlow<List<DelegatedTaskItem>> = _delegatedTasks.asStateFlow()
+
+    private val _dailyDigest = MutableStateFlow(AutonomousDailyDigest())
+    val dailyDigest: StateFlow<AutonomousDailyDigest> = _dailyDigest.asStateFlow()
+
+    private val _ecosystemBackupState = MutableStateFlow(EcosystemBackupState())
+    val ecosystemBackupState: StateFlow<EcosystemBackupState> = _ecosystemBackupState.asStateFlow()
+
+    private val _showDelegationDialog = MutableStateFlow(false)
+    val showDelegationDialog: StateFlow<Boolean> = _showDelegationDialog.asStateFlow()
+
+    private val _showDailyDigestDialog = MutableStateFlow(false)
+    val showDailyDigestDialog: StateFlow<Boolean> = _showDailyDigestDialog.asStateFlow()
+
+    private val _showEcosystemVaultDialog = MutableStateFlow(false)
+    val showEcosystemVaultDialog: StateFlow<Boolean> = _showEcosystemVaultDialog.asStateFlow()
+
     private val _dailyHighlights = MutableStateFlow(
         listOf(
             DailyHighlight(
@@ -3878,6 +3939,85 @@ class DayMeetViewModel : ViewModel() {
         val next = !_persistentHUDState.value.isOngoingNotificationEnabled
         _persistentHUDState.value = _persistentHUDState.value.copy(isOngoingNotificationEnabled = next)
         showToast(if (next) "🔔 Ongoing HUD Notification enabled" else "HUD Notification hidden")
+    }
+
+    // ==========================================
+    // Phase 6: Autonomous Delegation, Collaborative Sync & Ecosystem Methods
+    // ==========================================
+
+    fun switchProfile(profile: LifeOSProfile) {
+        _activeProfile.value = profile
+        showToast("Switched context to ${profile.label}")
+    }
+
+    fun openDelegationHub() {
+        _showDelegationDialog.value = true
+    }
+
+    fun closeDelegationHub() {
+        _showDelegationDialog.value = false
+    }
+
+    fun pingDelegatedTask(taskId: String) {
+        _delegatedTasks.value = _delegatedTasks.value.map { task ->
+            if (task.id == taskId) {
+                showToast("Sent automated reminder to ${task.assigneeName}")
+                task.copy(lastPingMessage = "Follow-up reminder sent just now.")
+            } else task
+        }
+    }
+
+    fun delegateNewTask(
+        title: String,
+        assigneeName: String,
+        role: DelegationRole,
+        deadline: String,
+        notes: String
+    ) {
+        val initials = assigneeName.split(" ")
+            .mapNotNull { it.firstOrNull()?.toString() }
+            .take(2)
+            .joinToString("")
+            .ifBlank { "TM" }
+
+        val item = DelegatedTaskItem(
+            id = "del_${System.currentTimeMillis()}",
+            title = title.ifBlank { "New Delegated Milestone" },
+            assigneeName = assigneeName.ifBlank { "Team Member" },
+            assigneeAvatarInitials = initials,
+            role = role,
+            deadline = deadline.ifBlank { "This Sprint" },
+            status = "Pending Accept",
+            isAutoFollowUpEnabled = true,
+            lastPingMessage = "Assignment dispatched via Slack / Email link.",
+            notes = notes
+        )
+        _delegatedTasks.value = listOf(item) + _delegatedTasks.value
+        showToast("Delegated '$title' to $assigneeName")
+    }
+
+    fun openDailyDigest() {
+        _showDailyDigestDialog.value = true
+    }
+
+    fun closeDailyDigest() {
+        _showDailyDigestDialog.value = false
+    }
+
+    fun openEcosystemVault() {
+        _showEcosystemVaultDialog.value = true
+    }
+
+    fun closeEcosystemVault() {
+        _showEcosystemVaultDialog.value = false
+    }
+
+    fun triggerCloudE2EEBackup() {
+        _ecosystemBackupState.value = _ecosystemBackupState.value.copy(
+            lastBackupTimestamp = "Just now",
+            isCloudE2EEEnabled = true
+        )
+        triggerConfetti("Ecosystem Synced with AES-256-GCM Vault! 🔒")
     }
 }
 

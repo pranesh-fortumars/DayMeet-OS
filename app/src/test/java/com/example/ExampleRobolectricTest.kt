@@ -334,4 +334,42 @@ class ExampleRobolectricTest {
     viewModel.toggleOngoingNotification()
     assertEquals(!initialNotif, viewModel.persistentHUDState.value.isOngoingNotificationEnabled)
   }
+
+  @Test
+  fun `phase 6 context switching and delegation flow functions correctly`() {
+    val viewModel = DayMeetViewModel()
+    
+    // Test profile context switching
+    assertEquals(com.example.model.LifeOSProfile.WORK, viewModel.activeProfile.value)
+    viewModel.switchProfile(com.example.model.LifeOSProfile.CREATIVE)
+    assertEquals(com.example.model.LifeOSProfile.CREATIVE, viewModel.activeProfile.value)
+
+    // Test delegation ping
+    val initialTasks = viewModel.delegatedTasks.value
+    assertTrue("Delegated tasks should exist", initialTasks.isNotEmpty())
+    val targetTask = initialTasks.first()
+    viewModel.pingDelegatedTask(targetTask.id)
+    val updatedTask = viewModel.delegatedTasks.value.first { it.id == targetTask.id }
+    assertTrue(updatedTask.lastPingMessage.contains("just now"))
+
+    // Test new task delegation
+    val initialSize = viewModel.delegatedTasks.value.size
+    viewModel.delegateNewTask(
+      title = "Deploy Edge Cache Server",
+      assigneeName = "Marcus Vance",
+      role = com.example.model.DelegationRole.ENGINEERING,
+      deadline = "Tomorrow, 3 PM",
+      notes = "Cloudflare Worker deployment"
+    )
+    assertEquals(initialSize + 1, viewModel.delegatedTasks.value.size)
+    val newest = viewModel.delegatedTasks.value.first()
+    assertEquals("Deploy Edge Cache Server", newest.title)
+    assertEquals("Marcus Vance", newest.assigneeName)
+    assertEquals("MV", newest.assigneeAvatarInitials)
+
+    // Test E2EE backup trigger
+    viewModel.triggerCloudE2EEBackup()
+    assertEquals("Just now", viewModel.ecosystemBackupState.value.lastBackupTimestamp)
+    assertTrue(viewModel.ecosystemBackupState.value.isCloudE2EEEnabled)
+  }
 }

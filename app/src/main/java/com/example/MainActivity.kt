@@ -156,6 +156,9 @@ fun DayMeetApp(
     val showAudioMemoDialog by viewModel.showAudioMemoDialog.collectAsStateWithLifecycle()
     val showSedentaryStretchDialog by viewModel.showSedentaryStretchDialog.collectAsStateWithLifecycle()
     val showWidgetPreviewDialog by viewModel.showWidgetPreviewDialog.collectAsStateWithLifecycle()
+    val showDelegationDialog by viewModel.showDelegationDialog.collectAsStateWithLifecycle()
+    val showDailyDigestDialog by viewModel.showDailyDigestDialog.collectAsStateWithLifecycle()
+    val showEcosystemVaultDialog by viewModel.showEcosystemVaultDialog.collectAsStateWithLifecycle()
     val showSearchOverlay by viewModel.showSearchOverlay.collectAsStateWithLifecycle()
     val toastMessage by viewModel.toastMessage.collectAsStateWithLifecycle()
     val appUpdateInfo by viewModel.appUpdateInfo.collectAsStateWithLifecycle()
@@ -452,6 +455,30 @@ fun DayMeetApp(
                 AndroidWidgetsHUDDialog(
                     viewModel = viewModel,
                     onDismiss = { viewModel.closeWidgetPreview() }
+                )
+            }
+
+            // Task Delegation Hub Dialog (Phase 6 Life OS)
+            if (showDelegationDialog) {
+                TaskDelegationHubDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeDelegationHub() }
+                )
+            }
+
+            // Autonomous Daily Digest Dialog (Phase 6 Life OS)
+            if (showDailyDigestDialog) {
+                DailyDigestDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeDailyDigest() }
+                )
+            }
+
+            // E2EE Ecosystem Vault Dialog (Phase 6 Life OS)
+            if (showEcosystemVaultDialog) {
+                EcosystemVaultDialog(
+                    viewModel = viewModel,
+                    onDismiss = { viewModel.closeEcosystemVault() }
                 )
             }
 

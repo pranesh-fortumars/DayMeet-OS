@@ -511,6 +511,11 @@ fun HomeScreen(
             HealthConnectReadinessCard(viewModel = viewModel)
         }
 
+        // 2.8. Autonomous Delegation & Multi-Profile Ecosystem (Phase 6 Life OS)
+        item {
+            AutonomousEcosystemDashboardCard(viewModel = viewModel)
+        }
+
         // 3. My Day Widgets Header
         item {
             Row(
@@ -713,6 +718,22 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Default.Widgets, contentDescription = null, tint = Color(0xFF4F46E5), modifier = Modifier.size(14.dp))
                         Text("Home Widgets", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF4338CA)))
+                    }
+                }
+
+                // Autonomous Delegation Pill (Phase 6)
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFEDE9FE),
+                    modifier = Modifier.clickable { viewModel.openDelegationHub() }.testTag("quick_delegation_pill")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.Groups, contentDescription = null, tint = Color(0xFF7C3AED), modifier = Modifier.size(14.dp))
+                        Text("Delegated", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color(0xFF6D28D9)))
                     }
                 }
             }

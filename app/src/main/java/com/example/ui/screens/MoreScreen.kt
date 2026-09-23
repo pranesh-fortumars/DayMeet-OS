@@ -754,6 +754,34 @@ fun MoreScreen(
                         onClick = { viewModel.openSedentaryStretch() },
                         testTag = "module_sedentary_stretch"
                     )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "Autonomous Delegation Hub",
+                        subtitle = "Cross-functional ownership & automated check-in pings",
+                        badge = "Ownership",
+                        badgeColor = Color(0xFF7C3AED),
+                        icon = Icons.Default.Groups,
+                        iconTint = Color(0xFF7C3AED),
+                        iconBg = Color(0xFFEDE9FE),
+                        onClick = { viewModel.openDelegationHub() },
+                        testTag = "module_delegation_hub"
+                    )
+
+                    HorizontalDivider(color = SurfaceContainerHigh, thickness = 0.5.dp)
+
+                    ModuleListRow(
+                        title = "E2EE Ecosystem Vault",
+                        subtitle = "Zero-knowledge AES-256-GCM hardware keystore snapshot sync",
+                        badge = "Encrypted",
+                        badgeColor = Color(0xFF16A34A),
+                        icon = Icons.Default.Lock,
+                        iconTint = Color(0xFF16A34A),
+                        iconBg = Color(0xFFDCFCE7),
+                        onClick = { viewModel.openEcosystemVault() },
+                        testTag = "module_ecosystem_vault"
+                    )
                 }
             }
         }
