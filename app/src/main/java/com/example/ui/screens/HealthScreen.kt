@@ -50,6 +50,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.model.FinanceTransaction
+import com.example.ui.components.CircularFinancialHealthGaugeCard
 import com.example.ui.theme.*
 import com.example.viewmodel.DayMeetViewModel
 import java.util.Locale
@@ -4391,13 +4392,93 @@ fun FinancialHealthGaugeCard(
     onCustomizeBudget: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    SpendingVelocityGaugeCard(
-        monthlySpent = monthlySpent,
-        monthlyBudgetTarget = monthlyBudgetTarget,
-        transactions = transactions,
-        onCustomizeBudget = onCustomizeBudget,
-        modifier = modifier
-    )
+    var selectedGaugeView by remember { mutableIntStateOf(0) } // 0: Circular SVG Arc Gauge, 1: Velocity Speedometer
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Mode Selector: Circular SVG Arc vs Speedometer Velocity
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "FINANCIAL HEALTH GAUGE",
+                style = MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Primary,
+                    letterSpacing = 0.8.sp
+                )
+            )
+
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = SurfaceContainerLow,
+                modifier = Modifier.padding(2.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (selectedGaugeView == 0) Primary else Color.Transparent)
+                            .clickable { selectedGaugeView = 0 }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .testTag("tab_circular_svg_arc")
+                    ) {
+                        Text(
+                            text = "Circular SVG Arc",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (selectedGaugeView == 0) Color.White else OnSurfaceVariant,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (selectedGaugeView == 1) Primary else Color.Transparent)
+                            .clickable { selectedGaugeView = 1 }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .testTag("tab_velocity_speedometer")
+                    ) {
+                        Text(
+                            text = "Velocity Speedometer",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = if (selectedGaugeView == 1) Color.White else OnSurfaceVariant,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+
+        if (selectedGaugeView == 0) {
+            CircularFinancialHealthGaugeCard(
+                monthlySpent = monthlySpent,
+                monthlyBudgetTarget = monthlyBudgetTarget,
+                transactions = transactions,
+                onCustomizeBudget = onCustomizeBudget
+            )
+        } else {
+            SpendingVelocityGaugeCard(
+                monthlySpent = monthlySpent,
+                monthlyBudgetTarget = monthlyBudgetTarget,
+                transactions = transactions,
+                onCustomizeBudget = onCustomizeBudget
+            )
+        }
+    }
 }
 
 /**

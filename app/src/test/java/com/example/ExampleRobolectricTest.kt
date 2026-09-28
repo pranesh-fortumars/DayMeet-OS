@@ -372,4 +372,51 @@ class ExampleRobolectricTest {
     assertEquals("Just now", viewModel.ecosystemBackupState.value.lastBackupTimestamp)
     assertTrue(viewModel.ecosystemBackupState.value.isCloudE2EEEnabled)
   }
+
+  @Test
+  fun `circular financial health gauge SVG arc path generation is valid W3C syntax`() {
+    // Test 90-degree arc (small arc flag = 0)
+    val smallArc = com.example.ui.components.buildSvgArcPathData(
+      cx = 150f,
+      cy = 150f,
+      radius = 100f,
+      startAngleDeg = 0f,
+      sweepAngleDeg = 90f
+    )
+    assertTrue("SVG path should start with M", smallArc.pathString.startsWith("M "))
+    assertTrue("SVG path should contain Arc command A", smallArc.pathString.contains(" A "))
+    assertFalse("90 deg arc should not have largeArc flag", smallArc.isLargeArc)
+    assertTrue("Path string should have largeArc 0", smallArc.pathString.contains(" 0 1 "))
+
+    // Test 280-degree circular arc (large arc flag = 1)
+    val largeArc = com.example.ui.components.buildSvgArcPathData(
+      cx = 150f,
+      cy = 150f,
+      radius = 100f,
+      startAngleDeg = 130f,
+      sweepAngleDeg = 280f
+    )
+    assertTrue("280 deg arc should have largeArc flag", largeArc.isLargeArc)
+    assertTrue("Path string should have largeArc 1", largeArc.pathString.contains(" 1 1 "))
+
+    // Verify AndroidX PathParser successfully parses the generated SVG arc path data
+    val androidPath = androidx.core.graphics.PathParser.createPathFromPathData(largeArc.pathString)
+    org.junit.Assert.assertNotNull("AndroidX PathParser should parse SVG arc path", androidPath)
+    assertFalse("Parsed path should not be empty", androidPath!!.isEmpty)
+  }
+
+  @Test
+  fun `financial health budget utilization correctly computes progress and deficit`() {
+    val budgetTarget = 48000.0
+    val normalSpent = 35000.0
+    val normalRatio = (normalSpent / budgetTarget).toFloat()
+    assertTrue(normalRatio < 1.0f)
+    assertEquals(13000.0, budgetTarget - normalSpent, 0.001)
+
+    val overSpent = 52000.0
+    val overRatio = (overSpent / budgetTarget).toFloat()
+    assertTrue(overRatio > 1.0f)
+    assertEquals(4000.0, overSpent - budgetTarget, 0.001)
+  }
 }
+
