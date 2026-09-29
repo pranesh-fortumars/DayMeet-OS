@@ -68,9 +68,10 @@ fun getTaskCategoryMeta(categoryName: String?): TaskCategoryMeta {
     return when (categoryName?.trim()?.lowercase()) {
         "work" -> TaskCategoryMeta("Work", "💼", Color(0xFF1E40AF), Color(0xFFEFF6FF), Color(0xFFBFDBFE))
         "personal" -> TaskCategoryMeta("Personal", "👤", Color(0xFF7E22CE), Color(0xFFFAF5FF), Color(0xFFE9D5FF))
+        "urgent" -> TaskCategoryMeta("Urgent", "⚡", Color(0xFFB91C1C), Color(0xFFFEF2F2), Color(0xFFFECACA))
+        "routine" -> TaskCategoryMeta("Routine", "🔁", Color(0xFF0D9488), Color(0xFFF0FDFA), Color(0xFF99F6E4))
         "shopping" -> TaskCategoryMeta("Shopping", "🛒", Color(0xFF0F766E), Color(0xFFF0FDFA), Color(0xFF99F6E4))
         "health" -> TaskCategoryMeta("Health", "🏥", Color(0xFF0369A1), Color(0xFFF0F9FF), Color(0xFFBAE6FD))
-        "urgent" -> TaskCategoryMeta("Urgent", "⚡", Color(0xFFB91C1C), Color(0xFFFEF2F2), Color(0xFFFECACA))
         "finance" -> TaskCategoryMeta("Finance", "💰", Color(0xFF15803D), Color(0xFFF0FDF4), Color(0xFFBBF7D0))
         "engineering" -> TaskCategoryMeta("Engineering", "⚙️", Color(0xFF512DA8), Color(0xFFEDE7F6), Color(0xFFD1C4E9))
         "design" -> TaskCategoryMeta("Design", "🎨", Color(0xFFC2185B), Color(0xFFFCE4EC), Color(0xFFF8BBD0))
@@ -227,6 +228,8 @@ fun TasksScreen(
             "Completed" -> lifeModeFiltered.filter { it.isCompleted }
             "Work" -> lifeModeFiltered.filter { it.statusTag.equals("Work", ignoreCase = true) || it.subtitle.contains("Work", ignoreCase = true) }
             "Personal" -> lifeModeFiltered.filter { it.statusTag.equals("Personal", ignoreCase = true) || it.subtitle.contains("Personal", ignoreCase = true) }
+            "Urgent" -> lifeModeFiltered.filter { it.statusTag.equals("Urgent", ignoreCase = true) || it.subtitle.contains("Urgent", ignoreCase = true) || it.priority == Priority.URGENT }
+            "Routine" -> lifeModeFiltered.filter { it.statusTag.equals("Routine", ignoreCase = true) || it.subtitle.contains("Routine", ignoreCase = true) }
             "Shopping" -> lifeModeFiltered.filter { it.statusTag.equals("Shopping", ignoreCase = true) || it.subtitle.contains("Shopping", ignoreCase = true) }
             "Health" -> lifeModeFiltered.filter { it.statusTag.equals("Health", ignoreCase = true) || it.subtitle.contains("Health", ignoreCase = true) }
             "High" -> lifeModeFiltered.filter { it.priority == Priority.HIGH || it.priority == Priority.URGENT || it.statusTag?.contains("High", ignoreCase = true) == true }
@@ -836,7 +839,7 @@ fun TasksScreen(
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            listOf("Work", "Personal", "Shopping", "Health", "Urgent", "Finance").forEach { cat ->
+                            listOf("Work", "Personal", "Urgent", "Routine", "Shopping", "Health", "Finance").forEach { cat ->
                                 val isSelected = quickAddCategory.equals(cat, ignoreCase = true)
                                 TaskCategoryPill(
                                     category = cat,
@@ -983,6 +986,12 @@ fun TasksScreen(
             val personalCount = remember(tasksOnly) {
                 tasksOnly.count { it.statusTag.equals("Personal", ignoreCase = true) || it.subtitle.contains("Personal", ignoreCase = true) }
             }
+            val urgentCount = remember(tasksOnly) {
+                tasksOnly.count { it.statusTag.equals("Urgent", ignoreCase = true) || it.subtitle.contains("Urgent", ignoreCase = true) || it.priority == Priority.URGENT }
+            }
+            val routineCount = remember(tasksOnly) {
+                tasksOnly.count { it.statusTag.equals("Routine", ignoreCase = true) || it.subtitle.contains("Routine", ignoreCase = true) }
+            }
             val shoppingCount = remember(tasksOnly) {
                 tasksOnly.count { it.statusTag.equals("Shopping", ignoreCase = true) || it.subtitle.contains("Shopping", ignoreCase = true) }
             }
@@ -1000,6 +1009,8 @@ fun TasksScreen(
                     "All (${tasksOnly.size})",
                     "Work ($workCount)",
                     "Personal ($personalCount)",
+                    "Urgent ($urgentCount)",
+                    "Routine ($routineCount)",
                     "Shopping ($shoppingCount)",
                     "Health ($healthCount)",
                     "High ($highCount)",
@@ -1010,7 +1021,7 @@ fun TasksScreen(
                 ).forEach { tab ->
                     val rawTab = tab.substringBefore(" (")
                     val isSelected = filterState == rawTab
-                    val isCat = rawTab in listOf("Work", "Personal", "Shopping", "Health")
+                    val isCat = rawTab in listOf("Work", "Personal", "Urgent", "Routine", "Shopping", "Health")
                     val catMeta = if (isCat) getTaskCategoryMeta(rawTab) else null
 
                     val containerBg = when {
@@ -1581,11 +1592,12 @@ fun AnimatedTaskItemRow(
 
         val categoryName = remember(task.statusTag, task.subtitle) {
             when {
-                task.statusTag in listOf("Work", "Personal", "Shopping", "Urgent", "Finance", "Health", "Engineering", "Design", "Security", "Documentation", "Deliverable", "Tech Debt") -> task.statusTag!!
+                task.statusTag in listOf("Work", "Personal", "Urgent", "Routine", "Shopping", "Finance", "Health", "Engineering", "Design", "Security", "Documentation", "Deliverable", "Tech Debt") -> task.statusTag!!
                 task.subtitle.contains("Work", ignoreCase = true) -> "Work"
                 task.subtitle.contains("Personal", ignoreCase = true) -> "Personal"
-                task.subtitle.contains("Shopping", ignoreCase = true) -> "Shopping"
                 task.subtitle.contains("Urgent", ignoreCase = true) -> "Urgent"
+                task.subtitle.contains("Routine", ignoreCase = true) -> "Routine"
+                task.subtitle.contains("Shopping", ignoreCase = true) -> "Shopping"
                 task.subtitle.contains("Finance", ignoreCase = true) -> "Finance"
                 task.subtitle.contains("Health", ignoreCase = true) -> "Health"
                 else -> task.statusTag?.takeIf { it != priorityLabel } ?: "Work"
@@ -1967,6 +1979,8 @@ fun AnimatedTaskItemRow(
                                 modifier = Modifier
                                     .testTag("task_category_badge_${task.id}")
                                     .testTag("task_category_pill_${task.id}")
+                                    .testTag("task_category_tag_${categoryName.lowercase()}")
+                                    .testTag("task_category_tag_${task.id}")
                             )
 
                             // Fast Tap Context Menu Button
@@ -2922,7 +2936,7 @@ fun AnimatedTaskItemRow(
                                 .horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            listOf("Work", "Personal", "Shopping", "Health", "Urgent", "Finance").forEach { cat ->
+                            listOf("Work", "Personal", "Urgent", "Routine", "Shopping", "Health", "Finance").forEach { cat ->
                                 val isSelected = editCategory.equals(cat, ignoreCase = true)
                                 TaskCategoryPill(
                                     category = cat,

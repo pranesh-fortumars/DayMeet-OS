@@ -2,6 +2,7 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.model.Priority
 import com.example.viewmodel.DayMeetViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -417,6 +418,97 @@ class ExampleRobolectricTest {
     val overRatio = (overSpent / budgetTarget).toFloat()
     assertTrue(overRatio > 1.0f)
     assertEquals(4000.0, overSpent - budgetTarget, 0.001)
+  }
+
+  @Test
+  fun `universal quick add correctly assigns Work, Personal, Urgent, Routine categories to new tasks`() {
+    val viewModel = DayMeetViewModel()
+    val initialTaskCount = viewModel.feedItems.value.count { it.category == com.example.model.FeedCategory.TASK }
+
+    // Test creating task with Routine category
+    viewModel.universalQuickAdd(
+      type = "Task",
+      title = "Daily Evening Routine",
+      detail = "Journal and review tomorrow's plan",
+      priority = Priority.MEDIUM,
+      category = "Routine",
+      reminderTime = "Today 09:00 PM",
+      dueDate = "Today"
+    )
+
+    // Test creating task with Urgent category
+    viewModel.universalQuickAdd(
+      type = "Task",
+      title = "Fix Critical Security Hotfix",
+      detail = "Deploy patch to production cluster",
+      priority = Priority.HIGH,
+      category = "Urgent",
+      reminderTime = "In 15 Mins",
+      dueDate = "Today"
+    )
+
+    // Test creating task with Personal category
+    viewModel.universalQuickAdd(
+      type = "Task",
+      title = "Grocery Shopping",
+      detail = "Pick up milk, fruits, and bread",
+      priority = Priority.LOW,
+      category = "Personal",
+      dueDate = "Tomorrow"
+    )
+
+    // Test creating task with Work category
+    viewModel.universalQuickAdd(
+      type = "Task",
+      title = "Sprint Planning Presentation",
+      detail = "Finalize Q4 roadmap slide deck",
+      priority = Priority.HIGH,
+      category = "Work",
+      dueDate = "Sep 30, 2026"
+    )
+
+    val updatedTasks = viewModel.feedItems.value.filter { it.category == com.example.model.FeedCategory.TASK }
+    assertEquals(initialTaskCount + 4, updatedTasks.size)
+
+    val routineTask = updatedTasks.firstOrNull { it.title == "Daily Evening Routine" }
+    org.junit.Assert.assertNotNull("Routine task should exist", routineTask)
+    assertEquals("Routine", routineTask!!.statusTag)
+
+    val urgentTask = updatedTasks.firstOrNull { it.title == "Fix Critical Security Hotfix" }
+    org.junit.Assert.assertNotNull("Urgent task should exist", urgentTask)
+    assertEquals("Urgent", urgentTask!!.statusTag)
+    assertEquals(Priority.HIGH, urgentTask.priority)
+
+    val personalTask = updatedTasks.firstOrNull { it.title == "Grocery Shopping" }
+    org.junit.Assert.assertNotNull("Personal task should exist", personalTask)
+    assertEquals("Personal", personalTask!!.statusTag)
+
+    val workTask = updatedTasks.firstOrNull { it.title == "Sprint Planning Presentation" }
+    org.junit.Assert.assertNotNull("Work task should exist", workTask)
+    assertEquals("Work", workTask!!.statusTag)
+  }
+
+  @Test
+  fun `getTaskCategoryMeta returns valid color and icon metadata for core categories`() {
+    val workMeta = com.example.ui.screens.getTaskCategoryMeta("Work")
+    assertEquals("Work", workMeta.name)
+    assertEquals("💼", workMeta.icon)
+
+    val personalMeta = com.example.ui.screens.getTaskCategoryMeta("Personal")
+    assertEquals("Personal", personalMeta.name)
+    assertEquals("👤", personalMeta.icon)
+
+    val urgentMeta = com.example.ui.screens.getTaskCategoryMeta("Urgent")
+    assertEquals("Urgent", urgentMeta.name)
+    assertEquals("⚡", urgentMeta.icon)
+
+    val routineMeta = com.example.ui.screens.getTaskCategoryMeta("Routine")
+    assertEquals("Routine", routineMeta.name)
+    assertEquals("🔁", routineMeta.icon)
+
+    // Verify all 4 categories have distinct text colors
+    val colors = listOf(workMeta.textColor, personalMeta.textColor, urgentMeta.textColor, routineMeta.textColor)
+    assertEquals(4, colors.toSet().size)
   }
 }
 

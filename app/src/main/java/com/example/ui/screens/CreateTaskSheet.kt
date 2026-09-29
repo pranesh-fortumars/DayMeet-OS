@@ -738,13 +738,45 @@ fun CreateTaskSheet(
                         .testTag("quick_add_category_selector"),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(
-                        text = "Category",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = OnSurfaceVariant
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Category",
+                            style = MaterialTheme.typography.labelMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurfaceVariant
+                            )
                         )
-                    )
+                        Surface(
+                            shape = RoundedCornerShape(99.dp),
+                            color = when (selectedCategory.lowercase()) {
+                                "work" -> Color(0xFFEFF6FF)
+                                "personal" -> Color(0xFFFAF5FF)
+                                "urgent" -> Color(0xFFFEF2F2)
+                                "routine" -> Color(0xFFF0FDFA)
+                                else -> SurfaceContainerHigh
+                            }
+                        ) {
+                            Text(
+                                text = "Selected: $selectedCategory",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = when (selectedCategory.lowercase()) {
+                                        "work" -> Color(0xFF1E40AF)
+                                        "personal" -> Color(0xFF7E22CE)
+                                        "urgent" -> Color(0xFFB91C1C)
+                                        "routine" -> Color(0xFF0D9488)
+                                        else -> Primary
+                                    },
+                                    fontSize = 11.sp
+                                ),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -754,21 +786,28 @@ fun CreateTaskSheet(
                         listOf(
                             Triple("Work", "💼", Color(0xFF1E40AF) to Color(0xFFEFF6FF)),
                             Triple("Personal", "👤", Color(0xFF7E22CE) to Color(0xFFFAF5FF)),
+                            Triple("Urgent", "⚡", Color(0xFFB91C1C) to Color(0xFFFEF2F2)),
+                            Triple("Routine", "🔁", Color(0xFF0D9488) to Color(0xFFF0FDFA)),
                             Triple("Shopping", "🛒", Color(0xFF0F766E) to Color(0xFFF0FDFA)),
                             Triple("Health", "🏥", Color(0xFF0369A1) to Color(0xFFF0F9FF)),
-                            Triple("Urgent", "⚡", Color(0xFFB91C1C) to Color(0xFFFEF2F2)),
                             Triple("Finance", "💰", Color(0xFF15803D) to Color(0xFFF0FDF4))
                         ).forEach { (cat, emoji, colors) ->
                             val (primaryColor, bgColor) = colors
-                            val isSelected = selectedCategory == cat
+                            val isSelected = selectedCategory.equals(cat, ignoreCase = true)
                             Surface(
                                 shape = RoundedCornerShape(99.dp),
                                 color = if (isSelected) primaryColor else bgColor,
                                 border = BorderStroke(1.dp, if (isSelected) primaryColor else primaryColor.copy(alpha = 0.35f)),
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(99.dp))
-                                    .clickable { selectedCategory = cat }
+                                    .clickable {
+                                        selectedCategory = cat
+                                        if (cat == "Urgent") {
+                                            selectedPriority = Priority.HIGH
+                                        }
+                                    }
                                     .testTag("quick_add_category_${cat.lowercase()}")
+                                    .testTag("quick_add_cat_${cat.lowercase()}")
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
