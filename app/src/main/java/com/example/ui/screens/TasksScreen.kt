@@ -50,6 +50,10 @@ import com.example.model.FeedCategory
 import com.example.model.FeedItem
 import com.example.model.LifeMode
 import com.example.model.Priority
+import com.example.model.SubChecklist
+import com.example.model.SubChecklistItem
+import com.example.ui.components.TaskDetailsDialog
+import com.example.ui.components.TaskSubChecklistsSection
 import com.example.ui.theme.*
 import com.example.util.TimeUtils
 import com.example.viewmodel.DayMeetViewModel
@@ -1224,6 +1228,7 @@ fun TasksScreen(
                 onAddSubtask = { subtaskTitle -> viewModel.addSubtask(task.id, subtaskTitle) },
                 onToggleSubtask = { subtaskId -> viewModel.toggleSubtask(task.id, subtaskId) },
                 onDeleteSubtask = { subtaskId -> viewModel.deleteSubtask(task.id, subtaskId) },
+                viewModel = viewModel,
                 modifier = Modifier.animateItem(
                     fadeInSpec = spring(
                         dampingRatio = Spring.DampingRatioLowBouncy,
@@ -1485,6 +1490,7 @@ fun AnimatedTaskItemRow(
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     onSelectToggle: () -> Unit = {},
+    viewModel: DayMeetViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -1507,6 +1513,7 @@ fun AnimatedTaskItemRow(
     var showMoveToCalendarDialog by remember { mutableStateOf(false) }
     var showSetReminderDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showTaskDetailsDialog by remember { mutableStateOf(false) }
     var isNotesExpanded by remember { mutableStateOf(false) }
     var isSubtasksExpanded by remember { mutableStateOf(false) }
     var isEditingNotes by remember { mutableStateOf(false) }
@@ -2460,27 +2467,54 @@ fun AnimatedTaskItemRow(
                             }
                         }
 
-                        // Task Actions (Edit & Delete Task)
+                        // Task Sub-Checklists Section within Task Details View
+                        Spacer(modifier = Modifier.height(10.dp))
+                        HorizontalDivider(color = SurfaceContainerHigh.copy(alpha = 0.5f))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (viewModel != null) {
+                            TaskSubChecklistsSection(
+                                task = task,
+                                viewModel = viewModel
+                            )
+                        }
+
+                        // Task Actions (Edit, Details Dialog & Delete Task)
                         Spacer(modifier = Modifier.height(10.dp))
                         HorizontalDivider(color = SurfaceContainerHigh.copy(alpha = 0.5f))
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             OutlinedButton(
                                 onClick = { showQuickEditDialog = true },
                                 shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                                 modifier = Modifier
+                                    .weight(1f)
                                     .height(36.dp)
                                     .testTag("edit_task_button_${task.id}")
                             ) {
-                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text("Edit Task", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                                Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Edit", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold))
+                            }
+
+                            OutlinedButton(
+                                onClick = { showTaskDetailsDialog = true },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(36.dp)
+                                    .testTag("task_details_btn_${task.id}")
+                            ) {
+                                Icon(Icons.Default.FactCheck, contentDescription = null, tint = Primary, modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Details", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, color = Primary))
                             }
 
                             OutlinedButton(
@@ -2490,15 +2524,16 @@ fun AnimatedTaskItemRow(
                                     contentColor = Color(0xFFD32F2F)
                                 ),
                                 border = BorderStroke(1.dp, Color(0xFFEF9A9A)),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                                 modifier = Modifier
+                                    .weight(1f)
                                     .height(36.dp)
                                     .testTag("delete_task_btn_${task.id}")
                                     .testTag("task_detail_delete_btn_${task.id}")
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(15.dp))
-                                Spacer(modifier = Modifier.width(5.dp))
-                                Text("Delete Task", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)))
+                                Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFD32F2F), modifier = Modifier.size(14.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Delete", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color(0xFFD32F2F)))
                             }
                         }
                     }
@@ -2546,6 +2581,46 @@ fun AnimatedTaskItemRow(
                     }
                 }
                 HorizontalDivider(color = SurfaceContainerHigh)
+
+                // 0. Quick Option: 'Task Details & Sub-Checklists'
+                DropdownMenuItem(
+                    text = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(Primary.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FactCheck,
+                                    contentDescription = null,
+                                    tint = Primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Task Details & Sub-Checklists",
+                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold)
+                                )
+                                Text(
+                                    text = "View sub-checklists and full metadata",
+                                    style = MaterialTheme.typography.labelSmall.copy(color = OnSurfaceVariant, fontSize = 10.sp)
+                                )
+                            }
+                        }
+                    },
+                    onClick = {
+                        showContextMenu = false
+                        showTaskDetailsDialog = true
+                    },
+                    modifier = Modifier.testTag("task_action_details_${task.id}")
+                )
 
                 // 1. Quick Option: 'Edit' (in-place dialog, no separate edit mode required)
                 DropdownMenuItem(
@@ -3564,6 +3639,19 @@ fun AnimatedTaskItemRow(
             modifier = Modifier
                 .testTag("delete_task_confirm_dialog")
                 .testTag("delete_confirmation_dialog_${task.id}")
+        )
+    }
+
+    // Task Details & Sub-Checklists Full Dialog
+    if (showTaskDetailsDialog && viewModel != null) {
+        TaskDetailsDialog(
+            task = task,
+            viewModel = viewModel,
+            onDismiss = { showTaskDetailsDialog = false },
+            onEditTask = {
+                showTaskDetailsDialog = false
+                showQuickEditDialog = true
+            }
         )
     }
     }

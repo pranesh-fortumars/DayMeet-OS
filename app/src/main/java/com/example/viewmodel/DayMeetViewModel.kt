@@ -2769,7 +2769,8 @@ class DayMeetViewModel : ViewModel() {
         space: String,
         subtasks: List<String> = emptyList(),
         reminderTime: String? = null,
-        dueDate: String? = null
+        dueDate: String? = null,
+        subChecklists: List<SubChecklist> = emptyList()
     ) {
         val taskId = "task_${System.currentTimeMillis()}"
         val taskTitle = title.ifBlank { "New Task" }
@@ -2790,7 +2791,8 @@ class DayMeetViewModel : ViewModel() {
             reminderTime = reminderTime,
             notes = notes.ifBlank { null },
             dueDate = dueDate,
-            subtasks = subtaskList
+            subtasks = subtaskList,
+            subChecklists = subChecklists
         )
         _feedItems.value = listOf(newTask) + _feedItems.value
 
@@ -2845,6 +2847,92 @@ class DayMeetViewModel : ViewModel() {
         _crossStreamItems.value = _crossStreamItems.value.map { item ->
             if (item.id == taskId || item.title.equals(_feedItems.value.firstOrNull { it.id == taskId }?.title, ignoreCase = true)) {
                 item.copy(subtasks = item.subtasks.filter { it.id != subtaskId })
+            } else item
+        }
+    }
+
+    // Sub-Checklists within Task Management
+    fun createSubChecklist(taskId: String, title: String) {
+        val checklistTitle = title.trim().ifBlank { "Checklist" }
+        val newChecklist = SubChecklist(
+            id = "chk_${System.currentTimeMillis()}_${(100..999).random()}",
+            title = checklistTitle,
+            items = emptyList()
+        )
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                item.copy(subChecklists = item.subChecklists + newChecklist)
+            } else item
+        }
+        showToast("Created sub-checklist: $checklistTitle")
+    }
+
+    fun deleteSubChecklist(taskId: String, checklistId: String) {
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                item.copy(subChecklists = item.subChecklists.filter { it.id != checklistId })
+            } else item
+        }
+        showToast("Deleted sub-checklist")
+    }
+
+    fun addSubChecklistItem(taskId: String, checklistId: String, itemTitle: String) {
+        if (itemTitle.isBlank()) return
+        val newItem = SubChecklistItem(
+            id = "chk_item_${System.currentTimeMillis()}_${(100..999).random()}",
+            title = itemTitle.trim(),
+            isCompleted = false
+        )
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                val updatedChecklists = item.subChecklists.map { chk ->
+                    if (chk.id == checklistId) {
+                        chk.copy(items = chk.items + newItem)
+                    } else chk
+                }
+                item.copy(subChecklists = updatedChecklists)
+            } else item
+        }
+        showToast("Added item to checklist")
+    }
+
+    fun toggleSubChecklistItem(taskId: String, checklistId: String, itemId: String) {
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                val updatedChecklists = item.subChecklists.map { chk ->
+                    if (chk.id == checklistId) {
+                        val updatedItems = chk.items.map { itm ->
+                            if (itm.id == itemId) itm.copy(isCompleted = !itm.isCompleted) else itm
+                        }
+                        chk.copy(items = updatedItems)
+                    } else chk
+                }
+                item.copy(subChecklists = updatedChecklists)
+            } else item
+        }
+    }
+
+    fun deleteSubChecklistItem(taskId: String, checklistId: String, itemId: String) {
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                val updatedChecklists = item.subChecklists.map { chk ->
+                    if (chk.id == checklistId) {
+                        chk.copy(items = chk.items.filter { it.id != itemId })
+                    } else chk
+                }
+                item.copy(subChecklists = updatedChecklists)
+            } else item
+        }
+    }
+
+    fun renameSubChecklist(taskId: String, checklistId: String, newTitle: String) {
+        if (newTitle.isBlank()) return
+        _feedItems.value = _feedItems.value.map { item ->
+            if (item.id == taskId) {
+                val updatedChecklists = item.subChecklists.map { chk ->
+                    if (chk.id == checklistId) chk.copy(title = newTitle.trim()) else chk
+                }
+                item.copy(subChecklists = updatedChecklists)
             } else item
         }
     }

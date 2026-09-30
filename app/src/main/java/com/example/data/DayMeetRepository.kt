@@ -37,6 +37,25 @@ object DayMeetRepository {
                 Subtask("sub_f2_2", "Verify typography and corner radii", isCompleted = true),
                 Subtask("sub_f2_3", "Dark Mode parity check across screens", isCompleted = false)
             ),
+            subChecklists = listOf(
+                SubChecklist(
+                    id = "chk_f2_1",
+                    title = "Design Tokens Verification",
+                    items = listOf(
+                        SubChecklistItem("ci_f2_1", "Audit primary and semantic color tokens", isCompleted = true),
+                        SubChecklistItem("ci_f2_2", "Verify typography scales & line heights", isCompleted = true),
+                        SubChecklistItem("ci_f2_3", "Inspect 8dp corner radius grid conformance", isCompleted = false)
+                    )
+                ),
+                SubChecklist(
+                    id = "chk_f2_2",
+                    title = "Component & Theme Parity",
+                    items = listOf(
+                        SubChecklistItem("ci_f2_4", "Dark mode contrast ratio pass (WCAG AA)", isCompleted = true),
+                        SubChecklistItem("ci_f2_5", "RTL layout mirroring and edge-to-edge padding", isCompleted = false)
+                    )
+                )
+            ),
             progress = 65
         ),
         FeedItem(

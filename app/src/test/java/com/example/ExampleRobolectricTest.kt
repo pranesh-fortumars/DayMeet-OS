@@ -3,6 +3,8 @@ package com.example
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import com.example.model.Priority
+import com.example.model.SubChecklist
+import com.example.model.SubChecklistItem
 import com.example.viewmodel.DayMeetViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -509,6 +511,69 @@ class ExampleRobolectricTest {
     // Verify all 4 categories have distinct text colors
     val colors = listOf(workMeta.textColor, personalMeta.textColor, urgentMeta.textColor, routineMeta.textColor)
     assertEquals(4, colors.toSet().size)
+  }
+
+  @Test
+  fun `subChecklist creation, addition of items, toggling, and deletion within a task works correctly`() {
+    val viewModel = DayMeetViewModel()
+
+    // 1. Create a task with initial sub-checklists
+    val initialChecklist = SubChecklist(
+      id = "chk_init_1",
+      title = "Pre-flight Checklist",
+      items = listOf(
+        SubChecklistItem("item_1", "Verify API keys in secrets", isCompleted = true),
+        SubChecklistItem("item_2", "Run schema validation", isCompleted = false)
+      )
+    )
+
+    viewModel.saveNewTask(
+      title = "Deploy SuperApp Production Build",
+      notes = "Critical release checklist",
+      priority = Priority.HIGH,
+      space = "Urgent",
+      subChecklists = listOf(initialChecklist)
+    )
+
+    val createdTask = viewModel.feedItems.value.first { it.title == "Deploy SuperApp Production Build" }
+    assertEquals(1, createdTask.subChecklists.size)
+    assertEquals("Pre-flight Checklist", createdTask.subChecklists.first().title)
+    assertEquals(2, createdTask.subChecklists.first().items.size)
+    assertTrue(createdTask.subChecklists.first().items[0].isCompleted)
+    assertFalse(createdTask.subChecklists.first().items[1].isCompleted)
+
+    // 2. Create another sub-checklist within this task
+    viewModel.createSubChecklist(createdTask.id, "QA & Performance Testing")
+    val taskWithTwoLists = viewModel.feedItems.value.first { it.id == createdTask.id }
+    assertEquals(2, taskWithTwoLists.subChecklists.size)
+    val secondList = taskWithTwoLists.subChecklists.first { it.title == "QA & Performance Testing" }
+    assertTrue(secondList.items.isEmpty())
+
+    // 3. Add an item to the new sub-checklist
+    viewModel.addSubChecklistItem(createdTask.id, secondList.id, "Verify 60fps rendering in emulator")
+    val taskWithItem = viewModel.feedItems.value.first { it.id == createdTask.id }
+    val updatedSecondList = taskWithItem.subChecklists.first { it.id == secondList.id }
+    assertEquals(1, updatedSecondList.items.size)
+    val addedItem = updatedSecondList.items.first()
+    assertEquals("Verify 60fps rendering in emulator", addedItem.title)
+    assertFalse(addedItem.isCompleted)
+
+    // 4. Toggle the checklist item
+    viewModel.toggleSubChecklistItem(createdTask.id, secondList.id, addedItem.id)
+    val taskAfterToggle = viewModel.feedItems.value.first { it.id == createdTask.id }
+    val toggledItem = taskAfterToggle.subChecklists.first { it.id == secondList.id }.items.first { it.id == addedItem.id }
+    assertTrue("Item should now be completed", toggledItem.isCompleted)
+
+    // 5. Delete the checklist item
+    viewModel.deleteSubChecklistItem(createdTask.id, secondList.id, addedItem.id)
+    val taskAfterItemDelete = viewModel.feedItems.value.first { it.id == createdTask.id }
+    assertTrue(taskAfterItemDelete.subChecklists.first { it.id == secondList.id }.items.isEmpty())
+
+    // 6. Delete the entire sub-checklist
+    viewModel.deleteSubChecklist(createdTask.id, secondList.id)
+    val taskAfterListDelete = viewModel.feedItems.value.first { it.id == createdTask.id }
+    assertEquals(1, taskAfterListDelete.subChecklists.size)
+    assertEquals("Pre-flight Checklist", taskAfterListDelete.subChecklists.first().title)
   }
 }
 

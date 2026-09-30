@@ -42,6 +42,7 @@ data class FeedItem(
     val notes: String? = null,
     val dueDate: String? = null,
     val subtasks: List<Subtask> = emptyList(),
+    val subChecklists: List<SubChecklist> = emptyList(),
     val progress: Int = 0
 )
 
@@ -49,6 +50,18 @@ data class Subtask(
     val id: String,
     val title: String,
     val isCompleted: Boolean = false
+)
+
+data class SubChecklistItem(
+    val id: String,
+    val title: String,
+    val isCompleted: Boolean = false
+)
+
+data class SubChecklist(
+    val id: String,
+    val title: String,
+    val items: List<SubChecklistItem> = emptyList()
 )
 
 data class TimelineEvent(
