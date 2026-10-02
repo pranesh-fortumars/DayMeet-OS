@@ -2,6 +2,8 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.model.FeedCategory
+import com.example.model.FeedItem
 import com.example.model.Priority
 import com.example.model.SubChecklist
 import com.example.model.SubChecklistItem
@@ -574,6 +576,107 @@ class ExampleRobolectricTest {
     val taskAfterListDelete = viewModel.feedItems.value.first { it.id == createdTask.id }
     assertEquals(1, taskAfterListDelete.subChecklists.size)
     assertEquals("Pre-flight Checklist", taskAfterListDelete.subChecklists.first().title)
+  }
+
+  @Test
+  fun `auto-sort by priority correctly orders tasks based on priority High greater than Medium greater than Low then by due date and time`() {
+    val viewModel = DayMeetViewModel()
+
+    val taskLowEarliest = FeedItem(
+      id = "t_low_early",
+      time = "09:00 AM",
+      dueDate = "Today",
+      title = "Low Priority Early",
+      subtitle = "Notes",
+      category = FeedCategory.TASK,
+      priority = Priority.LOW
+    )
+    val taskMediumLater = FeedItem(
+      id = "t_med_later",
+      time = "04:00 PM",
+      dueDate = "Today",
+      title = "Medium Priority Late",
+      subtitle = "Notes",
+      category = FeedCategory.TASK,
+      priority = Priority.MEDIUM
+    )
+    val taskMediumEarlier = FeedItem(
+      id = "t_med_earlier",
+      time = "11:00 AM",
+      dueDate = "Today",
+      title = "Medium Priority Earlier",
+      subtitle = "Notes",
+      category = FeedCategory.TASK,
+      priority = Priority.MEDIUM
+    )
+    val taskHighTomorrow = FeedItem(
+      id = "t_high_tomorrow",
+      time = "09:00 AM",
+      dueDate = "Tomorrow",
+      title = "High Priority Tomorrow",
+      subtitle = "Notes",
+      category = FeedCategory.TASK,
+      priority = Priority.HIGH
+    )
+    val taskHighTodayLate = FeedItem(
+      id = "t_high_today_late",
+      time = "03:00 PM",
+      dueDate = "Today",
+      title = "High Priority Today Late",
+      subtitle = "Notes",
+      category = FeedCategory.TASK,
+      priority = Priority.HIGH
+    )
+    val taskHighTodayEarly = FeedItem(
+      id = "t_high_today_early",
+      time = "10:00 AM",
+      dueDate = "Today",
+      title = "High Priority Today Early",
+      subtitle = "Notes",
+      category = FeedCategory.TASK,
+      priority = Priority.HIGH
+    )
+
+    val unsorted = listOf(
+      taskLowEarliest,
+      taskMediumLater,
+      taskHighTomorrow,
+      taskHighTodayLate,
+      taskMediumEarlier,
+      taskHighTodayEarly
+    )
+
+    val sorted = viewModel.sortTasksByPriorityAndDueDate(unsorted)
+
+    // Expected order:
+    // 1. High Today 10:00 AM
+    // 2. High Today 03:00 PM
+    // 3. High Tomorrow 09:00 AM
+    // 4. Medium Today 11:00 AM
+    // 5. Medium Today 04:00 PM
+    // 6. Low Today 09:00 AM
+    assertEquals(6, sorted.size)
+    assertEquals(taskHighTodayEarly.id, sorted[0].id)
+    assertEquals(taskHighTodayLate.id, sorted[1].id)
+    assertEquals(taskHighTomorrow.id, sorted[2].id)
+    assertEquals(taskMediumEarlier.id, sorted[3].id)
+    assertEquals(taskMediumLater.id, sorted[4].id)
+    assertEquals(taskLowEarliest.id, sorted[5].id)
+  }
+
+  @Test
+  fun `toggleAutoSortByPriority and setAutoSortByPriority update state correctly`() {
+    val viewModel = DayMeetViewModel()
+    assertFalse(viewModel.isAutoSortByPriority.value)
+
+    viewModel.toggleAutoSortByPriority()
+    assertTrue(viewModel.isAutoSortByPriority.value)
+
+    viewModel.toggleAutoSortByPriority()
+    assertFalse(viewModel.isAutoSortByPriority.value)
+
+    viewModel.setAutoSortByPriority(true)
+    assertTrue(viewModel.isAutoSortByPriority.value)
   }
 }
 

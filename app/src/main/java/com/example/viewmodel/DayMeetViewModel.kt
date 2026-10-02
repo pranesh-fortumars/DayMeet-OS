@@ -72,6 +72,10 @@ class DayMeetViewModel : ViewModel() {
     private val _feedItems = MutableStateFlow(DayMeetRepository.getInitialFeedItems())
     val feedItems: StateFlow<List<FeedItem>> = _feedItems.asStateFlow()
 
+    // Task auto-sort by priority state
+    private val _isAutoSortByPriority = MutableStateFlow(false)
+    val isAutoSortByPriority: StateFlow<Boolean> = _isAutoSortByPriority.asStateFlow()
+
     // Cross-Module Stream items
     private val _crossStreamItems = MutableStateFlow(DayMeetRepository.getInitialCrossStreamItems())
     val crossStreamItems: StateFlow<List<CrossStreamItem>> = _crossStreamItems.asStateFlow()
@@ -2946,6 +2950,37 @@ class DayMeetViewModel : ViewModel() {
             }
         }
         showToast("Due date updated")
+    }
+
+    fun toggleAutoSortByPriority() {
+        val next = !_isAutoSortByPriority.value
+        _isAutoSortByPriority.value = next
+        showToast(if (next) "Auto-sorting by priority enabled" else "Auto-sorting disabled")
+    }
+
+    fun setAutoSortByPriority(enabled: Boolean) {
+        _isAutoSortByPriority.value = enabled
+    }
+
+    fun sortTasksByPriorityAndDueDate(tasks: List<FeedItem>): List<FeedItem> {
+        return tasks.sortedWith(
+            compareBy<FeedItem> { item ->
+                when (item.priority) {
+                    Priority.URGENT -> 0
+                    Priority.HIGH -> 1
+                    Priority.MEDIUM -> 2
+                    Priority.LOW -> 3
+                    null -> when {
+                        item.statusTag?.contains("Urgent", ignoreCase = true) == true -> 0
+                        item.statusTag?.contains("High", ignoreCase = true) == true -> 1
+                        item.statusTag?.contains("Low", ignoreCase = true) == true -> 3
+                        else -> 2
+                    }
+                }
+            }.thenBy { item ->
+                com.example.util.TimeUtils.parseDueDateTime(item.dueDate, item.time)
+            }
+        )
     }
 
     fun showToast(msg: String) {

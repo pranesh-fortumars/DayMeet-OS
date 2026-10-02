@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -191,8 +192,15 @@ fun TasksScreen(
     var showStreakDialog by remember { mutableStateOf(false) }
 
     val currentLifeMode by viewModel.currentLifeMode.collectAsState()
+    val vmAutoSort by viewModel.isAutoSortByPriority.collectAsState()
     var filterState by remember { mutableStateOf("All") } // "All", "Work", "Personal", "Shopping", "Health", "High", "Medium", "Low", "Pending", "Completed"
-    var isAutoSortByPriorityEnabled by remember { mutableStateOf(false) }
+    var isAutoSortByPriorityEnabled by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(vmAutoSort) {
+        if (isAutoSortByPriorityEnabled != vmAutoSort) {
+            isAutoSortByPriorityEnabled = vmAutoSort
+        }
+    }
     var searchQuery by remember { mutableStateOf("") }
 
     // Quick Add state
@@ -253,24 +261,7 @@ fun TasksScreen(
         }
 
         if (isAutoSortByPriorityEnabled) {
-            base.sortedWith(
-                compareBy<FeedItem> { item ->
-                    when (item.priority) {
-                        Priority.URGENT -> 0
-                        Priority.HIGH -> 1
-                        Priority.MEDIUM -> 2
-                        Priority.LOW -> 3
-                        null -> when {
-                            item.statusTag?.contains("Urgent", ignoreCase = true) == true -> 0
-                            item.statusTag?.contains("High", ignoreCase = true) == true -> 1
-                            item.statusTag?.contains("Low", ignoreCase = true) == true -> 3
-                            else -> 2
-                        }
-                    }
-                }.thenBy { item ->
-                    TimeUtils.parseTime(item.time) ?: java.time.LocalTime.MAX
-                }
-            )
+            viewModel.sortTasksByPriorityAndDueDate(base)
         } else {
             base
         }
@@ -1163,7 +1154,10 @@ fun TasksScreen(
 
                     Switch(
                         checked = isAutoSortByPriorityEnabled,
-                        onCheckedChange = { isAutoSortByPriorityEnabled = it },
+                        onCheckedChange = {
+                            isAutoSortByPriorityEnabled = it
+                            viewModel.setAutoSortByPriority(it)
+                        },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
                             checkedTrackColor = Primary,
