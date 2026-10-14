@@ -44,12 +44,22 @@ data class FeedItem(
     val subtasks: List<Subtask> = emptyList(),
     val subChecklists: List<SubChecklist> = emptyList(),
     val progress: Int = 0
-)
+) {
+    val hasSubtasks: Boolean get() = subtasks.isNotEmpty()
+    val hasMultipleSubtasks: Boolean get() = subtasks.size > 1
+    val completedSubtaskCount: Int get() = subtasks.count { it.isCompleted }
+    val totalSubtaskCount: Int get() = subtasks.size
+    val subtasksProgressRatio: Float get() = if (subtasks.isEmpty()) 0f else completedSubtaskCount.toFloat() / totalSubtaskCount.toFloat()
+    val subtasksCompletionPercent: Int get() = (subtasksProgressRatio * 100).toInt()
+}
 
 data class Subtask(
     val id: String,
     val title: String,
-    val isCompleted: Boolean = false
+    val isCompleted: Boolean = false,
+    val dueDate: String? = null,
+    val notes: String? = null,
+    val orderIndex: Int = 0
 )
 
 data class SubChecklistItem(
@@ -164,7 +174,13 @@ data class CrossStreamItem(
     val isCompleted: Boolean = false,
     val subtasks: List<Subtask> = emptyList(),
     val progress: Int = 0
-)
+) {
+    val hasMultipleSubtasks: Boolean get() = subtasks.size > 1
+    val completedSubtaskCount: Int get() = subtasks.count { it.isCompleted }
+    val totalSubtaskCount: Int get() = subtasks.size
+    val subtasksProgressRatio: Float get() = if (subtasks.isEmpty()) 0f else completedSubtaskCount.toFloat() / totalSubtaskCount.toFloat()
+    val subtasksCompletionPercent: Int get() = (subtasksProgressRatio * 100).toInt()
+}
 
 data class HealthMetrics(
     val score: Int = 88,

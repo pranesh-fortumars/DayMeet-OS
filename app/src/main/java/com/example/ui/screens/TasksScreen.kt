@@ -1823,136 +1823,242 @@ fun AnimatedTaskItemRow(
                                 )
                             )
 
-                            // Notes Badge / Toggle Button
+                            // Badges Row
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(
-                                        if (task.notes.isNullOrBlank()) SurfaceContainerHigh.copy(alpha = 0.5f)
-                                        else Primary.copy(alpha = 0.12f)
-                                    )
-                                    .clickable { isNotesExpanded = !isNotesExpanded }
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    .testTag("task_notes_toggle_${task.id}")
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = if (task.notes.isNullOrBlank()) Icons.Default.NoteAdd else Icons.Default.Notes,
-                                    contentDescription = "Notes",
-                                    tint = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = if (task.notes.isNullOrBlank()) "Add Note" else "Note",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
-                                        fontSize = 11.sp
-                                    )
-                                )
-                                Icon(
-                                    imageVector = if (isNotesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = if (isNotesExpanded) "Collapse Notes" else "Expand Notes",
-                                    tint = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-                            // Subtasks Toggle Badge
-                            val subtaskCount = task.subtasks.size
-                            val completedSubtaskCount = task.subtasks.count { it.isCompleted }
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(
-                                        if (subtaskCount > 0) Primary.copy(alpha = 0.12f)
-                                        else SurfaceContainerHigh.copy(alpha = 0.5f)
-                                    )
-                                    .clickable { isSubtasksExpanded = !isSubtasksExpanded }
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                                    .testTag("task_subtasks_toggle_${task.id}")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Checklist,
-                                    contentDescription = "Subtasks",
-                                    tint = if (subtaskCount > 0) Primary else OnSurfaceVariant,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Text(
-                                    text = if (subtaskCount > 0) "$completedSubtaskCount/$subtaskCount subtasks" else "Add subtask",
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Medium,
-                                        color = if (subtaskCount > 0) Primary else OnSurfaceVariant,
-                                        fontSize = 11.sp
-                                    )
-                                )
-                                Icon(
-                                    imageVector = if (isSubtasksExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                                    contentDescription = if (isSubtasksExpanded) "Collapse Subtasks" else "Expand Subtasks",
-                                    tint = if (subtaskCount > 0) Primary else OnSurfaceVariant,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                            }
-
-                            // Due Date Badge
-                            if (!task.dueDate.isNullOrBlank()) {
-                                val isTodayDue = TimeUtils.isDueToday(task.dueDate)
-                                val badgeBg = if (isTodayDue) Color(0xFFFEF3C7) else Color(0xFFE8F5E9)
-                                val badgeTextColor = if (isTodayDue) Color(0xFFB45309) else Color(0xFF2E7D32)
-                                val badgeIcon = if (isTodayDue) Icons.Default.Today else Icons.Default.Event
-
+                                // Notes Badge / Toggle Button
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(badgeBg)
+                                        .background(
+                                            if (task.notes.isNullOrBlank()) SurfaceContainerHigh.copy(alpha = 0.5f)
+                                            else Primary.copy(alpha = 0.12f)
+                                        )
+                                        .clickable { isNotesExpanded = !isNotesExpanded }
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        .testTag("task_due_date_badge_${task.id}")
+                                        .testTag("task_notes_toggle_${task.id}")
                                 ) {
                                     Icon(
-                                        imageVector = badgeIcon,
-                                        contentDescription = "Due Date",
-                                        tint = badgeTextColor,
+                                        imageVector = if (task.notes.isNullOrBlank()) Icons.Default.NoteAdd else Icons.Default.Notes,
+                                        contentDescription = "Notes",
+                                        tint = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Text(
-                                        text = if (isTodayDue) "Due: Today" else "Due: ${task.dueDate}",
+                                        text = if (task.notes.isNullOrBlank()) "Add Note" else "Note",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = badgeTextColor,
+                                            fontWeight = FontWeight.Medium,
+                                            color = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
                                             fontSize = 11.sp
                                         )
                                     )
+                                    Icon(
+                                        imageVector = if (isNotesExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (isNotesExpanded) "Collapse Notes" else "Expand Notes",
+                                        tint = if (task.notes.isNullOrBlank()) OnSurfaceVariant else Primary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
                                 }
-                            }
 
-                            if (!task.reminderTime.isNullOrBlank()) {
+                                // Subtasks Toggle Badge
+                                val subtaskCount = task.subtasks.size
+                                val completedSubtaskCount = task.subtasks.count { it.isCompleted }
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Primary.copy(alpha = 0.08f))
+                                        .background(
+                                            if (subtaskCount > 0) Primary.copy(alpha = 0.12f)
+                                            else SurfaceContainerHigh.copy(alpha = 0.5f)
+                                        )
+                                        .clickable { isSubtasksExpanded = !isSubtasksExpanded }
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        .testTag("task_reminder_badge_${task.id}")
+                                        .testTag("task_subtasks_toggle_${task.id}")
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.NotificationsActive,
-                                        contentDescription = "Reminder",
-                                        tint = Primary,
-                                        modifier = Modifier.size(11.dp)
+                                        imageVector = Icons.Default.Checklist,
+                                        contentDescription = "Subtasks",
+                                        tint = if (subtaskCount > 0) Primary else OnSurfaceVariant,
+                                        modifier = Modifier.size(12.dp)
                                     )
                                     Text(
-                                        text = task.reminderTime,
+                                        text = if (subtaskCount > 0) "$completedSubtaskCount/$subtaskCount subtasks" else "Add subtask",
                                         style = MaterialTheme.typography.labelSmall.copy(
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Primary,
+                                            fontWeight = FontWeight.Medium,
+                                            color = if (subtaskCount > 0) Primary else OnSurfaceVariant,
                                             fontSize = 11.sp
                                         )
                                     )
+                                    Icon(
+                                        imageVector = if (isSubtasksExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                        contentDescription = if (isSubtasksExpanded) "Collapse Subtasks" else "Expand Subtasks",
+                                        tint = if (subtaskCount > 0) Primary else OnSurfaceVariant,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+
+                                // Due Date Badge
+                                if (!task.dueDate.isNullOrBlank()) {
+                                    val isTodayDue = TimeUtils.isDueToday(task.dueDate)
+                                    val badgeBg = if (isTodayDue) Color(0xFFFEF3C7) else Color(0xFFE8F5E9)
+                                    val badgeTextColor = if (isTodayDue) Color(0xFFB45309) else Color(0xFF2E7D32)
+                                    val badgeIcon = if (isTodayDue) Icons.Default.Today else Icons.Default.Event
+
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(badgeBg)
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .testTag("task_due_date_badge_${task.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = badgeIcon,
+                                            contentDescription = "Due Date",
+                                            tint = badgeTextColor,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = if (isTodayDue) "Due: Today" else "Due: ${task.dueDate}",
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.Bold,
+                                                color = badgeTextColor,
+                                                fontSize = 11.sp
+                                            )
+                                        )
+                                    }
+                                }
+
+                                if (!task.reminderTime.isNullOrBlank()) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(Primary.copy(alpha = 0.08f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                            .testTag("task_reminder_badge_${task.id}")
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.NotificationsActive,
+                                            contentDescription = "Reminder",
+                                            tint = Primary,
+                                            modifier = Modifier.size(11.dp)
+                                        )
+                                        Text(
+                                            text = task.reminderTime,
+                                            style = MaterialTheme.typography.labelSmall.copy(
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Primary,
+                                                fontSize = 11.sp
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Dedicated Multi-subtask Progress Bar & Indicator (shown when task contains multiple sub-steps)
+                            val subtaskCount = task.subtasks.size
+                            val completedSubtaskCount = task.subtasks.count { it.isCompleted }
+                            if (subtaskCount > 1) {
+                                val progressFraction = if (subtaskCount > 0) completedSubtaskCount.toFloat() / subtaskCount.toFloat() else 0f
+                                val percent = (progressFraction * 100).toInt()
+                                val isAllDone = completedSubtaskCount == subtaskCount
+
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isAllDone) EmeraldSuccess.copy(alpha = 0.08f) else Primary.copy(alpha = 0.06f),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isAllDone) EmeraldSuccess.copy(alpha = 0.35f) else Primary.copy(alpha = 0.22f)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { isSubtasksExpanded = !isSubtasksExpanded }
+                                        .testTag("subtasks_progress_indicator_${task.id}")
+                                        .testTag("task_substeps_progress_${task.id}")
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 9.dp, vertical = 6.dp),
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isAllDone) Icons.Default.CheckCircle else Icons.Default.PlaylistAddCheck,
+                                                    contentDescription = null,
+                                                    tint = if (isAllDone) EmeraldSuccess else Primary,
+                                                    modifier = Modifier.size(15.dp)
+                                                )
+                                                Text(
+                                                    text = "$completedSubtaskCount of $subtaskCount sub-steps completed",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isAllDone) EmeraldSuccess else OnSurface,
+                                                        fontSize = 11.5.sp
+                                                    )
+                                                )
+                                            }
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = if (isAllDone) EmeraldSuccess else Primary
+                                                ) {
+                                                    Text(
+                                                        text = "$percent%",
+                                                        style = MaterialTheme.typography.labelSmall.copy(
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = Color.White,
+                                                            fontSize = 10.sp
+                                                        ),
+                                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
+                                                    )
+                                                }
+                                                Icon(
+                                                    imageVector = if (isSubtasksExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                                    contentDescription = if (isSubtasksExpanded) "Collapse sub-steps" else "Expand sub-steps",
+                                                    tint = OnSurfaceVariant,
+                                                    modifier = Modifier
+                                                        .size(16.dp)
+                                                        .testTag("task_subtasks_expand_toggle_${task.id}")
+                                                )
+                                            }
+                                        }
+
+                                        LinearProgressIndicator(
+                                            progress = { progressFraction },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(4.dp)
+                                                .clip(RoundedCornerShape(2.dp)),
+                                            color = if (isAllDone) EmeraldSuccess else Primary,
+                                            trackColor = SurfaceContainerHighest
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2316,7 +2422,7 @@ fun AnimatedTaskItemRow(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                task.subtasks.forEach { subtask ->
+                                task.subtasks.forEachIndexed { index, subtask ->
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -2332,6 +2438,26 @@ fun AnimatedTaskItemRow(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
+                                        // Step number indicator pill
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = if (subtask.isCompleted) EmeraldSuccess.copy(alpha = 0.14f) else SurfaceContainerHigh,
+                                            modifier = Modifier
+                                                .size(20.dp)
+                                                .testTag("subtask_step_badge_${subtask.id}")
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    text = "${index + 1}",
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (subtask.isCompleted) EmeraldSuccess else OnSurfaceVariant,
+                                                        fontSize = 10.sp
+                                                    )
+                                                )
+                                            }
+                                        }
+
                                         // Subtask Checkbox
                                         Box(
                                             modifier = Modifier
@@ -2354,18 +2480,31 @@ fun AnimatedTaskItemRow(
                                             }
                                         }
 
-                                        // Subtask Title
-                                        Text(
-                                            text = subtask.title,
-                                            style = MaterialTheme.typography.bodySmall.copy(
-                                                color = if (subtask.isCompleted) OnSurfaceVariant.copy(alpha = 0.5f) else OnSurface,
-                                                textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
-                                                fontWeight = if (subtask.isCompleted) FontWeight.Normal else FontWeight.Medium
-                                            ),
+                                        // Subtask Title & optional step metadata
+                                        Column(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clickable { onToggleSubtask(subtask.id) }
-                                        )
+                                        ) {
+                                            Text(
+                                                text = subtask.title,
+                                                style = MaterialTheme.typography.bodySmall.copy(
+                                                    color = if (subtask.isCompleted) OnSurfaceVariant.copy(alpha = 0.5f) else OnSurface,
+                                                    textDecoration = if (subtask.isCompleted) TextDecoration.LineThrough else null,
+                                                    fontWeight = if (subtask.isCompleted) FontWeight.Normal else FontWeight.Medium
+                                                )
+                                            )
+                                            if (!subtask.dueDate.isNullOrBlank() || !subtask.notes.isNullOrBlank()) {
+                                                val meta = listOfNotNull(subtask.dueDate?.let { "Due: $it" }, subtask.notes).joinToString(" • ")
+                                                Text(
+                                                    text = meta,
+                                                    style = MaterialTheme.typography.labelSmall.copy(
+                                                        color = OnSurfaceVariant.copy(alpha = 0.6f),
+                                                        fontSize = 10.sp
+                                                    )
+                                                )
+                                            }
+                                        }
 
                                         // Delete Subtask Button
                                         IconButton(

@@ -678,5 +678,61 @@ class ExampleRobolectricTest {
     viewModel.setAutoSortByPriority(true)
     assertTrue(viewModel.isAutoSortByPriority.value)
   }
+
+  @Test
+  fun `subtask structure and multiple sub-steps progress calculations operate accurately`() {
+    val subtasks = listOf(
+      com.example.model.Subtask(id = "s1", title = "Draft proposal", isCompleted = true),
+      com.example.model.Subtask(id = "s2", title = "Internal review", isCompleted = true),
+      com.example.model.Subtask(id = "s3", title = "Client signoff", isCompleted = false)
+    )
+
+    val item = FeedItem(
+      id = "test_task_multi_sub",
+      time = "11:00 AM",
+      title = "Enterprise Q4 Contract",
+      subtitle = "Client Deliverable",
+      category = FeedCategory.TASK,
+      priority = Priority.HIGH,
+      subtasks = subtasks
+    )
+
+    assertTrue("Should detect task has subtasks", item.hasSubtasks)
+    assertTrue("Should detect task contains multiple sub-steps", item.hasMultipleSubtasks)
+    assertEquals(3, item.totalSubtaskCount)
+    assertEquals(2, item.completedSubtaskCount)
+    assertEquals(66, item.subtasksCompletionPercent) // 2 / 3 = 0.666... -> 66%
+
+    val viewModel = DayMeetViewModel()
+    viewModel.saveNewTask(
+      title = "Multi-step Feature Development",
+      notes = "Sprint roadmap items",
+      priority = Priority.HIGH,
+      space = "Work",
+      subtasks = listOf("Step 1: Architecture review", "Step 2: API integration", "Step 3: Test automation")
+    )
+
+    val createdTask = viewModel.feedItems.value.first { it.title == "Multi-step Feature Development" }
+    assertEquals(3, createdTask.subtasks.size)
+    assertTrue(createdTask.hasMultipleSubtasks)
+    assertEquals(0, createdTask.completedSubtaskCount)
+
+    // Toggle the first step
+    val firstSub = createdTask.subtasks[0]
+    viewModel.toggleSubtask(createdTask.id, firstSub.id)
+
+    val updatedTask = viewModel.feedItems.value.first { it.id == createdTask.id }
+    assertEquals(1, updatedTask.completedSubtaskCount)
+    assertTrue(updatedTask.subtasks[0].isCompleted)
+    assertEquals(33, updatedTask.progress) // 1 of 3 = 33%
+
+    // Toggle the second step
+    val secondSub = createdTask.subtasks[1]
+    viewModel.toggleSubtask(createdTask.id, secondSub.id)
+
+    val updatedTask2 = viewModel.feedItems.value.first { it.id == createdTask.id }
+    assertEquals(2, updatedTask2.completedSubtaskCount)
+    assertEquals(66, updatedTask2.progress) // 2 of 3 = 66%
+  }
 }
 

@@ -2586,7 +2586,10 @@ class DayMeetViewModel : ViewModel() {
                 val updatedSubtasks = item.subtasks.map { sub ->
                     if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
                 }
-                item.copy(subtasks = updatedSubtasks)
+                val autoProgress = if (updatedSubtasks.isNotEmpty()) {
+                    ((updatedSubtasks.count { it.isCompleted }.toFloat() / updatedSubtasks.size) * 100).toInt()
+                } else item.progress
+                item.copy(subtasks = updatedSubtasks, progress = autoProgress)
             } else item
         }
         _crossStreamItems.value = _crossStreamItems.value.map { item ->
@@ -2594,7 +2597,10 @@ class DayMeetViewModel : ViewModel() {
                 val updatedSubtasks = item.subtasks.map { sub ->
                     if (sub.id == subtaskId) sub.copy(isCompleted = !sub.isCompleted) else sub
                 }
-                item.copy(subtasks = updatedSubtasks)
+                val autoProgress = if (updatedSubtasks.isNotEmpty()) {
+                    ((updatedSubtasks.count { it.isCompleted }.toFloat() / updatedSubtasks.size) * 100).toInt()
+                } else item.progress
+                item.copy(subtasks = updatedSubtasks, progress = autoProgress)
             } else item
         }
     }
@@ -2826,7 +2832,11 @@ class DayMeetViewModel : ViewModel() {
         )
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id == taskId) {
-                item.copy(subtasks = item.subtasks + newSub)
+                val updated = item.subtasks + newSub
+                val autoProgress = if (updated.isNotEmpty()) {
+                    ((updated.count { it.isCompleted }.toFloat() / updated.size) * 100).toInt()
+                } else item.progress
+                item.copy(subtasks = updated, progress = autoProgress)
             } else {
                 item
             }
@@ -2834,7 +2844,11 @@ class DayMeetViewModel : ViewModel() {
         // Keep Cross-Module Stream items in sync
         _crossStreamItems.value = _crossStreamItems.value.map { item ->
             if (item.id == taskId || item.title.equals(_feedItems.value.firstOrNull { it.id == taskId }?.title, ignoreCase = true)) {
-                item.copy(subtasks = item.subtasks + newSub)
+                val updated = item.subtasks + newSub
+                val autoProgress = if (updated.isNotEmpty()) {
+                    ((updated.count { it.isCompleted }.toFloat() / updated.size) * 100).toInt()
+                } else item.progress
+                item.copy(subtasks = updated, progress = autoProgress)
             } else item
         }
         showToast("Subtask added")
@@ -2843,14 +2857,22 @@ class DayMeetViewModel : ViewModel() {
     fun deleteSubtask(taskId: String, subtaskId: String) {
         _feedItems.value = _feedItems.value.map { item ->
             if (item.id == taskId) {
-                item.copy(subtasks = item.subtasks.filter { it.id != subtaskId })
+                val updated = item.subtasks.filter { it.id != subtaskId }
+                val autoProgress = if (updated.isNotEmpty()) {
+                    ((updated.count { it.isCompleted }.toFloat() / updated.size) * 100).toInt()
+                } else 0
+                item.copy(subtasks = updated, progress = autoProgress)
             } else {
                 item
             }
         }
         _crossStreamItems.value = _crossStreamItems.value.map { item ->
             if (item.id == taskId || item.title.equals(_feedItems.value.firstOrNull { it.id == taskId }?.title, ignoreCase = true)) {
-                item.copy(subtasks = item.subtasks.filter { it.id != subtaskId })
+                val updated = item.subtasks.filter { it.id != subtaskId }
+                val autoProgress = if (updated.isNotEmpty()) {
+                    ((updated.count { it.isCompleted }.toFloat() / updated.size) * 100).toInt()
+                } else 0
+                item.copy(subtasks = updated, progress = autoProgress)
             } else item
         }
     }

@@ -1827,6 +1827,67 @@ private fun CrossStreamRowItem(
                         }
                     }
 
+                    if (item.subtasks.size > 1) {
+                        val subtaskCount = item.subtasks.size
+                        val completedCount = item.subtasks.count { it.isCompleted }
+                        val progressFraction = if (subtaskCount > 0) completedCount.toFloat() / subtaskCount.toFloat() else 0f
+                        val isAllDone = completedCount == subtaskCount
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isAllDone) EmeraldSuccess.copy(alpha = 0.08f) else Primary.copy(alpha = 0.06f),
+                            border = BorderStroke(
+                                0.8.dp,
+                                if (isAllDone) EmeraldSuccess.copy(alpha = 0.3f) else Primary.copy(alpha = 0.2f)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 14.dp, end = 14.dp, bottom = 8.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { isSubtasksExpanded = !isSubtasksExpanded }
+                                .testTag("cross_stream_subtasks_progress_${item.id}")
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "$completedCount of $subtaskCount sub-steps completed",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isAllDone) EmeraldSuccess else OnSurface,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                    Text(
+                                        text = "${(progressFraction * 100).toInt()}%",
+                                        style = MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isAllDone) EmeraldSuccess else Primary,
+                                            fontSize = 10.sp
+                                        )
+                                    )
+                                }
+                                LinearProgressIndicator(
+                                    progress = { progressFraction },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(3.5.dp)
+                                        .clip(RoundedCornerShape(2.dp)),
+                                    color = if (isAllDone) EmeraldSuccess else Primary,
+                                    trackColor = SurfaceContainerHighest
+                                )
+                            }
+                        }
+                    }
+
                     // Expandable Subtasks View
                     AnimatedVisibility(
                         visible = isSubtasksExpanded,
